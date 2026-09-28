@@ -160,7 +160,10 @@ export async function seedPhase2(tenantId: string) {
   const grades = (await rootDb.grade.findMany({ where: { tenantId }, include: { stage: true } }))
     .sort((a, b) => a.stage.order - b.stage.order || a.order - b.order)
     .map((g, index) => ({ id: g.id, name: g.name, index }));
-  const sections = (await rootDb.section.findMany({ where: { tenantId, academicYearId: year.id } })).map((s) => ({ id: s.id, branchId: s.branchId, gradeId: s.gradeId, capacity: s.capacity, count: 0 }));
+  // ٣٠٠ طالب ≈ ١٢ لكل صف في كل فرع: شعبة واحدة (سعة ٢٥) تكفي؛ الشعب الإضافية تُؤرشف
+  await rootDb.section.updateMany({ where: { tenantId, academicYearId: year.id }, data: { capacity: 25 } });
+  await rootDb.section.updateMany({ where: { tenantId, academicYearId: year.id, name: { not: "أ" } }, data: { deletedAt: new Date() } });
+  const sections = (await rootDb.section.findMany({ where: { tenantId, academicYearId: year.id, deletedAt: null } })).map((s) => ({ id: s.id, branchId: s.branchId, gradeId: s.gradeId, capacity: s.capacity, count: 0 }));
   const users = await rootDb.user.findMany({ where: { tenantId }, select: { id: true, email: true } });
   const userBy = (email: string) => users.find((u) => u.email === email)!.id;
   const ownerId = userBy("owner@demo.manassa.sa");

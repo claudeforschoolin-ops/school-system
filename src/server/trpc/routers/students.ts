@@ -45,6 +45,7 @@ const admissionInput = z.object({
 
 export const studentsRouter = router({
   overview: permissionProcedure("students", "view").query(({ ctx }) => students.studentsOverview(ctx.db, ctx.session)),
+  report: permissionProcedure("students", "view").query(({ ctx }) => students.studentsReport(ctx.db, ctx.session)),
   databaseId: permissionProcedure("students", "view").query(({ ctx }) => systemDatabaseId(ctx.db, ctx.session, "students")),
   get: permissionProcedure("students", "view").input(z.object({ id })).query(({ ctx, input }) => students.getStudentProfile(ctx.db, ctx.session, input.id)),
   search: permissionProcedure("students", "view")
@@ -180,6 +181,7 @@ export const admissionsRouter = router({
     .input(z.object({ id, stage: z.enum(ADMISSION_FLOW as [string, ...string[]]), reason: optText(500) }))
     .mutation(({ ctx, input }) => admissions.changeAdmissionStage(ctx.db, ctx.session, input.id, input.stage as never, input.reason)),
   funnel: permissionProcedure("admissions", "view").query(({ ctx }) => admissions.admissionFunnel(ctx.db, ctx.session)),
+  overview: permissionProcedure("admissions", "view").query(({ ctx }) => admissions.admissionsOverview(ctx.db, ctx.session)),
   seats: permissionProcedure("admissions", "view").input(z.object({ branchId: id, gradeId: id })).query(({ ctx, input }) => admissions.seatsFor(ctx.db, input.branchId, input.gradeId)),
 
   /** النموذج العام: بيانات المدرسة وخياراتها (دون تسجيل دخول) */
@@ -188,7 +190,8 @@ export const admissionsRouter = router({
     const settings = (tenant?.settings ?? {}) as { admissions?: { publicFormEnabled?: boolean } };
     if (!tenant || settings.admissions?.publicFormEnabled === false) throw new TRPCError({ code: "NOT_FOUND", message: "نموذج التقديم غير متاح" });
     const db = createTenantDb({ tenantId: tenant.id, actor: null });
-    return { school: { name: tenant.name, platformName: tenant.platformName, logoUrl: tenant.logoUrl, isDemo: tenant.isDemo }, ...(await admissions.admissionFormOptions(db)) };
+    const intro = (tenant.settings as { admissions?: { intro?: string } } | null)?.admissions?.intro ?? "";
+    return { school: { name: tenant.name, platformName: tenant.platformName, logoUrl: tenant.logoUrl, isDemo: tenant.isDemo, intro }, ...(await admissions.admissionFormOptions(db)) };
   }),
 
   /** التقديم العام: يُنشئ طلب قبول دون حساب (مع حدّ للمحاولات وحقل مصيدة للبرامج الآلية) */

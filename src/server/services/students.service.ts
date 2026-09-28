@@ -497,3 +497,45 @@ export async function studentActivity(db: TenantDb, session: SessionData, id: st
     select: { id: true, action: true, entityType: true, userName: true, createdAt: true, summary: true, oldValue: true, newValue: true },
   });
 }
+
+/** تقارير الطلاب: التوزيع حسب الصف والجنس والحالة والجنسية، اكتمال المستندات، وإشغال الفصول */
+export async function studentsReport(db: TenantDb, session: SessionData) {
+  const where = { ...(await requireStudentWhere(db, session, "students", "view")), deletedAt: null };
+  const active = { ...where, status: "ACTIVE" as const };
+  const [byGradeGender, byStatus, byNationality, byTransport, activeIds, docs, required] = await Promise.all([
+    db.student.groupBy({ by: ["gradeId", "gender"], where: active, _count: { _all: true } }),
+    db.student.groupBy({ by: ["status"], where, _count: { _all: true } }),
+    db.student.groupBy({ by: ["nationality"], where: active, _count: { _all: true } }),
+    db.student.groupBy({ by: ["transportMode"], where: active, _count: { _all: true } }),
+    db.student.findMany({ where: active, select: { id: true } }),
+    db.studentDocument.groupBy({ by: ["type"], where: { deletedAt: null, student: active }, _count: { studentId: true } }),
+    requiredDocumentTypes({ db, session }),
+  ]);
+  const grades = await db.grade.findMany({ where: { deletedAt: null }, include: { stage: true }, orderBy: [{ stage: { order: "asc" } }, { order: "asc" }] });
+  const year = await currentYear(db);
+  const sections = year
+    ? await db.section.findMany({ where: { academicYearId: year.id, deletedAt: null }, select: { id: true, capacity: true, _count: { select: { students: { where: { status: "ACTIVE", deletedAt: null } } } } } })
+    : [];
+  const capacity = sections.reduce((a, s) => a + s.capacity, 0);
+  const placed = sections.reduce((a, s) => a + s._count.students, 0);
+  // عدد الطلاب الذين لديهم كل نوع (قد يتكرر المستند نفسه؛ نعدّ الطلاب المميزين)
+  const perType = await Promise.all(
+    required.map(async (type) => ({ type, count: (await db.studentDocument.findMany({ where: { type, deletedAt: null, student: active }, distinct: ["studentId"], select: { studentId: true } })).length })),
+  );
+  void docs;
+  return {
+    activeCount: activeIds.length,
+    byGrade: grades.map((g) => ({
+      id: g.id,
+      name: g.name,
+      stage: g.stage.name,
+      male: byGradeGender.find((b) => b.gradeId === g.id && b.gender === "MALE")?._count._all ?? 0,
+      female: byGradeGender.find((b) => b.gradeId === g.id && b.gender === "FEMALE")?._count._all ?? 0,
+    })),
+    byStatus: byStatus.map((s) => ({ status: s.status, count: s._count._all })),
+    byNationality: byNationality.map((n) => ({ nationality: n.nationality, count: n._count._all })).sort((a, b) => b.count - a.count),
+    byTransport: byTransport.map((t) => ({ mode: t.transportMode ?? "UNKNOWN", count: t._count._all })).sort((a, b) => b.count - a.count),
+    documents: perType.map((d) => ({ type: d.type, label: DOCUMENT_TYPES.find((t) => t.id === d.type)?.label ?? d.type, share: activeIds.length ? d.count / activeIds.length : 0, count: d.count })),
+    occupancy: { capacity, placed, rate: capacity ? placed / capacity : null, sections: sections.length },
+  };
+}

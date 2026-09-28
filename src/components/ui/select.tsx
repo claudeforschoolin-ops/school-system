@@ -34,7 +34,9 @@ export function Select({
           className,
         )}
       >
-        <S.Value placeholder={placeholder} />
+        <span className="min-w-0 truncate">
+          <S.Value placeholder={placeholder} />
+        </span>
         <S.Icon>
           <ChevronDown className="size-3.5 text-fg-3" />
         </S.Icon>

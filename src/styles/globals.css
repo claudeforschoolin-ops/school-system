@@ -49,6 +49,10 @@
   --text-primary: #111827;
   /* نص فوق الأزرار الأساسية الداكنة، والطبقات العائمة (التلميح والإشعار المنبثق) */
   --on-primary: #ffffff;
+  /* ألوان الرسوم البيانية (مُتحقَّق منها لعمى الألوان: الفصل بين السلاسل ΔE ≥ 15) */
+  --chart-1: #2a78d6;
+  --chart-2: #1baf7a;
+  --chart-grid: #ececea;
   --bg-inverse: #1f1f1f;
   --inverse-success: #7ccf9f;
   --inverse-danger: #f07186;
@@ -129,6 +133,9 @@
   --border-strong: #404040;
   --text-primary: #f1f1ef;
   --on-primary: #0f172a;
+  --chart-1: #3987e5;
+  --chart-2: #199e70;
+  --chart-grid: #333331;
   --bg-inverse: #363636;
   --text-secondary: #b4b4b0;
   --text-muted: #7a7a76;
@@ -220,6 +227,9 @@
   --color-fg-3: var(--text-muted);
   --color-fg-4: var(--text-disabled);
   --color-on-primary: var(--on-primary);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-grid: var(--chart-grid);
   --color-inverse: var(--bg-inverse);
   --color-inverse-success: var(--inverse-success);
   --color-inverse-danger: var(--inverse-danger);

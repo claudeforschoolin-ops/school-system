@@ -43,6 +43,14 @@ export interface AdmissionInput {
   notes?: string | null;
 }
 
+/** المرفقات: ملفات مرفوعة فعلاً لهذه المدرسة فقط */
+async function validAttachments(db: TenantDb, list: NonNullable<AdmissionInput["attachments"]>) {
+  const ids = list.map((f) => f.id).filter(Boolean).slice(0, 10);
+  if (!ids.length) return [];
+  const files = await db.fileObject.findMany({ where: { id: { in: ids } } });
+  return files.map((f) => ({ id: f.id, name: f.name, url: `/api/files/${f.id}`, size: f.size, mime: f.mime }));
+}
+
 /** المقاعد المتاحة لصف في فرع للعام الحالي */
 export async function seatsFor(db: TenantDb, branchId: string, gradeId: string) {
   const year = await currentYear(db);
@@ -102,6 +110,7 @@ export async function createAdmission(db: TenantDb, tenant: TenantInfo, actorId:
     contacts.push({ relation: "MOTHER", name: input.motherName.trim(), phone: input.motherPhone ? normalizeSaudiMobile(input.motherPhone) : null });
   }
 
+  const attachments = await validAttachments(db, input.attachments ?? []);
   const number = await nextNumber(db, tenant.tenant.id, "admission");
   const fullName = composeFullName(input);
   const admission = await db.admission.create({
@@ -129,7 +138,7 @@ export async function createAdmission(db: TenantDb, tenant: TenantInfo, actorId:
       guardianEmail: input.guardianEmail?.trim().toLowerCase() || null,
       contacts: contacts as Prisma.InputJsonValue,
       address: input.address?.trim() || null,
-      attachments: (input.attachments ?? []) as Prisma.InputJsonValue,
+      attachments: attachments as Prisma.InputJsonValue,
       source: input.source ?? null,
       submittedVia: via,
       notes: input.notes ? ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: input.notes }] }] } as Prisma.InputJsonValue) : undefined,
@@ -451,7 +460,7 @@ export async function updateAdmission(db: TenantDb, session: SessionData, id: st
     if (!p) throw badRequest("رقم الجوال غير صالح");
     data.guardianPhone = p;
   }
-  if (patch.attachments) data.attachments = patch.attachments as Prisma.InputJsonValue;
+  if (patch.attachments) data.attachments = (await validAttachments(db, patch.attachments)) as Prisma.InputJsonValue;
   if (patch.notes !== undefined) data.notes = patch.notes as Prisma.InputJsonValue;
   for (const key of ["gender", "nationality", "birthDate", "requestedGradeId", "previousSchool", "guardianName", "guardianRelation", "guardianEmail", "address", "source", "ownerId", "assessmentAt", "assessmentScore", "assessmentNotes"] as const) {
     if (patch[key] !== undefined) (data as Record<string, unknown>)[key] = patch[key];
@@ -470,4 +479,22 @@ export async function admissionFormOptions(db: TenantDb) {
     db.grade.findMany({ where: { deletedAt: null }, include: { stage: { select: { name: true, order: true } } }, orderBy: [{ stage: { order: "asc" } }, { order: "asc" }] }),
   ]);
   return { branches, grades: grades.map((g) => ({ id: g.id, name: g.name, stage: g.stage.name })) };
+}
+
+/** مؤشرات لوحة القبول */
+export async function admissionsOverview(db: TenantDb, session: SessionData) {
+  const scope = branchWhere(session, "admissions", "view");
+  if (!scope) throw forbidden();
+  const year = await currentYear(db);
+  const where = { ...scope, deletedAt: null, ...(year ? { academicYearId: year.id } : {}) };
+  const weekAhead = new Date(Date.now() + 7 * 86_400_000);
+  const [open, interviews, accepted, waitlist, publicForm, funnel] = await Promise.all([
+    db.admission.count({ where: { ...where, stage: { in: ["NEW", "REVIEW", "ASSESSMENT"] } } }),
+    db.admission.count({ where: { ...where, assessmentAt: { gte: new Date(), lte: weekAhead } } }),
+    db.admission.count({ where: { ...where, stage: { in: ["ACCEPTED", "ENROLLED"] } } }),
+    db.admission.count({ where: { ...where, stage: "WAITLIST" } }),
+    db.admission.count({ where: { ...where, submittedVia: "PUBLIC_FORM", stage: "NEW" } }),
+    admissionFunnel(db, session),
+  ]);
+  return { open, interviewsThisWeek: interviews, accepted, waitlist, newFromPublicForm: publicForm, acceptanceRate: funnel.acceptanceRate, tenantSlug: session.tenant.slug };
 }
