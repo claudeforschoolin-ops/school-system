@@ -6,7 +6,7 @@ import { motion } from "motion/react";
 import { AlarmClock, Bell, CalendarDays, CheckSquare, ClipboardCheck, Database, FileText, KeyRound, ShieldCheck, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { formatDate, formatRelative, formatTimeRange, greetingForHour } from "@/lib/dates";
+import { formatDate, formatRelative, formatTimeRange, greetingForHour, hourIn } from "@/lib/dates";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { CountUp } from "@/components/ui/count-up";
@@ -35,7 +35,7 @@ export function HomeView() {
       <div className="mx-auto w-full max-w-[1040px] px-6 pb-24 pt-8 md:px-12">
         <p className="text-[13px] text-fg-3">{formatDate(now, { calendar: prefs.calendar, digits: prefs.digits, style: "full" })}</p>
         <h1 className="mt-1 text-[32px] font-bold leading-tight text-fg md:text-[36px]">
-          {greetingForHour(now.getHours())}، {firstName}
+          {greetingForHour(hourIn(tenant.timezone))}، {firstName}
         </h1>
         <p className="mt-1 text-[15px] text-fg-3">{tenant.name}</p>
 
@@ -165,9 +165,9 @@ function Kpi({ label, value, icon, tone, href }: { label: string; value: number 
         <span className="text-[13px] font-medium">{label}</span>
         <span className={cn("grid size-7 place-items-center rounded-md bg-hover", tone === "danger" && "bg-danger-50 text-danger-700", tone === "warning" && "bg-warning-50 text-warning-700")}>{icon}</span>
       </div>
-      <p className={cn("mt-3 text-[28px] font-bold leading-none text-fg", tone === "danger" && value ? "text-danger-700" : "")}>
+      <div className={cn("mt-3 text-[28px] font-bold leading-none text-fg", tone === "danger" && value ? "text-danger-700" : "")}>
         {value === undefined ? <Skeleton className="h-7 w-10" /> : <CountUp value={value} digits={prefs.digits} />}
-      </p>
+      </div>
     </Link>
   );
 }

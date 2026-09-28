@@ -27,6 +27,8 @@ export function groupBy<T, K extends string | number>(items: readonly T[], key: 
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "؟";
+  // الأسماء العربية: حرف واحد (الحرفان المتتاليان يُقرآن ككلمة غير مفهومة)
+  if (/[\u0600-\u06FF]/.test(parts[0]!)) return parts[0]![0]!;
   const first = parts[0]?.[0] ?? "";
   const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
   return (first + last).toUpperCase();

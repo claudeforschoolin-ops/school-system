@@ -54,15 +54,32 @@ export function formatHijri(input: Date | string | number, options: DateFormatOp
   return formatDate(input, { ...options, calendar: "hijri" });
 }
 
-export function formatTime(input: Date | string | number, digits: DigitsPreference = "arab", timeZone = DEFAULT_TIMEZONE): string {
-  return new Intl.DateTimeFormat(localeFor(digits), { hour: "numeric", minute: "2-digit", timeZone }).format(toDate(input));
+function clockParts(input: Date | string | number, digits: DigitsPreference, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone }).formatToParts(toDate(input));
+  const hour = parts.find((p) => p.type === "hour")?.value ?? "0";
+  const minute = parts.find((p) => p.type === "minute")?.value ?? "00";
+  const period = (parts.find((p) => p.type === "dayPeriod")?.value ?? "AM").toUpperCase() === "PM" ? "م" : "ص";
+  const localize = (v: string) => (digits === "arab" ? v.replace(/[0-9]/g, (d) => "٠١٢٣٤٥٦٧٨٩"[Number(d)]!) : v);
+  const clock = minute === "00" ? localize(hour) : `${localize(hour)}:${localize(minute)}`;
+  return { clock, period };
 }
 
-/** نطاق وقت مختصر: «١٠–١١ص» */
+/** وقت مختصر: «١٠ص» أو «١٠:٣٠م» */
+export function formatTime(input: Date | string | number, digits: DigitsPreference = "arab", timeZone = DEFAULT_TIMEZONE): string {
+  const { clock, period } = clockParts(input, digits, timeZone);
+  return `${clock}${period}`;
+}
+
+/** نطاق وقت مختصر: «١٠–١١ص» أو «١١ص–١م» */
 export function formatTimeRange(start: Date, end: Date, digits: DigitsPreference = "arab", timeZone = DEFAULT_TIMEZONE): string {
-  const fmt = new Intl.DateTimeFormat(localeFor(digits), { hour: "numeric", minute: "2-digit", timeZone });
-  if (typeof fmt.formatRange === "function") return fmt.formatRange(start, end);
-  return `${fmt.format(start)} – ${fmt.format(end)}`;
+  const a = clockParts(start, digits, timeZone);
+  const b = clockParts(end, digits, timeZone);
+  return a.period === b.period ? `${a.clock}–${b.clock}${b.period}` : `${a.clock}${a.period}–${b.clock}${b.period}`;
+}
+
+/** الساعة الحالية في منطقة زمنية (لتحية ثابتة بين الخادم والمتصفح) */
+export function hourIn(timeZone = DEFAULT_TIMEZONE, date = new Date()): number {
+  return Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone }).format(date)) % 24;
 }
 
 const RELATIVE_UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [

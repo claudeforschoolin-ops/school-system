@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AGENTS } from "@/lib/agents";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
@@ -306,14 +306,14 @@ function TeamspacesGroup({ data }: { data: SidebarData }) {
 function TeamspaceNode({ teamspace }: { teamspace: SidebarData["teamspaces"][number] }) {
   const actions = usePageActions();
   const storageKey = `manassa:ts-open:${teamspace.id}`;
-  const [open, setOpen] = useState(() => {
-    if (typeof window === "undefined") return true;
+  const [open, setOpen] = useState(true);
+  useEffect(() => {
     try {
-      return localStorage.getItem(storageKey) !== "0";
+      if (localStorage.getItem(storageKey) === "0") setOpen(false);
     } catch {
-      return true;
+      /* تجاهل */
     }
-  });
+  }, [storageKey]);
   const toggle = useCallback(
     (value?: boolean) =>
       setOpen((o) => {
