@@ -136,10 +136,10 @@ export const MODULE_GROUPS: readonly ModuleGroup[] = [
     key: "communication",
     label: "التواصل",
     modules: [
-      { key: "messages", label: "الرسائل والإشعارات", section: 37, phase: 6 },
-      { key: "announcements", label: "لوحة الإعلانات", section: 38, phase: 6 },
-      { key: "parent_app", label: "تطبيق أولياء الأمور", section: 39, phase: 6, actions: ["view"] },
-      { key: "website", label: "البوابة الإلكترونية", section: 40, phase: 6 },
+      // الرسائل الداخلية والإعلانات تعمل ضمن مساحة «التواصل» منذ المرحلة ١.
+      // المرحلة ٦ (البوابات، تطبيق أولياء الأمور، بوابة المعلمين، الواجهات البرمجية العامة) أُلغيت بطلب المالك.
+      { key: "messages", label: "الرسائل والإشعارات", section: 37, phase: 1 },
+      { key: "announcements", label: "لوحة الإعلانات", section: 38, phase: 1 },
       { key: "events", label: "الأحداث والمناسبات", section: 41, phase: 1 },
     ],
   },
@@ -164,14 +164,6 @@ export const MODULE_GROUPS: readonly ModuleGroup[] = [
       { key: "analytics", label: "تحليل البيانات", section: 49, phase: 7, actions: READ_EXPORT },
       { key: "data_export", label: "تصدير البيانات", section: 50, phase: 7, actions: ["view", "export"] },
       { key: "ai", label: "الذكاء الاصطناعي", section: 51, phase: 8, actions: ["view", "create", "approve"] },
-    ],
-  },
-  {
-    key: "integration",
-    label: "التكامل والواجهات",
-    modules: [
-      { key: "api", label: "الواجهات البرمجية والمفاتيح", section: 54, phase: 6 },
-      { key: "teacher_portal", label: "بوابة المعلمين", section: 56, phase: 6, actions: ["view"] },
     ],
   },
   {

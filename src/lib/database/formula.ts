@@ -36,17 +36,21 @@ const OPERATORS = ["==", "!=", ">=", "<=", "&&", "||", ">", "<", "+", "-", "*", 
 function tokenize(src: string): Token[] {
   const tokens: Token[] = [];
   let i = 0;
-  const input = src.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/،/g, ",");
+  // الأرقام العربية والفاصلة العربية تُطبَّع خارج النصوص فقط (النص بين علامات التنصيص يبقى كما كُتب)
+  const input = src;
   while (i < input.length) {
     const ch = input[i]!;
     if (/\s/.test(ch)) {
       i++;
       continue;
     }
-    if (/[0-9.]/.test(ch)) {
+    if (/[0-9.٠-٩٫]/.test(ch)) {
       let j = i;
-      while (j < input.length && /[0-9.]/.test(input[j]!)) j++;
-      const raw = input.slice(i, j);
+      while (j < input.length && /[0-9.٠-٩٫]/.test(input[j]!)) j++;
+      const raw = input
+        .slice(i, j)
+        .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
+        .replace(/٫/g, ".");
       const value = Number(raw);
       if (Number.isNaN(value)) throw new FormulaError(`رقم غير صالح: ${raw}`);
       tokens.push({ type: "number", value });
@@ -76,7 +80,7 @@ function tokenize(src: string): Token[] {
       i++;
       continue;
     }
-    if (ch === ",") {
+    if (ch === "," || ch === "،") {
       tokens.push({ type: "comma" });
       i++;
       continue;

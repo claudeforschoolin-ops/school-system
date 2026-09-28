@@ -125,7 +125,6 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
       grant(["students"], VIEW("ASSIGNED")),
       grant(["attendance", "grade_entry"], { view: "ASSIGNED", create: "ASSIGNED", update: "ASSIGNED" }),
       grant(["timetable", "exams", "curriculum", "classes", "activities"], VIEW("ASSIGNED")),
-      grant(["teacher_portal"], VIEW("OWN")),
     ),
   },
   {
@@ -241,7 +240,7 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
       grant(["collections"], { view: "ASSIGNED", create: "ASSIGNED" }),
       grant(["transfers"], { view: "ASSIGNED", create: "ASSIGNED" }),
       grant(["messages"], { view: "OWN", create: "OWN" }),
-      grant(["announcements", "events", "parent_app"], VIEW("ALL")),
+      grant(["announcements", "events"], VIEW("ALL")),
     ),
   },
   {
