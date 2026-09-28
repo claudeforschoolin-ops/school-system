@@ -25,9 +25,10 @@ async function drag(page: Page, card: Locator, target: Locator) {
   await page.mouse.up();
 }
 
-test("كلمة مرور خاطئة تعرض رسالة عربية ولا تدخل", async ({ page }) => {
+test("بيانات دخول خاطئة تعرض رسالة عربية عامة ولا تدخل", async ({ page }) => {
   await page.goto("/login");
-  await page.fill('input[type="email"]', "teacher@demo.manassa.sa");
+  // بريد غير موجود: نفس الرسالة العامة دون قفل حساب تجريبي حقيقي عند تكرار التشغيل
+  await page.fill('input[type="email"]', "no-such-user@demo.manassa.sa");
   await page.fill('input[type="password"]', "wrong-password");
   await page.click('button[type="submit"]');
   await expect(page.getByText(/غير صحيحة/)).toBeVisible();
