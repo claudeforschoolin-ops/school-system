@@ -125,6 +125,8 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
       grant(["students"], VIEW("ASSIGNED")),
       grant(["attendance", "grade_entry"], { view: "ASSIGNED", create: "ASSIGNED", update: "ASSIGNED" }),
       grant(["timetable", "exams", "curriculum", "classes", "activities"], VIEW("ASSIGNED")),
+      // المعلم يسجّل الملاحظات السلوكية لطلاب فصوله (دون الاطلاع على حالات الإرشاد السرية)
+      grant(["counseling"], { view: "ASSIGNED", create: "ASSIGNED" }),
     ),
   },
   {

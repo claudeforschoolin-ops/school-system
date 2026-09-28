@@ -24,6 +24,22 @@ async function approverUserIds(db: TenantDb, step: { approverRoleId: string | nu
   return [];
 }
 
+/** ربط قرارات الموافقة بالوحدات (تحميل كسول لتجنب الاعتماد الدائري) */
+export interface ApprovalHookEvent {
+  decision: "APPROVED" | "REJECTED";
+  stepName: string;
+  final: boolean;
+}
+type ApprovalHook = (db: TenantDb, session: SessionData, request: { id: string; entityType: string | null; entityId: string | null; type: string }, event: ApprovalHookEvent) => Promise<void>;
+const APPROVAL_HOOKS: Record<string, () => Promise<ApprovalHook>> = {
+  student_transfer: () => import("./transfers.service").then((m) => m.onTransferApproval),
+};
+
+async function runApprovalHook(db: TenantDb, session: SessionData, request: { id: string; entityType: string | null; entityId: string | null; type: string }, event: ApprovalHookEvent) {
+  const loader = APPROVAL_HOOKS[request.type];
+  if (loader) await (await loader())(db, session, request, event);
+}
+
 export async function createApprovalRequest(
   db: TenantDb,
   session: SessionData,
@@ -154,6 +170,7 @@ export async function decideApproval(
       entityId: request.id,
     });
   }
+  await runApprovalHook(db, session, request, { decision: input.decision, stepName: step.name, final: input.decision === "REJECTED" || !nextStep });
   await writeAudit(ctx, {
     action: input.decision === "APPROVED" ? "APPROVE" : "REJECT",
     entityType: "ApprovalRequest",

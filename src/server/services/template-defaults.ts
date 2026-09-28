@@ -12,6 +12,7 @@ export const DEFAULT_TEMPLATES = {
   guardian_summon: "نأمل حضوركم إلى المدرسة بخصوص {student} يوم {date}. — {school}",
   leave_decision: "طلب {kind} لـ{student} ({date}): {decision} — {school}",
   transfer_completed: "تم تنفيذ طلب {kind} لـ{student}. رقم الشهادة: {certificate} — {school}",
+  behavior_notice: "نفيدكم بتسجيل ملاحظة سلوكية على {student}: {category}. نأمل التواصل مع المدرسة عند الحاجة — {school}",
   activity_consent: "يرجى الموافقة على مشاركة {student} في «{activity}» بتاريخ {date} — {school}",
 } as const;
 export type TemplateKey = keyof typeof DEFAULT_TEMPLATES;

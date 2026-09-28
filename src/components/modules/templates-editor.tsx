@@ -21,6 +21,7 @@ const LABELS: Record<TemplateKey, string> = {
   leave_decision: "قرار الإجازة/الاستئذان",
   transfer_completed: "تنفيذ التحويل",
   activity_consent: "موافقة على نشاط/رحلة",
+  behavior_notice: "ملاحظة سلوكية",
 };
 
 export function TemplatesEditor({ keys }: { keys: TemplateKey[] }) {

@@ -344,7 +344,7 @@ export async function seedPhase2(tenantId: string) {
 
   // قواعد بيانات النظام في مساحة «شؤون الطلاب»
   const db = createTenantDb({ tenantId, actor: null });
-  for (const source of ["admissions", "students"]) await ensureSystemDatabase(db, tenantId, source, ownerId);
+  for (const source of ["admissions", "students", "leaves", "transfers", "behavior", "counseling"]) await ensureSystemDatabase(db, tenantId, source, ownerId);
 
   await seedPhase2Operations(tenantId, r);
   console.log(`✅ المرحلة ٢: ${created} طالباً، ${guardians} ولي أمر، ${number} طلب قبول.`);
