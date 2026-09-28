@@ -47,6 +47,12 @@
   --border: #e5e5e2;
   --border-strong: #d1d5db;
   --text-primary: #111827;
+  /* نص فوق الأزرار الأساسية الداكنة، والطبقات العائمة (التلميح والإشعار المنبثق) */
+  --on-primary: #ffffff;
+  --bg-inverse: #1f1f1f;
+  --inverse-success: #7ccf9f;
+  --inverse-danger: #f07186;
+  --inverse-accent: #9fe1e6;
   --text-secondary: #4b5563;
   --text-muted: #9ca3af;
   --text-disabled: #c4c7cc;
@@ -122,6 +128,8 @@
   --border: #303030;
   --border-strong: #404040;
   --text-primary: #f1f1ef;
+  --on-primary: #0f172a;
+  --bg-inverse: #363636;
   --text-secondary: #b4b4b0;
   --text-muted: #7a7a76;
   --text-disabled: #4f4f4c;
@@ -211,6 +219,11 @@
   --color-fg-2: var(--text-secondary);
   --color-fg-3: var(--text-muted);
   --color-fg-4: var(--text-disabled);
+  --color-on-primary: var(--on-primary);
+  --color-inverse: var(--bg-inverse);
+  --color-inverse-success: var(--inverse-success);
+  --color-inverse-danger: var(--inverse-danger);
+  --color-inverse-accent: var(--inverse-accent);
 
   --color-navy-900: var(--navy-900);
   --color-navy-700: var(--navy-700);

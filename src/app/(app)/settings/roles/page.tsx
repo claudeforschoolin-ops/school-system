@@ -156,9 +156,9 @@ function RoleEditor({ role }: { role: RoleRow }) {
         ))}
       </div>
 
-      <div className="thin-scroll overflow-x-auto rounded-lg shadow-card">
+      <div className="thin-scroll max-h-[calc(100vh-240px)] overflow-auto rounded-lg shadow-card">
         <table className="w-full min-w-[820px] border-collapse text-[13px]">
-          <thead className="sticky top-11 z-[2] bg-sidebar">
+          <thead className="sticky top-0 z-[2] bg-sidebar shadow-[0_1px_0_var(--border)]">
             <tr>
               <th className="w-[260px] px-3 py-2 text-start font-medium text-fg-3">الوحدة</th>
               {ACTIONS.map((a) => (

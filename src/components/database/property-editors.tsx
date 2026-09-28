@@ -227,7 +227,7 @@ export function MonthGrid({
               className={cn(
                 "relative flex h-9 flex-col items-center justify-center rounded-md text-[13px] tabular transition-colors hover:bg-hover",
                 iso === today && "font-bold text-danger-700",
-                (iso === selected?.slice(0, 10) || iso === rangeEnd?.slice(0, 10)) && "bg-navy-700 text-white hover:bg-navy-600 dark:text-[#0f172a]",
+                (iso === selected?.slice(0, 10) || iso === rangeEnd?.slice(0, 10)) && "bg-navy-700 text-on-primary hover:bg-navy-600",
                 selected && rangeEnd && iso > selected.slice(0, 10) && iso < rangeEnd.slice(0, 10) && "bg-navy-50",
               )}
             >

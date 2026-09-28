@@ -85,7 +85,7 @@ export function HomeView() {
           )}
         </Section>
 
-        <div className="mt-2 grid gap-8 lg:grid-cols-[1.4fr_1fr]">
+        <div className="mt-2 grid gap-8 lg:grid-cols-[1.4fr_1fr] [&>*]:min-w-0">
           <Section title="مهامي" icon={<CheckSquare className="size-4" />} action={<Link href="/tasks" className="text-[13px] text-fg-3 hover:text-fg">عرض الكل</Link>}>
             {tasks.isLoading ? (
               <div className="space-y-2">

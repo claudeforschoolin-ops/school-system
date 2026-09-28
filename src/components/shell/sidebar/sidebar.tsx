@@ -197,7 +197,7 @@ function IconRow() {
             <span
               className={cn(
                 "absolute -end-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold leading-none text-white ring-2 ring-sidebar",
-                danger ? "bg-danger-700" : "bg-navy-700 dark:text-[#0f172a]",
+                danger ? "bg-danger-700" : "bg-navy-700 dark:text-on-primary",
               )}
             >
               <NumberTicker value={Math.min(badge, 99)} className="h-3 leading-3" />

@@ -4,7 +4,7 @@ export function AuthCard({ title, subtitle, children, footer }: { title: string;
   return (
     <div className="rounded-xl bg-card p-7 shadow-[var(--shadow-card)]">
       <div className="mb-6 flex flex-col items-center text-center">
-        <span className="grid size-12 place-items-center rounded-[12px] bg-navy-700 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,.15)] dark:text-[#0f172a]">
+        <span className="grid size-12 place-items-center rounded-[12px] bg-navy-700 text-white shadow-[inset_0_-2px_0_rgba(0,0,0,.15)] dark:text-on-primary">
           <svg viewBox="0 0 64 64" className="size-7" aria-hidden>
             <path d="M18 44V22l14 12 14-12v22" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>

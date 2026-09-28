@@ -3,7 +3,7 @@
  * المحادثات الداخلية: قائمة المحادثات + الرسائل + محادثة جديدة (فردية أو جماعية).
  */
 import { AnimatePresence, motion } from "motion/react";
-import { MessageCirclePlus, Search, Users } from "lucide-react";
+import { ChevronRight, MessageCirclePlus, Search, Users } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatRelative, formatTime } from "@/lib/dates";
@@ -95,15 +95,16 @@ export function ChatView() {
                   </span>
                   <span className="flex items-center justify-between gap-2">
                     <span className="truncate text-[13px] text-fg-3">{c.lastMessage ? plainTextFromBody(c.lastMessage.body) : "لا توجد رسائل"}</span>
-                    {c.unread ? <span className="grid h-4 min-w-4 shrink-0 place-items-center rounded-full bg-navy-700 px-1 text-[10px] font-bold text-white dark:text-[#0f172a]">{c.unread}</span> : null}
+                    {c.unread ? <span className="grid h-4 min-w-4 shrink-0 place-items-center rounded-full bg-navy-700 px-1 text-[10px] font-bold text-white dark:text-on-primary">{c.unread}</span> : null}
                   </span>
                 </span>
               </button>
             ))}
           </div>
         </aside>
-        <section data-active={Boolean(active)} className="flex min-w-0 flex-1 flex-col">
-          {active ? <Conversation key={active.id} conversation={active} /> : <EmptyState illustration="inbox" title="اختر محادثة" description="أو ابدأ محادثة جديدة مع زملائك." />}
+        {/* على الجوال: القائمة أولاً، والمحادثة تظهر فقط عند اختيارها صراحة (مع زر رجوع) */}
+        <section data-active={Boolean(active && selectedId)} className="flex min-w-0 flex-1 flex-col max-md:data-[active=false]:hidden">
+          {active ? <Conversation key={active.id} conversation={active} onBack={() => setActiveId(null)} /> : <EmptyState illustration="inbox" title="اختر محادثة" description="أو ابدأ محادثة جديدة مع زملائك." />}
         </section>
       </div>
       <NewConversationDialog open={newOpen} onOpenChange={setNewOpen} pending={start.isPending} onStart={(userIds, title) => start.mutate({ userIds, title })} />
@@ -113,7 +114,7 @@ export function ChatView() {
 
 type ConversationItem = RouterOutputs["chat"]["conversations"][number];
 
-function Conversation({ conversation }: { conversation: ConversationItem }) {
+function Conversation({ conversation, onBack }: { conversation: ConversationItem; onBack: () => void }) {
   const { user, prefs } = useApp();
   const utils = trpc.useUtils();
   const messages = trpc.chat.messages.useQuery({ conversationId: conversation.id }, { refetchInterval: 5000 });
@@ -134,6 +135,9 @@ function Conversation({ conversation }: { conversation: ConversationItem }) {
   return (
     <>
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line px-4">
+        <button onClick={onBack} className="grid size-8 shrink-0 place-items-center rounded-md text-fg-2 hover:bg-hover md:hidden" aria-label="رجوع إلى المحادثات">
+          <ChevronRight className="size-5" />
+        </button>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[15px] font-medium">{conversation.title}</span>
           <span className="block truncate text-[12px] text-fg-3">{members.map((m) => m.name).join("، ")}</span>
@@ -150,7 +154,7 @@ function Conversation({ conversation }: { conversation: ConversationItem }) {
               return (
                 <motion.div key={m.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.16 }} className={cn("flex items-end gap-2", mine && "flex-row-reverse")}>
                   {!mine ? <Avatar name={author?.name ?? "؟"} color={author?.avatarColor} size={26} /> : null}
-                  <div className={cn("max-w-[70%] rounded-2xl px-3.5 py-2", mine ? "rounded-ee-md bg-navy-700 text-white dark:text-[#0f172a]" : "rounded-es-md bg-hover text-fg")}>
+                  <div className={cn("max-w-[70%] rounded-2xl px-3.5 py-2", mine ? "rounded-ee-md bg-navy-700 text-white dark:text-on-primary" : "rounded-es-md bg-hover text-fg")}>
                     {!mine && conversation.kind === "GROUP" ? <p className="mb-0.5 text-[12px] font-medium opacity-70">{author?.name}</p> : null}
                     <RichBody body={m.body} className="whitespace-pre-wrap text-[14px] leading-6" />
                     <p className={cn("mt-0.5 text-[11px]", mine ? "text-white/70 dark:text-black/60" : "text-fg-3")}>{formatTime(m.createdAt, prefs.digits)}</p>

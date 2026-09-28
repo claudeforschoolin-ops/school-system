@@ -99,7 +99,7 @@ export function CommentComposer({
       <button
         onClick={submit}
         disabled={pending}
-        className="grid size-7 shrink-0 place-items-center rounded-full bg-navy-700 text-white transition-opacity hover:bg-navy-600 disabled:opacity-40 dark:text-[#0f172a]"
+        className="grid size-7 shrink-0 place-items-center rounded-full bg-navy-700 text-white transition-opacity hover:bg-navy-600 disabled:opacity-40 dark:text-on-primary"
         aria-label="إرسال"
       >
         {pending ? <Spinner className="size-3.5" /> : <ArrowUp className="size-4" />}

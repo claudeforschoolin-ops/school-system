@@ -63,16 +63,16 @@ export function Toaster() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0, transition: { duration: 0.2, ease: EASE_OUT } }}
             exit={{ opacity: 0, y: 8, transition: { duration: 0.15 } }}
-            className="pointer-events-auto flex min-h-10 max-w-[520px] items-center gap-3 rounded-lg bg-[#1f1f1f] px-3.5 py-2 text-[14px] text-white shadow-popover dark:bg-[#333]"
+            className="pointer-events-auto flex min-h-10 max-w-[520px] items-center gap-3 rounded-lg bg-inverse px-3.5 py-2 text-[14px] text-white shadow-popover"
             role="status"
           >
-            {t.kind === "success" ? <CircleCheck className="size-4 shrink-0 text-[#7ccf9f]" /> : null}
-            {t.kind === "error" ? <CircleAlert className="size-4 shrink-0 text-[#f07186]" /> : null}
+            {t.kind === "success" ? <CircleCheck className="size-4 shrink-0 text-inverse-success" /> : null}
+            {t.kind === "error" ? <CircleAlert className="size-4 shrink-0 text-inverse-danger" /> : null}
             {t.kind === "info" ? <Info className="size-4 shrink-0 text-white/70" /> : null}
             <span className="leading-6">{t.message}</span>
             {t.action ? (
               <button
-                className="ms-2 rounded-md px-2 py-0.5 text-[13px] font-medium text-[#9fe1e6] hover:bg-white/10"
+                className="ms-2 rounded-md px-2 py-0.5 text-[13px] font-medium text-inverse-accent hover:bg-white/10"
                 onClick={() => {
                   t.action!.onClick();
                   dismiss(t.id);

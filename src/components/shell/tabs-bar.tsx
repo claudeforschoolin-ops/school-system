@@ -123,9 +123,11 @@ export function TabsBar({ onOpenMobileSidebar }: { onOpenMobileSidebar: () => vo
       </div>
 
       {tenant.isDemo ? (
-        <span className="mb-2 hidden h-5 shrink-0 items-center gap-1.5 rounded-full bg-gold-50 px-2 text-[11px] font-medium text-gold-700 sm:inline-flex" title="هذه بيانات تجريبية لأغراض العرض">
+        <span className="mb-2 inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full bg-gold-50 px-2 text-[11px] font-medium text-gold-700" title="هذه بيانات تجريبية لأغراض العرض">
           <span className="size-1.5 rounded-full bg-gold-700" />
-          بيانات تجريبية
+          {/* على الجوال كلمة واحدة لتوفير المساحة، ويبقى الشريط ظاهراً دائماً */}
+          <span className="sm:hidden">تجريبي</span>
+          <span className="hidden sm:inline">بيانات تجريبية</span>
         </span>
       ) : null}
     </div>

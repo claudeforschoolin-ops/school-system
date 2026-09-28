@@ -24,7 +24,7 @@ export function WorkspaceMenu() {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={tenant.logoUrl} alt="" className="size-6 rounded-md object-cover" />
           ) : (
-            <span className="grid size-6 shrink-0 place-items-center rounded-md bg-navy-700 text-white dark:text-[#0f172a]">
+            <span className="grid size-6 shrink-0 place-items-center rounded-md bg-navy-700 text-white dark:text-on-primary">
               <svg viewBox="0 0 64 64" className="size-4" aria-hidden>
                 <path d="M18 44V22l14 12 14-12v22" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>

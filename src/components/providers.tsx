@@ -39,7 +39,11 @@ export function Providers({ children }: { children: ReactNode }) {
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [
-        loggerLink({ enabled: (op) => process.env.NODE_ENV === "development" && op.direction === "down" && op.result instanceof Error }),
+        // سجل أخطاء التطوير فقط — ويستثني المصادقة والحساب حتى لا تظهر كلمات المرور والرموز في السجلات
+        loggerLink({
+          enabled: (op) =>
+            process.env.NODE_ENV === "development" && op.direction === "down" && op.result instanceof Error && !/^(auth|account)\./.test(op.result.data?.path ?? "auth."),
+        }),
         httpBatchLink({ url: "/api/trpc", transformer: superjson, maxURLLength: 4000 }),
       ],
     }),
