@@ -1,0 +1,951 @@
+// =====================================================================
+// منصة — مخطط قاعدة البيانات (المرحلة ١: الأساس)
+// ---------------------------------------------------------------------
+// قواعد عامة:
+//  - كل كيان (عدا Tenant) يحمل tenantId، وكل الاستعلامات تمر عبر عميل
+//    مقيّد بالمستأجر (src/server/db/tenant.ts) يحقن tenantId إلزامياً.
+//  - الحقول القياسية: createdAt, updatedAt, createdById, updatedById,
+//    deletedAt (حذف ناعم لغير المالية).
+//  - سجل التدقيق AuditLog للإلحاق فقط، ومحمي بـ Trigger يمنع التعديل والحذف.
+// =====================================================================
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------
+// المستأجر والهيكل التنظيمي
+// ---------------------------------------------------------------------
+
+model Tenant {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  /// اسم المدرسة أو مجموعة المدارس
+  name         String
+  /// اسم المنصة الظاهر في الشريط الجانبي وتسجيل الدخول والفواتير
+  platformName String   @default("منصة")
+  logoUrl      String?
+  /// لون تمييز ضمن الألوان الرسمية المعتمدة فقط (navy | teal | slate)
+  accentColor  String   @default("navy")
+  currency     String   @default("SAR")
+  locale       String   @default("ar")
+  timezone     String   @default("Asia/Riyadh")
+  /// إعدادات عامة: سياسة كلمات المرور، الترقيم، الإشعارات...
+  settings     Json     @default("{}")
+  isDemo       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  branches      Branch[]
+  stages        Stage[]
+  users         User[]
+  roles         Role[]
+  academicYears AcademicYear[]
+  teamspaces    Teamspace[]
+}
+
+enum BranchGender {
+  BOYS
+  GIRLS
+  MIXED
+}
+
+model Branch {
+  id          String       @id @default(cuid())
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  code        String
+  name        String
+  gender      BranchGender @default(MIXED)
+  address     String?
+  phone       String?
+  email       String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  sections  Section[]
+  userRoles UserRole[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+/// المرحلة الدراسية: رياض أطفال، ابتدائي، متوسط، ثانوي
+model Stage {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  code        String
+  name        String
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  grades    Grade[]
+  userRoles UserRole[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+/// الصف الدراسي داخل مرحلة
+model Grade {
+  id          String    @id @default(cuid())
+  tenantId    String
+  stageId     String
+  stage       Stage     @relation(fields: [stageId], references: [id])
+  code        String
+  name        String
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  sections Section[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, stageId])
+}
+
+/// الفصل/الشعبة داخل صف وفرع وعام دراسي
+model Section {
+  id             String       @id @default(cuid())
+  tenantId       String
+  branchId       String
+  branch         Branch       @relation(fields: [branchId], references: [id])
+  gradeId        String
+  grade          Grade        @relation(fields: [gradeId], references: [id])
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  name           String
+  capacity       Int          @default(30)
+  homeroomUserId String?
+  room           String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  createdById    String?
+  updatedById    String?
+  deletedAt      DateTime?
+
+  @@unique([tenantId, branchId, gradeId, academicYearId, name])
+  @@index([tenantId, branchId])
+}
+
+model AcademicYear {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  name        String
+  startDate   DateTime  @db.Date
+  endDate     DateTime  @db.Date
+  isCurrent   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  terms    Term[]
+  sections Section[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model Term {
+  id             String       @id @default(cuid())
+  tenantId       String
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  name           String
+  order          Int          @default(1)
+  startDate      DateTime     @db.Date
+  endDate        DateTime     @db.Date
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  createdById    String?
+  updatedById    String?
+  deletedAt      DateTime?
+
+  @@index([tenantId, academicYearId])
+}
+
+// ---------------------------------------------------------------------
+// المستخدمون والمصادقة
+// ---------------------------------------------------------------------
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+}
+
+model User {
+  id                String     @id @default(cuid())
+  tenantId          String
+  tenant            Tenant     @relation(fields: [tenantId], references: [id])
+  email             String
+  phone             String?
+  name              String
+  jobTitle          String?
+  avatarUrl         String?
+  /// لون الصورة الرمزية (من ألوان اللوحة الرسمية)
+  avatarColor       String     @default("navy")
+  passwordHash      String?
+  status            UserStatus @default(ACTIVE)
+  /// المصادقة الثنائية (TOTP) — السر مشفّر بـ AES-256-GCM
+  twoFactorEnabled  Boolean    @default(false)
+  twoFactorSecret   String?
+  /// رموز الاسترداد (مُجزّأة)
+  twoFactorBackup   Json?
+  failedLoginCount  Int        @default(0)
+  lockedUntil       DateTime?
+  lastLoginAt       DateTime?
+  passwordChangedAt DateTime?
+  /// تفضيلات: المظهر، اللغة، الأرقام، التقويم، عرض الشريط الجانبي...
+  preferences       Json       @default("{}")
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  createdById       String?
+  updatedById       String?
+  deletedAt         DateTime?
+
+  roles         UserRole[]
+  sessions      Session[]
+  notifications Notification[] @relation("NotificationRecipient")
+
+  @@unique([tenantId, email])
+  @@index([tenantId, status])
+  @@index([email])
+}
+
+enum PermissionScope {
+  /// كل المدرسة / المجموعة
+  ALL
+  /// الفروع المسندة للمستخدم
+  BRANCH
+  /// المراحل المسندة للمستخدم
+  STAGE
+  /// السجلات المسندة إليه (فصوله، مواده، أبناؤه)
+  ASSIGNED
+  /// سجلاته فقط
+  OWN
+}
+
+model Role {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  /// مفتاح ثابت للأدوار النظامية (OWNER, PRINCIPAL...) أو معرّف مخصص
+  key          String
+  name         String
+  description  String?
+  isSystem     Boolean  @default(false)
+  /// المصادقة الثنائية إلزامية لهذا الدور
+  requires2fa  Boolean  @default(false)
+  color        String   @default("slate")
+  position     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String?
+  updatedById  String?
+
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+}
+
+/// صلاحية دور على (وحدة × إجراء) ضمن نطاق بيانات
+model RolePermission {
+  id       String          @id @default(cuid())
+  tenantId String
+  roleId   String
+  role     Role            @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  module   String
+  action   String
+  scope    PermissionScope @default(ALL)
+
+  @@unique([roleId, module, action])
+  @@index([tenantId, roleId])
+}
+
+model UserRole {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  /// تقييد الدور بفرع (لنطاق BRANCH)
+  branchId  String?
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+  /// تقييد الدور بمرحلة (لنطاق STAGE)
+  stageId   String?
+  stage     Stage?   @relation(fields: [stageId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, roleId, branchId, stageId])
+  @@index([tenantId, userId])
+}
+
+model Session {
+  id                String    @id @default(cuid())
+  tenantId          String
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// SHA-256 للرمز — الرمز الخام لا يُخزَّن أبداً
+  tokenHash         String    @unique
+  ip                String?
+  userAgent         String?
+  deviceLabel       String?
+  twoFactorVerified Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  lastActiveAt      DateTime  @default(now())
+  expiresAt         DateTime
+  revokedAt         DateTime?
+
+  @@index([tenantId, userId])
+}
+
+enum AuthTokenType {
+  PASSWORD_RESET
+  INVITE
+  LOGIN_OTP
+  TWO_FACTOR_CHALLENGE
+}
+
+model AuthToken {
+  id        String        @id @default(cuid())
+  tenantId  String
+  userId    String
+  type      AuthTokenType
+  tokenHash String        @unique
+  /// للرموز الرقمية (OTP): الرمز المجزّأ وعدد المحاولات
+  codeHash  String?
+  attempts  Int           @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  @@index([tenantId, userId, type])
+}
+
+/// صندوق البريد الصادر (للتطوير: يُعرض بدلاً من الإرسال الفعلي)
+model OutboundMessage {
+  id        String   @id @default(cuid())
+  tenantId  String
+  channel   String
+  to        String
+  subject   String?
+  body      String
+  status    String   @default("QUEUED")
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+}
+
+// ---------------------------------------------------------------------
+// سجل التدقيق — للإلحاق فقط (Trigger يمنع UPDATE/DELETE/TRUNCATE)
+// ---------------------------------------------------------------------
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String?
+  userName   String?
+  /// CREATE | UPDATE | DELETE | RESTORE | LOGIN | LOGIN_FAILED | LOGOUT | EXPORT | PERMISSION_CHANGE ...
+  action     String
+  entityType String
+  entityId   String?
+  summary    String?
+  oldValue   Json?
+  newValue   Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, userId])
+}
+
+// ---------------------------------------------------------------------
+// الإشعارات والموافقات
+// ---------------------------------------------------------------------
+
+enum NotificationType {
+  MENTION
+  COMMENT
+  ASSIGNMENT
+  APPROVAL
+  AUTOMATION
+  SYSTEM
+  MESSAGE
+}
+
+model Notification {
+  id         String           @id @default(cuid())
+  tenantId   String
+  userId     String
+  user       User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  type       NotificationType
+  title      String
+  body       String?
+  link       String?
+  actorId    String?
+  entityType String?
+  entityId   String?
+  readAt     DateTime?
+  archivedAt DateTime?
+  createdAt  DateTime         @default(now())
+
+  @@index([tenantId, userId, readAt])
+  @@index([tenantId, userId, createdAt])
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model ApprovalRequest {
+  id            String         @id @default(cuid())
+  tenantId      String
+  /// نوع الطلب (مفتاح مسار الموافقة): discount_exception, expense, leave...
+  type          String
+  title         String
+  description   String?
+  entityType    String?
+  entityId      String?
+  link          String?
+  payload       Json           @default("{}")
+  requestedById String
+  status        ApprovalStatus @default(PENDING)
+  currentStep   Int            @default(1)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  decidedAt     DateTime?
+
+  steps ApprovalStep[]
+
+  @@index([tenantId, status])
+}
+
+model ApprovalStep {
+  id             String          @id @default(cuid())
+  tenantId       String
+  requestId      String
+  request        ApprovalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  order          Int
+  name           String
+  /// المعتمد: دور أو مستخدم محدد
+  approverRoleId String?
+  approverUserId String?
+  status         ApprovalStatus  @default(PENDING)
+  decidedById    String?
+  decidedAt      DateTime?
+  comment        String?
+  /// مهلة التصعيد بالساعات (اختياري)
+  dueHours       Int?
+
+  @@unique([requestId, order])
+  @@index([tenantId, status])
+}
+
+// ---------------------------------------------------------------------
+// مساحات الفرق والصفحات وقواعد البيانات (روح Notion)
+// ---------------------------------------------------------------------
+
+model Teamspace {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  key         String
+  name        String
+  icon        String?
+  description String?
+  /// الوحدات التي تمنح صلاحية الاطلاع على المساحة (أي منها يكفي)
+  moduleKeys  String[] @default([])
+  position    Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  members TeamspaceMember[]
+  pages   Page[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+}
+
+enum AccessLevel {
+  VIEW
+  COMMENT
+  EDIT
+  FULL
+}
+
+model TeamspaceMember {
+  id          String      @id @default(cuid())
+  tenantId    String
+  teamspaceId String
+  teamspace   Teamspace   @relation(fields: [teamspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  level       AccessLevel @default(EDIT)
+  createdAt   DateTime    @default(now())
+
+  @@unique([teamspaceId, userId])
+  @@index([tenantId, userId])
+}
+
+enum PageKind {
+  PAGE
+  DATABASE
+}
+
+model Page {
+  id          String     @id @default(cuid())
+  tenantId    String
+  kind        PageKind   @default(PAGE)
+  /// صفحة ضمن مساحة فريق، أو صفحة خاصة (teamspaceId = null و ownerId محدد)
+  teamspaceId String?
+  teamspace   Teamspace? @relation(fields: [teamspaceId], references: [id])
+  ownerId     String?
+  parentId    String?
+  parent      Page?      @relation("PageTree", fields: [parentId], references: [id])
+  children    Page[]     @relation("PageTree")
+  title       String     @default("")
+  /// أيقونة: "lucide:<name>" أو رمز تعبيري أو "img:<url>"
+  icon        String?
+  /// الغلاف: "color:<token>" أو رابط صورة
+  cover       String?
+  description String?
+  /// محتوى المحرر (Tiptap JSON)
+  content     Json?
+  fullWidth   Boolean    @default(false)
+  isLocked    Boolean    @default(false)
+  /// مفتاح نظامي للصفحات المولّدة (لوحات، قوالب)
+  systemKey   String?
+  position    Float      @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  createdById String?
+  updatedById String?
+  /// سلة المهملات (حذف ناعم)
+  deletedAt   DateTime?
+
+  database Database?
+  shares   PageShare[]
+
+  @@index([tenantId, teamspaceId, parentId])
+  @@index([tenantId, ownerId])
+}
+
+/// مشاركة صفحة (خاصة غالباً) مع مستخدمين محددين
+model PageShare {
+  id        String      @id @default(cuid())
+  tenantId  String
+  pageId    String
+  page      Page        @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  userId    String
+  level     AccessLevel @default(VIEW)
+  createdAt DateTime    @default(now())
+
+  @@unique([pageId, userId])
+  @@index([tenantId, userId])
+}
+
+model Database {
+  id          String   @id @default(cuid())
+  tenantId    String
+  /// الصفحة المضيفة لقاعدة البيانات (عرض كامل)
+  pageId      String   @unique
+  page        Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  /// اسم خاصية العنوان
+  titleLabel  String   @default("الاسم")
+  /// عدّاد الترقيم التلقائي للسجلات
+  rowCounter  Int      @default(0)
+  rowPrefix   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  updatedById String?
+
+  properties  DatabaseProperty[]
+  views       DatabaseView[]
+  rows        DatabaseRow[]
+  templates   DatabaseTemplate[]
+  automations Automation[]
+
+  @@index([tenantId])
+}
+
+enum PropertyType {
+  TEXT
+  NUMBER
+  MONEY
+  DATE
+  SELECT
+  MULTI_SELECT
+  STATUS
+  PERSON
+  FILES
+  CHECKBOX
+  URL
+  PHONE
+  EMAIL
+  RELATION
+  ROLLUP
+  FORMULA
+  CREATED_TIME
+  UPDATED_TIME
+  CREATED_BY
+}
+
+model DatabaseProperty {
+  id          String       @id @default(cuid())
+  tenantId    String
+  databaseId  String
+  database    Database     @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  name        String
+  type        PropertyType
+  /// إعدادات الخاصية: خيارات الاختيار، تنسيق الرقم، هدف العلاقة، معادلة...
+  config      Json         @default("{}")
+  description String?
+  position    Float        @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  createdById String?
+  updatedById String?
+
+  @@index([tenantId, databaseId])
+}
+
+enum ViewType {
+  TABLE
+  BOARD
+  CALENDAR
+  TIMELINE
+  GALLERY
+  LIST
+}
+
+model DatabaseView {
+  id          String   @id @default(cuid())
+  tenantId    String
+  databaseId  String
+  database    Database @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  name        String
+  type        ViewType
+  icon        String?
+  /// التصفية، الفرز، الأعمدة المرئية، التجميع، ارتفاع الصفوف...
+  config      Json     @default("{}")
+  /// عرض شخصي لا يراه إلا مالكه
+  isPersonal  Boolean  @default(false)
+  ownerId     String?
+  position    Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  updatedById String?
+
+  @@index([tenantId, databaseId])
+}
+
+model DatabaseRow {
+  id          String    @id @default(cuid())
+  tenantId    String
+  databaseId  String
+  database    Database  @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  /// رقم تسلسلي داخل قاعدة البيانات
+  number      Int
+  title       String    @default("")
+  icon        String?
+  cover       String?
+  /// قيم الخصائص: { [propertyId]: value }
+  values      Json      @default("{}")
+  /// محتوى صفحة السجل (Tiptap JSON)
+  content     Json?
+  position    Float     @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  @@unique([databaseId, number])
+  @@index([tenantId, databaseId, deletedAt])
+  /// فهرس GIN لتسريع البحث داخل القيم (مثل «المهام المسندة إليّ»)
+  @@index([values(ops: JsonbPathOps)], type: Gin)
+}
+
+model DatabaseTemplate {
+  id          String   @id @default(cuid())
+  tenantId    String
+  databaseId  String
+  database    Database @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  name        String
+  icon        String?
+  title       String   @default("")
+  values      Json     @default("{}")
+  content     Json?
+  isDefault   Boolean  @default(false)
+  position    Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  updatedById String?
+
+  @@index([tenantId, databaseId])
+}
+
+/// قاعدة أتمتة: «عندما … فإن …»
+model Automation {
+  id          String    @id @default(cuid())
+  tenantId    String
+  databaseId  String
+  database    Database  @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  name        String
+  isEnabled   Boolean   @default(true)
+  /// { type: "ROW_CREATED" | "PROPERTY_CHANGED" | "DATE_REACHED", ... }
+  trigger     Json
+  /// [{ type: "SET_PROPERTY" | "NOTIFY" | "ADD_COMMENT", ... }]
+  actions     Json
+  runCount    Int       @default(0)
+  lastRunAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+
+  runs AutomationRun[]
+
+  @@index([tenantId, databaseId])
+}
+
+model AutomationRun {
+  id           String     @id @default(cuid())
+  tenantId     String
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  rowId        String?
+  status       String
+  message      String?
+  createdAt    DateTime   @default(now())
+
+  @@index([tenantId, automationId, createdAt])
+}
+
+/// نسخ الصفحات النصية للاسترجاع
+model PageVersion {
+  id          String   @id @default(cuid())
+  tenantId    String
+  /// "PAGE" | "ROW"
+  targetType  String
+  targetId    String
+  title       String
+  content     Json?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, targetType, targetId, createdAt])
+}
+
+// ---------------------------------------------------------------------
+// التعليقات والإشارات والمفضلة
+// ---------------------------------------------------------------------
+
+model Comment {
+  id           String    @id @default(cuid())
+  tenantId     String
+  /// "PAGE" | "ROW"
+  targetType   String
+  targetId     String
+  /// تعليق على خاصية محددة (اختياري)
+  propertyId   String?
+  parentId     String?
+  parent       Comment?  @relation("CommentThread", fields: [parentId], references: [id])
+  replies      Comment[] @relation("CommentThread")
+  authorId     String
+  body         String
+  resolvedAt   DateTime?
+  resolvedById String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  @@index([tenantId, targetType, targetId])
+}
+
+model Mention {
+  id              String   @id @default(cuid())
+  tenantId        String
+  mentionedUserId String
+  mentionedById   String
+  /// "COMMENT" | "PAGE" | "ROW" | "MESSAGE"
+  sourceType      String
+  sourceId        String
+  targetType      String
+  targetId        String
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId, mentionedUserId])
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String
+  /// "PAGE" | "ROW"
+  targetType String
+  targetId   String
+  position   Float    @default(0)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, targetType, targetId])
+  @@index([tenantId, userId])
+}
+
+model RecentVisit {
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String
+  targetType String
+  targetId   String
+  visitedAt  DateTime @default(now())
+
+  @@unique([userId, targetType, targetId])
+  @@index([tenantId, userId, visitedAt])
+}
+
+// ---------------------------------------------------------------------
+// التقويم والمحادثات والملفات والترقيم
+// ---------------------------------------------------------------------
+
+enum EventCategory {
+  ACADEMIC
+  ADMINISTRATIVE
+  EXAM
+  MEETING
+  HOLIDAY
+  ACTIVITY
+}
+
+model CalendarEvent {
+  id          String        @id @default(cuid())
+  tenantId    String
+  branchId    String?
+  title       String
+  description String?
+  category    EventCategory @default(ADMINISTRATIVE)
+  location    String?
+  startAt     DateTime
+  endAt       DateTime
+  allDay      Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  @@index([tenantId, startAt])
+}
+
+enum ConversationKind {
+  DIRECT
+  GROUP
+  AGENT
+}
+
+model Conversation {
+  id            String           @id @default(cuid())
+  tenantId      String
+  kind          ConversationKind @default(DIRECT)
+  title         String?
+  /// مفتاح المساعد الذكي لمحادثات المساعدين
+  agentKey      String?
+  createdById   String
+  lastMessageAt DateTime         @default(now())
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  members  ConversationMember[]
+  messages Message[]
+
+  @@index([tenantId, lastMessageAt])
+}
+
+model ConversationMember {
+  id             String       @id @default(cuid())
+  tenantId       String
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  lastReadAt     DateTime?
+  joinedAt       DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([tenantId, userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  tenantId       String
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  /// null لرسائل النظام أو المساعد
+  authorId       String?
+  body           String
+  createdAt      DateTime     @default(now())
+  editedAt       DateTime?
+  deletedAt      DateTime?
+
+  @@index([tenantId, conversationId, createdAt])
+}
+
+model FileObject {
+  id           String   @id @default(cuid())
+  tenantId     String
+  storageKey   String   @unique
+  name         String
+  mime         String
+  size         Int
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+/// ترقيم تسلسلي غير منقطع (فواتير، سندات، أرقام أكاديمية...)
+model Sequence {
+  id        String   @id @default(cuid())
+  tenantId  String
+  key       String
+  prefix    String   @default("")
+  padding   Int      @default(5)
+  nextValue Int      @default(1)
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, key])
+}

@@ -1,0 +1,652 @@
+@import "tailwindcss";
+
+/* الوضع الداكن عبر السمة data-theme على html */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* =====================================================================
+   نظام التصميم — متغيرات الألوان (Design Tokens)
+   ===================================================================== */
+:root {
+  /* الأساسية */
+  --navy-900: #0f172a;
+  --navy-700: #1b3a6b;
+  --navy-600: #24498a;
+  --navy-100: #e3eaf5;
+  --navy-50: #f1f5fb;
+
+  --slate-800: #2c3e50;
+  --slate-blue: #4c63a6;
+
+  --teal-700: #0d7377;
+  --teal-500: #14919b;
+  --teal-100: #d0f0f4;
+  --teal-50: #eaf8fa;
+
+  --gold-700: #b8860b;
+  --gold-50: #fbf4e1;
+
+  /* الحالات */
+  --success-800: #1b4332;
+  --success-100: #ddefe5;
+  --success-50: #eef7f1;
+  --warning-700: #d97706;
+  --warning-100: #fbe8cc;
+  --warning-50: #fef5e7;
+  --danger-700: #c41e3a;
+  --danger-100: #f7d9de;
+  --danger-50: #fcedef;
+
+  /* المحايدة (نمط Notion) */
+  --bg-app: #ffffff;
+  --bg-sidebar: #f7f7f5;
+  --bg-hover: #efefed;
+  --bg-active: #e6e6e3;
+  --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-overlay: rgba(15, 23, 42, 0.32);
+  --border: #e5e5e2;
+  --border-strong: #d1d5db;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  --text-disabled: #c4c7cc;
+
+  /* ألوان الشارات: خلفية باهتة + نص داكن + نقطة */
+  --tag-gray-bg: #f1f1ef;
+  --tag-gray-fg: #57575a;
+  --tag-gray-dot: #9b9a97;
+  --tag-gray-col: #f7f7f5;
+  --tag-navy-bg: #e3eaf5;
+  --tag-navy-fg: #1b3a6b;
+  --tag-navy-dot: #24498a;
+  --tag-navy-col: #f1f5fb;
+  --tag-teal-bg: #d0f0f4;
+  --tag-teal-fg: #0b5f62;
+  --tag-teal-dot: #14919b;
+  --tag-teal-col: #eaf8fa;
+  --tag-slate-bg: #e4e8f3;
+  --tag-slate-fg: #34457a;
+  --tag-slate-dot: #4c63a6;
+  --tag-slate-col: #f1f5fb;
+  --tag-gold-bg: #fbf4e1;
+  --tag-gold-fg: #7a5906;
+  --tag-gold-dot: #b8860b;
+  --tag-gold-col: #fdf9ee;
+  --tag-green-bg: #ddefe5;
+  --tag-green-fg: #1b4332;
+  --tag-green-dot: #2d6a4f;
+  --tag-green-col: #eef7f1;
+  --tag-orange-bg: #fbe8cc;
+  --tag-orange-fg: #8a4204;
+  --tag-orange-dot: #d97706;
+  --tag-orange-col: #fef5e7;
+  --tag-red-bg: #f7d9de;
+  --tag-red-fg: #8f1529;
+  --tag-red-dot: #c41e3a;
+  --tag-red-col: #fcedef;
+  --tag-brown-bg: #efe6de;
+  --tag-brown-fg: #5f4129;
+  --tag-brown-dot: #8c6a4f;
+  --tag-brown-col: #f8f3ef;
+  --tag-purple-bg: #ece8f3;
+  --tag-purple-fg: #4d416d;
+  --tag-purple-dot: #7a6aa0;
+  --tag-purple-col: #f6f3fa;
+
+  /* الظلال — خفيفة جداً */
+  --shadow-card: 0 0 0 1px var(--border), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-card-hover: 0 0 0 1px var(--border-strong), 0 2px 6px rgba(15, 23, 42, 0.08);
+  --shadow-popover: 0 0 0 1px var(--border), 0 8px 24px rgba(15, 23, 42, 0.14);
+  --shadow-drag: 0 0 0 1px var(--border-strong), 0 12px 28px rgba(15, 23, 42, 0.18);
+
+  /* الخطوط */
+  --font-ui: "Thmanyah", "IBM Plex Sans Arabic", "Segoe UI", Tahoma, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* منحنيات الحركة */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --sidebar-width: 260px;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg-app: #191919;
+  --bg-sidebar: #202020;
+  --bg-hover: #2b2b2b;
+  --bg-active: #333333;
+  --bg-card: #252525;
+  --bg-elevated: #262626;
+  --bg-overlay: rgba(0, 0, 0, 0.5);
+  --border: #303030;
+  --border-strong: #404040;
+  --text-primary: #f1f1ef;
+  --text-secondary: #b4b4b0;
+  --text-muted: #7a7a76;
+  --text-disabled: #4f4f4c;
+
+  --navy-700: #7d9bd1;
+  --navy-600: #93afe0;
+  --navy-100: rgba(125, 155, 209, 0.2);
+  --navy-50: rgba(125, 155, 209, 0.12);
+  --teal-700: #4fc3cb;
+  --teal-500: #5fd0d8;
+  --teal-100: rgba(20, 145, 155, 0.24);
+  --teal-50: rgba(20, 145, 155, 0.14);
+  --gold-700: #e0b24a;
+  --gold-50: rgba(184, 134, 11, 0.18);
+  --success-800: #7ccf9f;
+  --success-100: rgba(45, 106, 79, 0.3);
+  --success-50: rgba(45, 106, 79, 0.18);
+  --warning-700: #f0a24a;
+  --warning-100: rgba(217, 119, 6, 0.26);
+  --warning-50: rgba(217, 119, 6, 0.14);
+  --danger-700: #f07186;
+  --danger-100: rgba(196, 30, 58, 0.28);
+  --danger-50: rgba(196, 30, 58, 0.14);
+
+  --tag-gray-bg: rgba(155, 154, 151, 0.2);
+  --tag-gray-fg: #d3d3cf;
+  --tag-gray-col: rgba(255, 255, 255, 0.03);
+  --tag-navy-bg: rgba(93, 131, 199, 0.22);
+  --tag-navy-fg: #b9cdf0;
+  --tag-navy-dot: #7d9bd1;
+  --tag-navy-col: rgba(93, 131, 199, 0.08);
+  --tag-teal-bg: rgba(20, 145, 155, 0.24);
+  --tag-teal-fg: #9fe1e6;
+  --tag-teal-dot: #4fc3cb;
+  --tag-teal-col: rgba(20, 145, 155, 0.08);
+  --tag-slate-bg: rgba(76, 99, 166, 0.26);
+  --tag-slate-fg: #c0cbee;
+  --tag-slate-dot: #8398d6;
+  --tag-slate-col: rgba(76, 99, 166, 0.08);
+  --tag-gold-bg: rgba(184, 134, 11, 0.22);
+  --tag-gold-fg: #f0d28c;
+  --tag-gold-dot: #e0b24a;
+  --tag-gold-col: rgba(184, 134, 11, 0.07);
+  --tag-green-bg: rgba(45, 106, 79, 0.3);
+  --tag-green-fg: #a8e0bf;
+  --tag-green-dot: #6cc393;
+  --tag-green-col: rgba(45, 106, 79, 0.1);
+  --tag-orange-bg: rgba(217, 119, 6, 0.24);
+  --tag-orange-fg: #f7c58b;
+  --tag-orange-dot: #f0a24a;
+  --tag-orange-col: rgba(217, 119, 6, 0.08);
+  --tag-red-bg: rgba(196, 30, 58, 0.26);
+  --tag-red-fg: #f5b0bb;
+  --tag-red-dot: #f07186;
+  --tag-red-col: rgba(196, 30, 58, 0.08);
+  --tag-brown-bg: rgba(140, 106, 79, 0.28);
+  --tag-brown-fg: #e2cbb7;
+  --tag-brown-dot: #c29d7d;
+  --tag-brown-col: rgba(140, 106, 79, 0.08);
+  --tag-purple-bg: rgba(122, 106, 160, 0.28);
+  --tag-purple-fg: #d4cbeb;
+  --tag-purple-dot: #a898cf;
+  --tag-purple-col: rgba(122, 106, 160, 0.09);
+
+  --shadow-card: 0 0 0 1px var(--border), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-card-hover: 0 0 0 1px var(--border-strong), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-popover: 0 0 0 1px var(--border-strong), 0 10px 28px rgba(0, 0, 0, 0.45);
+  --shadow-drag: 0 0 0 1px var(--border-strong), 0 14px 30px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+/* ربط المتغيرات بأدوات Tailwind (inline حتى يتبع تبديل السمة) */
+@theme inline {
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-mono);
+
+  --color-app: var(--bg-app);
+  --color-sidebar: var(--bg-sidebar);
+  --color-hover: var(--bg-hover);
+  --color-active: var(--bg-active);
+  --color-card: var(--bg-card);
+  --color-elevated: var(--bg-elevated);
+  --color-overlay: var(--bg-overlay);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-fg: var(--text-primary);
+  --color-fg-2: var(--text-secondary);
+  --color-fg-3: var(--text-muted);
+  --color-fg-4: var(--text-disabled);
+
+  --color-navy-900: var(--navy-900);
+  --color-navy-700: var(--navy-700);
+  --color-navy-600: var(--navy-600);
+  --color-navy-100: var(--navy-100);
+  --color-navy-50: var(--navy-50);
+  --color-slate-800: var(--slate-800);
+  --color-slate-blue: var(--slate-blue);
+  --color-teal-700: var(--teal-700);
+  --color-teal-500: var(--teal-500);
+  --color-teal-100: var(--teal-100);
+  --color-teal-50: var(--teal-50);
+  --color-gold-700: var(--gold-700);
+  --color-gold-50: var(--gold-50);
+  --color-success-800: var(--success-800);
+  --color-success-100: var(--success-100);
+  --color-success-50: var(--success-50);
+  --color-warning-700: var(--warning-700);
+  --color-warning-100: var(--warning-100);
+  --color-warning-50: var(--warning-50);
+  --color-danger-700: var(--danger-700);
+  --color-danger-100: var(--danger-100);
+  --color-danger-50: var(--danger-50);
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  --shadow-card: var(--shadow-card);
+  --shadow-card-hover: var(--shadow-card-hover);
+  --shadow-popover: var(--shadow-popover);
+  --shadow-drag: var(--shadow-drag);
+
+  --ease-out: var(--ease-out);
+  --ease-in-out: var(--ease-in-out);
+
+  --animate-shimmer: shimmer 1.4s ease-in-out infinite;
+  --animate-float: float 4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* =====================================================================
+   الأساس
+   ===================================================================== */
+@layer base {
+  html {
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    background: var(--bg-app);
+    color: var(--text-primary);
+  }
+  body {
+    font-size: 15px;
+    line-height: 1.7;
+    min-height: 100dvh;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--teal-500) 22%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--navy-600) 55%, transparent);
+    outline-offset: 1px;
+    border-radius: 4px;
+  }
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-muted);
+  }
+}
+
+/* الأرقام المحاسبية متراصة */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* شريط تمرير رفيع يظهر عند الحاجة فقط */
+.thin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.thin-scroll:hover,
+.thin-scroll:focus-within {
+  scrollbar-color: var(--border-strong) transparent;
+}
+.thin-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 8px;
+}
+.thin-scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+}
+
+/* هيكل عظمي بوميض أفقي هادئ */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-hover) 0%, var(--bg-active) 50%, var(--bg-hover) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+/* الأيقونات الاتجاهية تنعكس تلقائياً في RTL */
+[dir="rtl"] .rtl-flip {
+  transform: scaleX(-1);
+}
+
+/* =====================================================================
+   المحرر (Tiptap) — كتل على طراز Notion
+   ===================================================================== */
+.editor-content .ProseMirror {
+  outline: none;
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--text-primary);
+  min-height: 120px;
+  padding-bottom: 30vh;
+}
+.editor-content .ProseMirror > * + * {
+  margin-top: 4px;
+}
+.editor-content .ProseMirror p {
+  margin: 2px 0;
+  min-height: 1.75em;
+}
+.editor-content .ProseMirror h1 {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 28px 0 6px;
+}
+.editor-content .ProseMirror h2 {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 24px 0 4px;
+}
+.editor-content .ProseMirror h3 {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin: 18px 0 2px;
+}
+.editor-content .ProseMirror ul,
+.editor-content .ProseMirror ol {
+  padding-inline-start: 1.6em;
+  margin: 2px 0;
+}
+.editor-content .ProseMirror ul {
+  list-style: disc;
+}
+.editor-content .ProseMirror ol {
+  list-style: decimal;
+}
+.editor-content .ProseMirror li > p {
+  margin: 0;
+}
+.editor-content .ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-inline-start: 0.2em;
+}
+.editor-content .ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.editor-content .ProseMirror ul[data-type="taskList"] li > label {
+  margin-top: 5px;
+  user-select: none;
+}
+.editor-content .ProseMirror ul[data-type="taskList"] li > label input {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 4px;
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+  transition: background-color 140ms var(--ease-out), border-color 140ms var(--ease-out);
+}
+.editor-content .ProseMirror ul[data-type="taskList"] li > label input:checked {
+  background: var(--navy-700);
+  border-color: var(--navy-700);
+}
+.editor-content .ProseMirror ul[data-type="taskList"] li > label input:checked::after {
+  content: "";
+  width: 9px;
+  height: 5px;
+  border-inline-start: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: translateY(-1px) rotate(-45deg) scaleX(-1);
+}
+.editor-content .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+.editor-content .ProseMirror blockquote {
+  border-inline-start: 3px solid var(--text-primary);
+  padding-inline-start: 14px;
+  margin: 6px 0;
+}
+.editor-content .ProseMirror hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+.editor-content .ProseMirror code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  background: var(--bg-hover);
+  color: var(--danger-700);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.editor-content .ProseMirror pre {
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  direction: ltr;
+  text-align: left;
+  overflow-x: auto;
+}
+.editor-content .ProseMirror pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+.editor-content .ProseMirror mark {
+  background: var(--gold-50);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.editor-content .ProseMirror a {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 3px;
+}
+.editor-content .ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+  table-layout: fixed;
+}
+.editor-content .ProseMirror th,
+.editor-content .ProseMirror td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  vertical-align: top;
+  text-align: start;
+}
+.editor-content .ProseMirror th {
+  background: var(--bg-sidebar);
+  font-weight: 500;
+}
+.editor-content .ProseMirror img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+.editor-content .ProseMirror p.is-empty::before,
+.editor-content .ProseMirror h1.is-empty::before,
+.editor-content .ProseMirror h2.is-empty::before,
+.editor-content .ProseMirror h3.is-empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  float: right;
+  height: 0;
+  pointer-events: none;
+}
+[dir="ltr"] .editor-content .ProseMirror p.is-empty::before {
+  float: left;
+}
+.editor-content .mention-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 120ms var(--ease-out);
+}
+.editor-content .mention-chip:hover {
+  background: var(--bg-hover);
+}
+.editor-content .mention-chip[data-kind="user"]::before {
+  content: "@";
+  color: var(--text-muted);
+}
+
+/* =====================================================================
+   احترام تفضيل تقليل الحركة
+   ===================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+[data-reduced-motion="true"] *,
+[data-reduced-motion="true"] *::before,
+[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+}
+
+/* =====================================================================
+   حركات القوائم والنوافذ (تعتمد data-state من Radix)
+   ===================================================================== */
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--menu-shift, -4px));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes menu-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes pop-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.anim-menu[data-side="top"] {
+  --menu-shift: 4px;
+}
+.anim-menu[data-state="open"] {
+  animation: menu-in 120ms var(--ease-out);
+}
+.anim-menu[data-state="closed"] {
+  animation: menu-out 80ms ease-in;
+}
+.anim-pop[data-state="open"] {
+  animation: pop-in 160ms var(--ease-out);
+}
+.anim-pop[data-state="closed"] {
+  animation: pop-out 100ms var(--ease-in-out);
+}
+.anim-overlay[data-state="open"] {
+  animation: overlay-in 160ms var(--ease-out);
+}
+.anim-overlay[data-state="closed"] {
+  animation: overlay-out 120ms ease-in;
+}

@@ -1,0 +1,11 @@
+{
+  "name": "منصة — نظام إدارة المدارس",
+  "short_name": "منصة",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/home",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#1B3A6B",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
