@@ -3,14 +3,15 @@
  * عدّاد بانزلاق رقمي: الرقم القديم يخرج للأعلى والجديد يدخل من الأسفل (٢٠٠ms).
  */
 import { AnimatePresence, motion } from "motion/react";
-import { useRef } from "react";
+import { useState } from "react";
 import { formatNumber, type DigitsPreference } from "@/lib/numbers";
 import { cn } from "@/lib/utils";
 
 export function NumberTicker({ value, digits = "arab", className }: { value: number; digits?: DigitsPreference; className?: string }) {
-  const prev = useRef(value);
-  const direction = value >= prev.current ? 1 : -1;
-  prev.current = value;
+  // اتجاه الحركة مشتق من القيمة السابقة (نمط «تعديل الحالة أثناء العرض» الموصى به في React)
+  const [last, setLast] = useState({ value, direction: 1 });
+  if (last.value !== value) setLast({ value, direction: value >= last.value ? 1 : -1 });
+  const direction = last.value !== value ? (value >= last.value ? 1 : -1) : last.direction;
   return (
     <span className={cn("relative inline-flex h-[1.2em] overflow-hidden tabular", className)}>
       <AnimatePresence initial={false} mode="popLayout" custom={direction}>

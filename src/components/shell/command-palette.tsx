@@ -88,9 +88,12 @@ export function CommandPalette() {
   const search = trpc.workspace.search.useQuery({ query: debounced }, { enabled: isOpen && debounced.length > 0, placeholderData: (prev) => prev });
   const logout = trpc.auth.logout.useMutation({ onSuccess: () => router.replace("/login") });
 
-  useEffect(() => {
+  // مسح البحث عند الإغلاق (تعديل الحالة أثناء العرض بدل التأثير)
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (wasOpen !== isOpen) {
+    setWasOpen(isOpen);
     if (!isOpen) setQuery("");
-  }, [isOpen]);
+  }
 
   const go = (href: string) => {
     setOpen(false);

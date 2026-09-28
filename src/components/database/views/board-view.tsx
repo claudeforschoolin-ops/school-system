@@ -76,10 +76,12 @@ export function BoardView({ api, rows, config, visibleProps, onConfig, onOpen, s
   const [flash, setFlash] = useState<{ id: string; n: number } | null>(null);
   const dragOrigin = useRef<string | null>(null);
 
-  useEffect(() => {
+  // إعادة بناء الأعمدة من البيانات عند تغيّرها أو انتهاء السحب (تعديل الحالة أثناء العرض بدل التأثير)
+  const [synced, setSynced] = useState({ groups, activeId });
+  if (synced.groups !== groups || synced.activeId !== activeId) {
+    setSynced({ groups, activeId });
     if (!activeId) setItems(fromGroups());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groups, activeId]);
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),

@@ -9,7 +9,8 @@ import Text from "@tiptap/extension-text";
 import { Placeholder, UndoRedo } from "@tiptap/extensions";
 import { EditorContent, useEditor, type JSONContent } from "@tiptap/react";
 import { ArrowUp } from "lucide-react";
-import { useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLatest } from "@/lib/hooks/use-latest";
 import { mentionToken } from "@/lib/mentions";
 import { trpc } from "@/lib/trpc/client";
 import { cn, matchesSearch } from "@/lib/utils";
@@ -47,8 +48,11 @@ export function CommentComposer({
 }) {
   const store = useMemo(() => new SuggestionStore<MentionItem>(), []);
   const directory = trpc.workspace.directory.useQuery(undefined, { staleTime: 5 * 60_000 });
-  const users = useRef<MentionItem[]>([]);
-  users.current = (directory.data ?? []).filter((u) => u.status === "ACTIVE").map((u) => ({ id: u.id, label: u.name, kind: "user" as const, color: u.avatarColor, hint: u.jobTitle }));
+  const activeUsers = useMemo<MentionItem[]>(
+    () => (directory.data ?? []).filter((u) => u.status === "ACTIVE").map((u) => ({ id: u.id, label: u.name, kind: "user" as const, color: u.avatarColor, hint: u.jobTitle })),
+    [directory.data],
+  );
+  const users = useLatest(activeUsers);
   const submitRef = useRef<() => void>(() => undefined);
 
   const editor = useEditor({
@@ -76,7 +80,7 @@ export function CommentComposer({
     },
   });
 
-  submitRef.current = () => {
+  const submit = () => {
     if (!editor || pending) return;
     const body = docToBody(editor.getJSON());
     if (!body) return;
@@ -85,12 +89,15 @@ export function CommentComposer({
     if (result && typeof (result as Promise<unknown>).then === "function") void (result as Promise<unknown>).then(clear);
     else clear();
   };
+  useLayoutEffect(() => {
+    submitRef.current = submit;
+  });
 
   return (
     <div className={cn("editor-content flex items-end gap-2 rounded-lg bg-card px-3 py-2 shadow-[0_0_0_1px_var(--border)] focus-within:shadow-[0_0_0_1px_var(--border-strong)]", compact && "py-1.5")}>
       <EditorContent editor={editor} className="min-w-0 flex-1 [&_.ProseMirror]:min-h-0 [&_.ProseMirror]:p-0 [&_.ProseMirror]:text-[14px]" />
       <button
-        onClick={() => submitRef.current()}
+        onClick={submit}
         disabled={pending}
         className="grid size-7 shrink-0 place-items-center rounded-full bg-navy-700 text-white transition-opacity hover:bg-navy-600 disabled:opacity-40 dark:text-[#0f172a]"
         aria-label="إرسال"

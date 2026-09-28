@@ -22,6 +22,7 @@ import { ChevronLeft, CopyPlus, ExternalLink, FolderInput, Link2, MoreHorizontal
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useStoredValue } from "@/lib/hooks/use-stored-value";
 import { positionBetween } from "@/lib/position";
 import { trpc, type RouterOutputs } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
@@ -59,25 +60,27 @@ const useTree = () => useContext(TreeContext)!;
 
 const EXPANDED_KEY = "manassa:sidebar-expanded";
 
+function parseIdSet(raw: string | null): Set<string> {
+  if (!raw) return new Set();
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return new Set(Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
+
 /** مزوّد السحب والإفلات لكل أشجار الشريط الجانبي */
 export function PageTreeProvider({ data, children }: { data: SidebarData; children: ReactNode }) {
   const utils = trpc.useUtils();
   const move = trpc.page.move.useMutation();
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [expandedRaw, setExpandedRaw] = useStoredValue(EXPANDED_KEY);
+  const expanded = useMemo(() => parseIdSet(expandedRaw), [expandedRaw]);
   const [indicator, setIndicator] = useState<DropIndicator | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [moveTarget, setMoveTarget] = useState<TreePage | null>(null);
   const pathname = usePathname();
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(EXPANDED_KEY);
-      if (raw) setExpanded(new Set(JSON.parse(raw) as string[]));
-    } catch {
-      /* تجاهل */
-    }
-  }, []);
 
   const pages = data.pages;
   const byParent = useMemo(() => {
@@ -93,32 +96,30 @@ export function PageTreeProvider({ data, children }: { data: SidebarData; childr
   }, [pages]);
   const childrenOf = useCallback((key: string) => byParent.get(key) ?? [], [byParent]);
 
-  const toggle = useCallback((id: string, open?: boolean) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
+  const toggle = useCallback(
+    (id: string, open?: boolean) => {
+      const next = new Set(expanded);
       const shouldOpen = open ?? !next.has(id);
       if (shouldOpen) next.add(id);
       else next.delete(id);
-      try {
-        localStorage.setItem(EXPANDED_KEY, JSON.stringify([...next]));
-      } catch {
-        /* تجاهل */
-      }
-      return next;
-    });
-  }, []);
+      setExpandedRaw(JSON.stringify([...next]));
+    },
+    [expanded, setExpandedRaw],
+  );
 
-  // فتح أسلاف الصفحة الحالية تلقائياً
+  // فتح أسلاف الصفحة الحالية تلقائياً (مزامنة مع المخزن الخارجي localStorage)
   useEffect(() => {
     const match = pathname.match(/^\/p\/([^/]+)/);
     if (!match) return;
     const byId = new Map(pages.map((p) => [p.id, p]));
+    const next = new Set(expanded);
     let current = byId.get(match[1]!);
     while (current?.parentId) {
-      if (!expanded.has(current.parentId)) toggle(current.parentId, true);
+      next.add(current.parentId);
       current = byId.get(current.parentId);
     }
-  }, [pathname, pages, expanded, toggle]);
+    if (next.size !== expanded.size) setExpandedRaw(JSON.stringify([...next]));
+  }, [pathname, pages, expanded, setExpandedRaw]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const pointerY = useRef(0);

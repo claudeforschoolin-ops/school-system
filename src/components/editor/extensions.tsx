@@ -158,6 +158,11 @@ export const SlashCommand = Extension.create<{ store: SuggestionStore<SlashItem>
   },
 });
 
+/** أمر «/» مع مصدر عناصر يُقرأ لحظة الكتابة */
+export function createSlashCommand(store: SuggestionStore<SlashItem>, items: () => SlashItem[]) {
+  return SlashCommand.configure({ store, items });
+}
+
 // ---------------------------------------------------------------------
 // الإشارات «@» (أشخاص وصفحات)
 // ---------------------------------------------------------------------

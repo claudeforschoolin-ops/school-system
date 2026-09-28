@@ -147,3 +147,30 @@ export function greetingForHour(hour: number): string {
   if (hour < 12) return "صباح الخير";
   return "مساء الخير";
 }
+
+/** إزاحة المنطقة الزمنية بالدقائق عند لحظة معينة */
+export function timeZoneOffsetMinutes(date: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(date);
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0);
+  const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  return Math.round((asUtc - date.getTime()) / 60000);
+}
+
+/** تحويل وقت محلي «YYYY-MM-DDTHH:mm» في منطقة زمنية إلى لحظة UTC */
+export function zonedTimeToUtc(local: string, timeZone = DEFAULT_TIMEZONE): Date {
+  const [d = "", t = "00:00"] = local.split("T");
+  const [y = 1970, m = 1, day = 1] = d.split("-").map(Number);
+  const [hh = 0, mm = 0] = t.split(":").map(Number);
+  const guess = Date.UTC(y, m - 1, day, hh, mm);
+  const offset = timeZoneOffsetMinutes(new Date(guess), timeZone);
+  return new Date(guess - offset * 60000);
+}

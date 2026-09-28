@@ -99,6 +99,7 @@ export const ENTITY_LABELS: Record<string, string> = {
   FileObject: "ملف",
   Sequence: "تسلسل ترقيم",
   Auth: "الدخول",
+  AuditLog: "سجل التدقيق",
 };
 
 export const ACTION_LABELS: Record<string, string> = {

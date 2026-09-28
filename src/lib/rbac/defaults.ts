@@ -28,10 +28,10 @@ function modulesOfGroup(groupKey: string): string[] {
 /** يبني المنح مع تجاهل الإجراءات غير المنطبقة على الوحدة */
 function grant(modules: readonly string[], spec: GrantSpec): PermissionGrant[] {
   const out: PermissionGrant[] = [];
-  for (const module of modules) {
-    const allowed = actionsFor(module);
+  for (const moduleKey of modules) {
+    const allowed = actionsFor(moduleKey);
     for (const [action, scope] of Object.entries(spec) as Array<[Action, Scope]>) {
-      if (allowed.includes(action)) out.push({ module, action, scope });
+      if (allowed.includes(action)) out.push({ module: moduleKey, action, scope });
     }
   }
   return out;

@@ -473,9 +473,12 @@ const TableRow = memo(function TableRow({ api, row, visibleProps, widths, rowHei
 function TitleCell({ api, row, wrap }: { api: DatabaseApi; row: Row; wrap: boolean }) {
   const [editing, setEditing] = useState(api.justCreated === row.id);
   const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => {
+  // السجل المُنشأ للتو يفتح عنوانه للتحرير مباشرة
+  const [seenCreated, setSeenCreated] = useState(api.justCreated);
+  if (api.justCreated !== seenCreated) {
+    setSeenCreated(api.justCreated);
     if (api.justCreated === row.id) setEditing(true);
-  }, [api.justCreated, row.id]);
+  }
   useEffect(() => {
     if (editing) ref.current?.focus();
   }, [editing]);

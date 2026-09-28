@@ -42,7 +42,8 @@ import {
   Underline,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useLatest } from "@/lib/hooks/use-latest";
 import { pickFile, uploadFile } from "@/lib/upload";
 import { trpc } from "@/lib/trpc/client";
 import { cn, matchesSearch } from "@/lib/utils";
@@ -51,7 +52,7 @@ import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { PageIcon } from "@/components/ui/icon";
 import { Textarea } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
-import { Callout, DatabaseEmbed, SlashCommand, createMention, type MentionItem, type SlashItem } from "./extensions";
+import { Callout, DatabaseEmbed, createMention, createSlashCommand, type MentionItem, type SlashItem } from "./extensions";
 import { SuggestionPopup, SuggestionStore } from "./suggestion";
 
 export interface EditorHost {
@@ -76,21 +77,22 @@ export function BlockEditor({ content, editable, onChange, placeholder, host, cl
   const slashStore = useMemo(() => new SuggestionStore<SlashItem>(), []);
   const mentionStore = useMemo(() => new SuggestionStore<MentionItem>(), []);
   const [math, setMath] = useState<{ kind: "block" | "inline"; pos: number; latex: string } | null>(null);
-  const hostRef = useRef(host);
-  hostRef.current = host;
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  const hostRef = useLatest(host);
+  const onChangeRef = useLatest(onChange);
 
   // مصادر الإشارات
   const directory = trpc.workspace.directory.useQuery(undefined, { staleTime: 5 * 60_000, enabled: editable });
   const sidebar = trpc.workspace.sidebar.useQuery(undefined, { staleTime: 60_000, enabled: editable });
-  const mentionSource = useRef<{ users: MentionItem[]; pages: MentionItem[] }>({ users: [], pages: [] });
-  mentionSource.current = {
-    users: (directory.data ?? [])
-      .filter((u) => u.status === "ACTIVE")
-      .map((u) => ({ id: u.id, label: u.name, kind: "user", color: u.avatarColor, hint: u.jobTitle, group: "الأشخاص" })),
-    pages: (sidebar.data?.pages ?? []).map((p) => ({ id: p.id, label: p.title || "بدون عنوان", kind: "page", icon: p.icon, group: "الصفحات" })),
-  };
+  const mentionItems = useMemo<{ users: MentionItem[]; pages: MentionItem[] }>(
+    () => ({
+      users: (directory.data ?? [])
+        .filter((u) => u.status === "ACTIVE")
+        .map((u) => ({ id: u.id, label: u.name, kind: "user", color: u.avatarColor, hint: u.jobTitle, group: "الأشخاص" })),
+      pages: (sidebar.data?.pages ?? []).map((p) => ({ id: p.id, label: p.title || "بدون عنوان", kind: "page", icon: p.icon, group: "الصفحات" })),
+    }),
+    [directory.data, sidebar.data],
+  );
+  const mentionSource = useLatest(mentionItems);
 
   const editorRef = useRef<Editor | null>(null);
 
@@ -177,8 +179,7 @@ export function BlockEditor({ content, editable, onChange, placeholder, host, cl
     }
     return items;
   };
-  const slashItemsRef = useRef(slashItems);
-  slashItemsRef.current = slashItems;
+  const slashItemsRef = useLatest(slashItems);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -212,7 +213,8 @@ export function BlockEditor({ content, editable, onChange, placeholder, host, cl
       }),
       Callout,
       DatabaseEmbed,
-      SlashCommand.configure({ store: slashStore, items: () => slashItemsRef.current() }),
+      // eslint-disable-next-line react-hooks/refs -- الدالة تُستدعى عند كتابة «/» فقط، لا أثناء العرض
+      createSlashCommand(slashStore, () => slashItemsRef.current()),
       createMention(mentionStore, (query) => {
         const { users, pages } = mentionSource.current;
         return [...users.filter((u) => matchesSearch(u.label, query)).slice(0, 6), ...pages.filter((p) => matchesSearch(p.label, query)).slice(0, 5)];
@@ -249,7 +251,9 @@ export function BlockEditor({ content, editable, onChange, placeholder, host, cl
     },
     onUpdate: ({ editor: e }) => onChangeRef.current?.(e.getJSON()),
   });
-  editorRef.current = editor;
+  useLayoutEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
 
   useEffect(() => {
     editor?.setEditable(editable);
@@ -409,11 +413,14 @@ function FormatBubble({ editor }: { editor: Editor }) {
 }
 
 function MathDialog({ value, onClose, onSave }: { value: { latex: string } | null; onClose: () => void; onSave: (latex: string) => void }) {
-  const [latex, setLatex] = useState("");
+  const [latex, setLatex] = useState(value?.latex ?? "");
   const [preview, setPreview] = useState("");
-  useEffect(() => {
+  // مزامنة النص عند فتح المعادلة لعقدة أخرى (تعديل الحالة أثناء العرض بدل التأثير)
+  const [shown, setShown] = useState(value);
+  if (value !== shown) {
+    setShown(value);
     if (value) setLatex(value.latex);
-  }, [value]);
+  }
   useEffect(() => {
     let cancelled = false;
     void import("katex").then((k) => {

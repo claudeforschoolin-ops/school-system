@@ -5,6 +5,7 @@
 import { motion, useScroll, useTransform } from "motion/react";
 import { ImagePlus, MessageSquareText, Smile } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useSyncedState } from "@/lib/hooks/use-synced-state";
 import { pickFile, uploadFile } from "@/lib/upload";
 import { cn } from "@/lib/utils";
 import { PageIcon } from "@/components/ui/icon";
@@ -41,8 +42,8 @@ export interface PageHeaderProps {
 
 export function PageHeader(props: PageHeaderProps) {
   const { title, icon, cover, description, editable, wide, compact } = props;
-  const [draft, setDraft] = useState(title);
-  const [descOpen, setDescOpen] = useState(Boolean(description));
+  const [draft, setDraft] = useSyncedState(title);
+  const [descOpen, setDescOpen] = useSyncedState(Boolean(description));
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainer = useRef<HTMLElement | null>(null);
   useEffect(() => {
@@ -51,8 +52,6 @@ export function PageHeader(props: PageHeaderProps) {
   const { scrollY } = useScroll({ container: scrollContainer });
   const iconY = useTransform(scrollY, [0, 120], [0, -8]);
 
-  useEffect(() => setDraft(title), [title]);
-  useEffect(() => setDescOpen(Boolean(description)), [description]);
   useEffect(() => {
     const el = titleRef.current;
     if (!el) return;
@@ -158,8 +157,7 @@ export function PageHeader(props: PageHeaderProps) {
 }
 
 function DescriptionField({ value, editable, onSave }: { value: string; editable: boolean; onSave: (v: string) => void }) {
-  const [draft, setDraft] = useState(value);
-  useEffect(() => setDraft(value), [value]);
+  const [draft, setDraft] = useSyncedState(value);
   return (
     <textarea
       value={draft}

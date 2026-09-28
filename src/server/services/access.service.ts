@@ -26,10 +26,10 @@ export function teamspaceLevelFromRoles(session: SessionData, teamspace: Teamspa
   if (!can(access, "workspace", "view")) return "NONE";
   if (isOwner(session)) return "FULL";
   let level: AccessLevelName = "NONE";
-  for (const module of teamspace.moduleKeys) {
-    if (hasBroadScope(access, module, "view")) level = maxLevel(level, "VIEW");
-    if (hasBroadScope(access, module, "update")) level = maxLevel(level, "EDIT");
-    const del = resolveScope(access, module, "delete");
+  for (const moduleKey of teamspace.moduleKeys) {
+    if (hasBroadScope(access, moduleKey, "view")) level = maxLevel(level, "VIEW");
+    if (hasBroadScope(access, moduleKey, "update")) level = maxLevel(level, "EDIT");
+    const del = resolveScope(access, moduleKey, "delete");
     if (del?.kind === "all") level = maxLevel(level, "FULL");
   }
   return level;

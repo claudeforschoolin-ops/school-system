@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { ArrowUpRight, Maximize2, Minimize2, Search, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { applyView, orderedProperties } from "@/lib/database/engine";
 import { shortId } from "@/lib/database/defaults";
 import type { ViewConfig, ViewType } from "@/lib/database/types";
@@ -85,14 +85,12 @@ export function DatabaseView({ databaseId, mode, title }: { databaseId: string; 
     [config.openIn, router],
   );
 
-  // فتح السجل المُنشأ حديثاً في اللوحات التي لا تدعم التحرير المباشر
-  useEffect(() => {
-    if (!api.justCreated || !activeView) return;
-    if (activeView.type === "CALENDAR" || activeView.type === "TIMELINE" || activeView.type === "GALLERY" || activeView.type === "LIST") {
-      setPeek(api.justCreated);
-      api.clearJustCreated();
-    }
-  }, [api, activeView]);
+  // فتح السجل المُنشأ حديثاً في العروض التي لا تدعم التحرير المباشر (تعديل الحالة أثناء العرض بدل التأثير)
+  const peekOnCreate = activeView?.type === "CALENDAR" || activeView?.type === "TIMELINE" || activeView?.type === "GALLERY" || activeView?.type === "LIST";
+  if (api.justCreated && peekOnCreate) {
+    setPeek(api.justCreated);
+    api.clearJustCreated();
+  }
 
   if (api.bundleQuery.error) {
     return <EmptyState illustration="lock" title="لا يمكن عرض قاعدة البيانات" description={api.bundleQuery.error.message} compact={mode === "inline"} />;

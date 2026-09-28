@@ -24,7 +24,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useStoredValue } from "@/lib/hooks/use-stored-value";
 import { AGENTS } from "@/lib/agents";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
@@ -306,27 +307,9 @@ function TeamspacesGroup({ data }: { data: SidebarData }) {
 function TeamspaceNode({ teamspace }: { teamspace: SidebarData["teamspaces"][number] }) {
   const actions = usePageActions();
   const storageKey = `manassa:ts-open:${teamspace.id}`;
-  const [open, setOpen] = useState(true);
-  useEffect(() => {
-    try {
-      if (localStorage.getItem(storageKey) === "0") setOpen(false);
-    } catch {
-      /* تجاهل */
-    }
-  }, [storageKey]);
-  const toggle = useCallback(
-    (value?: boolean) =>
-      setOpen((o) => {
-        const next = value ?? !o;
-        try {
-          localStorage.setItem(storageKey, next ? "1" : "0");
-        } catch {
-          /* تجاهل */
-        }
-        return next;
-      }),
-    [storageKey],
-  );
+  const [stored, setStored] = useStoredValue(storageKey);
+  const open = stored !== "0";
+  const toggle = useCallback((value?: boolean) => setStored((value ?? !open) ? "1" : "0"), [open, setStored]);
   const canEdit = teamspace.level === "EDIT" || teamspace.level === "FULL";
 
   return (

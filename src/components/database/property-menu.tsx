@@ -3,7 +3,8 @@
  * إعدادات الخاصية: الاسم، النوع، الخيارات وألوانها، تنسيق الأرقام، العملة، العلاقة، التجميع، المعادلة.
  */
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, EyeOff, Filter, GripVertical, Plus, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useSyncedState } from "@/lib/hooks/use-synced-state";
 import { evaluateFormula } from "@/lib/database/formula";
 import {
   OPTION_COLORS,
@@ -54,9 +55,8 @@ export function PropertyMenu({
       onClose();
     },
   });
-  const [name, setName] = useState(prop.name);
+  const [name, setName] = useSyncedState(prop.name);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  useEffect(() => setName(prop.name), [prop.name]);
   const isTitle = prop.id === TITLE_KEY;
   const canEdit = api.canEdit && !isTitle;
 
@@ -205,10 +205,11 @@ function TypeConfig({ api, prop, onSave }: { api: DatabaseApi; prop: PropertyDef
   }
 }
 
+const NO_OPTIONS: SelectOption[] = [];
+
 function OptionsConfig({ prop, onSave }: { prop: PropertyDef; onSave: (patch: Partial<PropertyConfig>) => void }) {
-  const [options, setOptions] = useState<SelectOption[]>(prop.config.options ?? []);
+  const [options, setOptions] = useSyncedState<SelectOption[]>(prop.config.options ?? NO_OPTIONS);
   const [newName, setNewName] = useState("");
-  useEffect(() => setOptions(prop.config.options ?? []), [prop.config.options]);
   const save = (next: SelectOption[]) => {
     setOptions(next);
     const patch: Partial<PropertyConfig> = { options: next };

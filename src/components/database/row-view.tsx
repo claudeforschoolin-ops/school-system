@@ -5,6 +5,7 @@
  */
 import { History, MessageSquare, Plus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLatest } from "@/lib/hooks/use-latest";
 import type { JSONContent } from "@tiptap/react";
 import type { PropertyDef } from "@/lib/database/types";
 import { formatDate, formatRelative } from "@/lib/dates";
@@ -27,8 +28,7 @@ export function useAutosave<T>(save: (value: T) => Promise<unknown>, delay = 700
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef<T | null>(null);
   const [status, setStatus] = useState<"idle" | "pending" | "saving" | "saved" | "error">("idle");
-  const saveRef = useRef(save);
-  saveRef.current = save;
+  const saveRef = useLatest(save);
   const flush = useCallback(async () => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
@@ -42,7 +42,7 @@ export function useAutosave<T>(save: (value: T) => Promise<unknown>, delay = 700
     } catch {
       setStatus("error");
     }
-  }, []);
+  }, [saveRef]);
   const schedule = useCallback(
     (value: T) => {
       pending.current = value;

@@ -3,7 +3,8 @@
  * مجموعة في الشريط الجانبي: عنوان رمادي ١٢px قابل للطي، تظهر أزرار الإجراء عند التمرير.
  */
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { useStoredValue } from "@/lib/hooks/use-stored-value";
 import { cn } from "@/lib/utils";
 
 function storageKey(id: string) {
@@ -11,25 +12,9 @@ function storageKey(id: string) {
 }
 
 export function SidebarGroup({ id, title, actions, children, defaultOpen = true }: { id: string; title: string; actions?: ReactNode; children: ReactNode; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
-  useEffect(() => {
-    try {
-      const v = localStorage.getItem(storageKey(id));
-      if (v !== null) setOpen(v === "1");
-    } catch {
-      /* تجاهل */
-    }
-  }, [id]);
-  const toggle = () => {
-    setOpen((o) => {
-      try {
-        localStorage.setItem(storageKey(id), o ? "0" : "1");
-      } catch {
-        /* تجاهل */
-      }
-      return !o;
-    });
-  };
+  const [stored, setStored] = useStoredValue(storageKey(id));
+  const open = stored === null ? defaultOpen : stored === "1";
+  const toggle = () => setStored(open ? "0" : "1");
   return (
     <section className="mt-3 first:mt-1">
       <div className="group/header flex h-7 items-center justify-between rounded-md pe-1 ps-2 transition-colors duration-[120ms] hover:bg-hover">
