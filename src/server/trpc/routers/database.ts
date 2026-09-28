@@ -5,7 +5,7 @@ import * as dbs from "@/server/services/database.service";
 import { assertDatabaseAccess, assertRowAccess } from "@/server/services/access.service";
 import { entityActivity } from "@/server/services/admin/audit.service";
 import { commentCounts } from "@/server/services/comment.service";
-import { notFound } from "@/server/errors";
+import { badRequest, notFound } from "@/server/errors";
 import { authedProcedure, router } from "../init";
 
 const id = z.string().min(1).max(64);
@@ -34,7 +34,7 @@ export const databaseRouter = router({
 
   rows: authedProcedure.input(z.object({ databaseId: id })).query(async ({ ctx, input }) => {
     const result = await dbs.listRows(ctx.db, ctx.session, input.databaseId);
-    const comments = await commentCounts(ctx.db, "ROW", result.rows.map((r) => r.id));
+    const comments = (await dbs.systemSourceOf(ctx.db, input.databaseId)) ? {} : await commentCounts(ctx.db, "ROW", result.rows.map((r) => r.id));
     return { ...result, commentCounts: comments };
   }),
 
@@ -67,6 +67,7 @@ export const databaseRouter = router({
     .input(
       z.object({
         rowId: id,
+        databaseId: id.nullish(),
         title: z.string().max(500).optional(),
         icon: z.string().max(300).nullish(),
         cover: z.string().max(500).nullish(),
@@ -77,11 +78,15 @@ export const databaseRouter = router({
     .mutation(({ ctx, input }) => dbs.updateRow(ctx.db, ctx.session, input)),
 
   moveRow: authedProcedure
-    .input(z.object({ rowId: id, beforeRowId: id.nullish(), afterRowId: id.nullish(), values: values.optional() }))
+    .input(z.object({ rowId: id, databaseId: id.nullish(), beforeRowId: id.nullish(), afterRowId: id.nullish(), values: values.optional() }))
     .mutation(({ ctx, input }) => dbs.moveRow(ctx.db, ctx.session, input)),
 
-  trashRows: authedProcedure.input(z.object({ rowIds: z.array(id).min(1).max(500) })).mutation(({ ctx, input }) => dbs.trashRows(ctx.db, ctx.session, input.rowIds)),
-  restoreRows: authedProcedure.input(z.object({ rowIds: z.array(id).min(1).max(500) })).mutation(({ ctx, input }) => dbs.restoreRows(ctx.db, ctx.session, input.rowIds)),
+  trashRows: authedProcedure
+    .input(z.object({ rowIds: z.array(id).min(1).max(500), databaseId: id.nullish() }))
+    .mutation(({ ctx, input }) => dbs.trashRows(ctx.db, ctx.session, input.rowIds, input.databaseId)),
+  restoreRows: authedProcedure
+    .input(z.object({ rowIds: z.array(id).min(1).max(500), databaseId: id.nullish() }))
+    .mutation(({ ctx, input }) => dbs.restoreRows(ctx.db, ctx.session, input.rowIds, input.databaseId)),
   duplicateRow: authedProcedure.input(z.object({ rowId: id })).mutation(({ ctx, input }) => dbs.duplicateRow(ctx.db, ctx.session, input.rowId)),
 
   createProperty: authedProcedure
@@ -155,7 +160,8 @@ export const databaseRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await assertDatabaseAccess(ctx.db, ctx.session, input.databaseId, "EDIT");
+      const { database } = await assertDatabaseAccess(ctx.db, ctx.session, input.databaseId, "EDIT");
+      if (database.source) throw badRequest("الأتمتة غير متاحة لقواعد بيانات النظام؛ قواعد الوحدة مطبقة تلقائياً");
       const data = {
         name: input.name,
         isEnabled: input.isEnabled ?? true,

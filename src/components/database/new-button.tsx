@@ -21,7 +21,7 @@ export function NewButton({ api, onCreated, defaults }: { api: DatabaseApi; onCr
   if (!api.canEdit) return null;
   const create = async (templateId?: string | null) => {
     const row = await api.createRow({ templateId: templateId ?? null, values: defaults });
-    onCreated(row.id);
+    if (row) onCreated(row.id);
   };
   return (
     <div className="flex items-center">

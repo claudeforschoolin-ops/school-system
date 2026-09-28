@@ -18,6 +18,7 @@ import type { PropertyConfig } from "../../src/lib/database/types";
 import { DEMO_2FA_ROLES, DEMO_PASSWORD, DEMO_TOTP_SECRET, PEOPLE, fakePhone } from "./data/people";
 import { WORKSPACE, type DatabaseSeed, type PageSeed } from "./data/workspace";
 import { bullets, callout, doc, h2, mentionUser, p, todos } from "./doc";
+import { seedPhase2 } from "./phase2";
 
 const TENANT_SLUG = "demo";
 const TZ = "Asia/Riyadh";
@@ -501,6 +502,8 @@ async function main() {
       ) as never,
     },
   });
+
+  await seedPhase2(tenant.id);
 
   const counts = await Promise.all([
     rootDb.user.count({ where: { tenantId: tenant.id } }),

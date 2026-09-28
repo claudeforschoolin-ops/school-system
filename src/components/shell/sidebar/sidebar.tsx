@@ -27,6 +27,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { useStoredValue } from "@/lib/hooks/use-stored-value";
 import { AGENTS } from "@/lib/agents";
+import { MODULE_NAV } from "@/lib/modules-nav";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { PageIcon } from "@/components/ui/icon";
@@ -146,6 +147,8 @@ function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
           </SidebarGroup>
         ) : null}
 
+        <ModulesGroup />
+
         <AgentsGroup />
 
         {isLoading || !data ? (
@@ -240,6 +243,31 @@ function NavLink({ href, icon, children }: { href: string; icon: React.ReactNode
       <span className="text-fg-3">{icon}</span>
       <span className="truncate">{children}</span>
     </Link>
+  );
+}
+
+/** الوحدات المبنية (حسب الصلاحية) */
+function ModulesGroup() {
+  const { can } = useApp();
+  const pathname = usePathname();
+  const items = MODULE_NAV.filter((m) => can(m.module, "view"));
+  if (!items.length) return null;
+  return (
+    <SidebarGroup id="modules" title="الوحدات">
+      {items.map((m) => {
+        const active = pathname === m.href || pathname.startsWith(`${m.href}/`);
+        return (
+          <Link
+            key={m.key}
+            href={m.href}
+            className={cn("flex h-7 items-center gap-2 rounded-md px-2 text-[14px] font-medium text-fg-2 transition-colors duration-[120ms] hover:bg-hover", active && "bg-active text-fg")}
+          >
+            <PageIcon icon={m.icon} size={16} className="text-fg-3" />
+            <span className="truncate">{m.label}</span>
+          </Link>
+        );
+      })}
+    </SidebarGroup>
   );
 }
 

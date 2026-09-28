@@ -73,6 +73,8 @@ model Branch {
   updatedById String?
   deletedAt   DateTime?
 
+  students   Student[]
+  admissions Admission[]
   sections  Section[]
   userRoles UserRole[]
 
@@ -116,6 +118,9 @@ model Grade {
   updatedById String?
   deletedAt   DateTime?
 
+  students       Student[]
+  admissions     Admission[]
+  gradeSubjects  GradeSubject[]
   sections Section[]
 
   @@unique([tenantId, code])
@@ -142,6 +147,9 @@ model Section {
   updatedById    String?
   deletedAt      DateTime?
 
+  students    Student[]
+  assignments TeacherAssignment[]
+
   @@unique([tenantId, branchId, gradeId, academicYearId, name])
   @@index([tenantId, branchId])
 }
@@ -160,6 +168,8 @@ model AcademicYear {
   updatedById String?
   deletedAt   DateTime?
 
+  students   Student[]
+  admissions Admission[]
   terms    Term[]
   sections Section[]
 
@@ -587,6 +597,8 @@ model Database {
   /// عدّاد الترقيم التلقائي للسجلات
   rowCounter  Int      @default(0)
   rowPrefix   String?
+  /// مصدر نظامي: السجلات من جداول مخصصة (admissions, students…) بدل DatabaseRow
+  source      String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   createdById String?
@@ -598,6 +610,7 @@ model Database {
   templates   DatabaseTemplate[]
   automations Automation[]
 
+  @@unique([tenantId, source])
   @@index([tenantId])
 }
 
@@ -632,6 +645,8 @@ model DatabaseProperty {
   type        PropertyType
   /// إعدادات الخاصية: خيارات الاختيار، تنسيق الرقم، هدف العلاقة، معادلة...
   config      Json         @default("{}")
+  /// مفتاح الحقل في المصدر النظامي (لا يُحذف ولا يتغير نوعه)
+  systemKey   String?
   description String?
   position    Float        @default(0)
   createdAt   DateTime     @default(now())
@@ -639,6 +654,7 @@ model DatabaseProperty {
   createdById String?
   updatedById String?
 
+  @@unique([databaseId, systemKey])
   @@index([tenantId, databaseId])
 }
 
@@ -948,4 +964,780 @@ model Sequence {
   updatedAt DateTime @updatedAt
 
   @@unique([tenantId, key])
+}
+
+// =====================================================================
+// المرحلة ٢: الطلاب والقبول والشؤون الأكاديمية
+// الأرقام الوطنية تُخزَّن مشفّرة (Enc) مع بصمة HMAC للبحث ومنع التكرار (Hash) وآخر ٤ أرقام للعرض.
+// =====================================================================
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum IdType {
+  NATIONAL_ID
+  IQAMA
+  PASSPORT
+}
+
+enum StudentStatus {
+  /// منتظم
+  ACTIVE
+  /// منقطع
+  INACTIVE
+  /// منقول
+  TRANSFERRED
+  /// متخرج
+  GRADUATED
+  /// منسحب
+  WITHDRAWN
+  /// مؤجل
+  DEFERRED
+}
+
+enum GuardianRelation {
+  FATHER
+  MOTHER
+  /// وصي
+  GUARDIAN
+  OTHER
+}
+
+model Guardian {
+  id              String    @id @default(cuid())
+  tenantId        String
+  name            String
+  idType          IdType    @default(NATIONAL_ID)
+  nationalIdHash  String?
+  nationalIdEnc   String?
+  nationalIdLast4 String?
+  phone           String
+  phoneAlt        String?
+  email           String?
+  occupation      String?
+  employer        String?
+  address         String?
+  /// حساب مستخدم مرتبط (اختياري)
+  userId          String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String?
+  updatedById     String?
+  deletedAt       DateTime?
+
+  students StudentGuardian[]
+
+  @@unique([tenantId, nationalIdHash])
+  @@index([tenantId, phone])
+}
+
+model Student {
+  id                String        @id @default(cuid())
+  tenantId          String
+  branchId          String
+  branch            Branch        @relation(fields: [branchId], references: [id])
+  /// الرقم الأكاديمي (تسلسل بصيغة قابلة للضبط)
+  academicNumber    String
+  /// حساب الطالب (اختياري) لنطاق «سجلاته فقط»
+  userId            String?
+  firstName         String
+  fatherName        String
+  grandfatherName   String
+  familyName        String
+  /// الاسم الرباعي (مشتق للبحث والعرض)
+  fullName          String
+  gender            Gender
+  nationality       String        @default("SA")
+  idType            IdType        @default(NATIONAL_ID)
+  nationalIdHash    String?
+  nationalIdEnc     String?
+  nationalIdLast4   String?
+  birthDate         DateTime      @db.Date
+  birthPlace        String?
+  photoUrl          String?
+  cover             String?
+  status            StudentStatus @default(ACTIVE)
+  academicYearId    String
+  academicYear      AcademicYear  @relation(fields: [academicYearId], references: [id])
+  gradeId           String
+  grade             Grade         @relation(fields: [gradeId], references: [id])
+  sectionId         String?
+  section           Section?      @relation(fields: [sectionId], references: [id])
+  enrollmentDate    DateTime      @db.Date
+  previousSchool    String?
+  // الصحة
+  bloodType         String?
+  chronicConditions String?
+  allergies         String?
+  medications       String?
+  /// حالة صحية حرجة: شارة حمراء للمعلمين والعيادة
+  criticalHealth    Boolean       @default(false)
+  healthNotes       String?
+  // الوصول والخدمات
+  transportMode     String?
+  busNumber         String?
+  mealPlan          String?
+  /// جهات اتصال الطوارئ [{name, relation, phone}]
+  emergencyContacts Json          @default("[]")
+  /// ملاحظات حرة (Tiptap)
+  notes             Json?
+  /// قيم الخصائص التي يضيفها المستخدم في عروض قاعدة البيانات
+  customValues      Json          @default("{}")
+  position          Float         @default(0)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  createdById       String?
+  updatedById       String?
+  deletedAt         DateTime?
+
+  guardians      StudentGuardian[]
+  documents      StudentDocument[]
+  attendance     Attendance[]
+  admission      Admission?
+  leaves         StudentLeave[]
+  transfers      Transfer[]
+  behavior       BehaviorRecord[]
+  cases          CounselingCase[]
+  registrations  ActivityRegistration[]
+
+  @@unique([tenantId, academicNumber])
+  @@unique([tenantId, nationalIdHash])
+  @@index([tenantId, branchId, status])
+  @@index([tenantId, gradeId, sectionId])
+  @@index([tenantId, fullName])
+}
+
+model StudentGuardian {
+  id                    String           @id @default(cuid())
+  tenantId              String
+  studentId             String
+  student               Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  guardianId            String
+  guardian              Guardian         @relation(fields: [guardianId], references: [id])
+  relation              GuardianRelation
+  isPrimary             Boolean          @default(false)
+  canPickup             Boolean          @default(true)
+  receivesNotifications Boolean          @default(true)
+  createdAt             DateTime         @default(now())
+
+  @@unique([studentId, guardianId])
+  @@index([tenantId, guardianId])
+}
+
+model StudentDocument {
+  id           String    @id @default(cuid())
+  tenantId     String
+  studentId    String
+  student      Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  /// BIRTH_CERTIFICATE | ID_COPY | LAST_REPORT | MEDICAL | PHOTO | VACCINATION | OTHER
+  type         String
+  name         String
+  fileId       String
+  url          String
+  size         Int       @default(0)
+  mime         String?
+  expiresAt    DateTime? @db.Date
+  verifiedById String?
+  verifiedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  createdById  String?
+  deletedAt    DateTime?
+
+  @@index([tenantId, studentId])
+}
+
+enum AdmissionStage {
+  /// طلب جديد
+  NEW
+  /// قيد المراجعة
+  REVIEW
+  /// اختبار/مقابلة
+  ASSESSMENT
+  /// مقبول
+  ACCEPTED
+  /// مرفوض
+  REJECTED
+  /// قائمة انتظار
+  WAITLIST
+  /// مسجّل
+  ENROLLED
+}
+
+model Admission {
+  id               String         @id @default(cuid())
+  tenantId         String
+  branchId         String
+  branch           Branch         @relation(fields: [branchId], references: [id])
+  /// رقم الطلب
+  number           Int
+  academicYearId   String
+  academicYear     AcademicYear   @relation(fields: [academicYearId], references: [id])
+  stage            AdmissionStage @default(NEW)
+  firstName        String
+  fatherName       String         @default("")
+  grandfatherName  String         @default("")
+  familyName       String         @default("")
+  fullName         String
+  gender           Gender?
+  nationality      String         @default("SA")
+  idType           IdType         @default(NATIONAL_ID)
+  nationalIdHash   String?
+  nationalIdEnc    String?
+  nationalIdLast4  String?
+  birthDate        DateTime?      @db.Date
+  requestedGradeId String?
+  requestedGrade   Grade?         @relation(fields: [requestedGradeId], references: [id])
+  previousSchool   String?
+  /// ولي الأمر الأساسي
+  guardianName     String?
+  guardianRelation GuardianRelation?
+  guardianPhone    String?
+  guardianEmail    String?
+  /// بقية بيانات الأب والأم والوصي من النموذج [{relation, name, phone, email, occupation, nationalIdLast4, nationalIdEnc}]
+  contacts         Json           @default("[]")
+  address          String?
+  /// المرفقات (FileValue[])
+  attachments      Json           @default("[]")
+  /// كيف عرفتنا
+  source           String?
+  /// المسؤول عن المتابعة
+  ownerId          String?
+  assessmentAt     DateTime?
+  assessmentScore  Int?
+  assessmentNotes  String?
+  decisionAt       DateTime?
+  decisionReason   String?
+  /// PUBLIC_FORM | STAFF
+  submittedVia     String         @default("STAFF")
+  studentId        String?        @unique
+  student          Student?       @relation(fields: [studentId], references: [id])
+  notes            Json?
+  customValues     Json           @default("{}")
+  position         Float          @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  createdById      String?
+  updatedById      String?
+  deletedAt        DateTime?
+
+  @@unique([tenantId, number])
+  @@index([tenantId, stage])
+  @@index([tenantId, nationalIdHash])
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  /// مستأذن (خروج مبكر بإذن)
+  PERMISSION
+  /// غائب بعذر
+  EXCUSED
+}
+
+model Attendance {
+  id             String           @id @default(cuid())
+  tenantId       String
+  branchId       String
+  studentId      String
+  student        Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  sectionId      String
+  date           DateTime         @db.Date
+  /// 0 = تحضير يومي، وإلا رقم الحصة
+  period         Int              @default(0)
+  status         AttendanceStatus
+  reason         String?
+  minutesLate    Int?
+  /// MANUAL | LEAVE | IMPORT
+  source         String           @default("MANUAL")
+  leaveId        String?
+  recordedById   String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  updatedById    String?
+
+  @@unique([studentId, date, period])
+  @@index([tenantId, sectionId, date])
+  @@index([tenantId, date, status])
+}
+
+/// إجازة أو استئذان طالب
+model StudentLeave {
+  id             String         @id @default(cuid())
+  tenantId       String
+  branchId       String
+  number         Int
+  studentId      String
+  student        Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  /// LEAVE (إجازة) | EARLY_DISMISSAL (استئذان)
+  kind           String         @default("LEAVE")
+  startDate      DateTime       @db.Date
+  endDate        DateTime       @db.Date
+  reason         String
+  requestedBy    String?
+  attachments    Json           @default("[]")
+  status         ApprovalStatus @default(PENDING)
+  decidedById    String?
+  decidedAt      DateTime?
+  decisionNote   String?
+  customValues   Json           @default("{}")
+  position       Float          @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  createdById    String?
+  updatedById    String?
+  deletedAt      DateTime?
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+}
+
+enum TransferType {
+  /// نقل بين الفصول
+  SECTION
+  /// نقل إلى صف/مرحلة أخرى
+  GRADE
+  /// قادم من مدرسة أخرى
+  INCOMING
+  /// إلى مدرسة أخرى
+  OUTGOING
+  /// انسحاب
+  WITHDRAWAL
+}
+
+enum TransferStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+model Transfer {
+  id                  String         @id @default(cuid())
+  tenantId            String
+  branchId            String
+  number              Int
+  studentId           String
+  student             Student        @relation(fields: [studentId], references: [id])
+  type                TransferType
+  fromSectionId       String?
+  toSectionId         String?
+  toGradeId           String?
+  otherSchool         String?
+  reason              String
+  effectiveDate       DateTime       @db.Date
+  status              TransferStatus @default(PENDING)
+  approvalRequestId   String?
+  /// خلو الطرف المالي
+  financialClearance  Boolean        @default(false)
+  clearedById         String?
+  clearedAt           DateTime?
+  certificateNumber   String?
+  certificateIssuedAt DateTime?
+  attachments         Json           @default("[]")
+  notes               Json?
+  customValues        Json           @default("{}")
+  position            Float          @default(0)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  createdById         String?
+  updatedById         String?
+  deletedAt           DateTime?
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+}
+
+enum BehaviorKind {
+  POSITIVE
+  NEGATIVE
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model BehaviorRecord {
+  id               String       @id @default(cuid())
+  tenantId         String
+  branchId         String
+  number           Int
+  studentId        String
+  student          Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  kind             BehaviorKind
+  category         String
+  points           Int          @default(0)
+  severity         Severity     @default(LOW)
+  occurredAt       DateTime
+  description      String?
+  actionTaken      String?
+  guardianNotified Boolean      @default(false)
+  reportedById     String?
+  /// MANUAL | ATTENDANCE_THRESHOLD
+  source           String       @default("MANUAL")
+  customValues     Json         @default("{}")
+  position         Float        @default(0)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  createdById      String?
+  updatedById      String?
+  deletedAt        DateTime?
+
+  @@unique([tenantId, number])
+  @@index([tenantId, studentId])
+  @@index([tenantId, occurredAt])
+}
+
+enum CaseStatus {
+  OPEN
+  IN_PROGRESS
+  MONITORING
+  CLOSED
+}
+
+/// حالة إرشادية سرّية: يراها المرشد المسؤول والإدارة فقط
+model CounselingCase {
+  id                 String      @id @default(cuid())
+  tenantId           String
+  branchId           String
+  number             Int
+  studentId          String
+  student            Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  title              String
+  category           String
+  severity           Severity    @default(LOW)
+  status             CaseStatus  @default(OPEN)
+  counselorId        String
+  /// خطة العلاج الفردية (Tiptap)
+  plan               Json?
+  guardianSummonedAt DateTime?
+  openedAt           DateTime    @default(now())
+  closedAt           DateTime?
+  customValues       Json        @default("{}")
+  position           Float       @default(0)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  createdById        String?
+  updatedById        String?
+  deletedAt          DateTime?
+
+  sessions CounselingSession[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, counselorId])
+  @@index([tenantId, studentId])
+}
+
+model CounselingSession {
+  id              String         @id @default(cuid())
+  tenantId        String
+  caseId          String
+  case            CounselingCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  scheduledAt     DateTime
+  durationMinutes Int            @default(30)
+  /// SCHEDULED | DONE | MISSED | CANCELLED
+  status          String         @default("SCHEDULED")
+  attendees       String?
+  summary         String?
+  calendarEventId String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  createdById     String?
+  updatedById     String?
+
+  @@index([tenantId, caseId])
+}
+
+// ---------------------------------------------------------------------
+// الشؤون الأكاديمية
+// ---------------------------------------------------------------------
+
+model Room {
+  id          String    @id @default(cuid())
+  tenantId    String
+  branchId    String
+  code        String
+  name        String
+  /// CLASSROOM | LAB | COMPUTER | GYM | LIBRARY | HALL | ART
+  kind        String    @default("CLASSROOM")
+  capacity    Int       @default(30)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  @@unique([tenantId, branchId, code])
+}
+
+model Subject {
+  id          String    @id @default(cuid())
+  tenantId    String
+  code        String
+  name        String
+  color       String    @default("navy")
+  /// نوع القاعة المطلوب (اختياري): LAB, COMPUTER, GYM...
+  roomKind    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  gradeSubjects GradeSubject[]
+
+  @@unique([tenantId, code])
+}
+
+/// الخطة الدراسية: مادة في صف بعدد حصص أسبوعية
+model GradeSubject {
+  id            String   @id @default(cuid())
+  tenantId      String
+  gradeId       String
+  grade         Grade    @relation(fields: [gradeId], references: [id])
+  subjectId     String
+  subject       Subject  @relation(fields: [subjectId], references: [id])
+  weeklyPeriods Int      @default(4)
+  textbook      String?
+  /// مادة «ثقيلة»: تُفضَّل في الحصص الأولى ولا تتكرر في اليوم نفسه
+  heavy         Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdById   String?
+  updatedById   String?
+
+  units CurriculumUnit[]
+
+  @@unique([gradeId, subjectId])
+  @@index([tenantId])
+}
+
+model CurriculumUnit {
+  id             String       @id @default(cuid())
+  tenantId       String
+  gradeSubjectId String
+  gradeSubject   GradeSubject @relation(fields: [gradeSubjectId], references: [id], onDelete: Cascade)
+  title          String
+  order          Int          @default(0)
+  objectives     String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  lessons CurriculumLesson[]
+
+  @@index([tenantId, gradeSubjectId])
+}
+
+model CurriculumLesson {
+  id         String         @id @default(cuid())
+  tenantId   String
+  unitId     String
+  unit       CurriculumUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  title      String
+  order      Int            @default(0)
+  /// أسبوع التنفيذ المخطط (١..)
+  week       Int?
+  periods    Int            @default(1)
+  objectives String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  progress LessonProgress[]
+
+  @@index([tenantId, unitId])
+}
+
+model LessonProgress {
+  id            String           @id @default(cuid())
+  tenantId      String
+  lessonId      String
+  lesson        CurriculumLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  sectionId     String
+  completedAt   DateTime         @default(now())
+  completedById String?
+  note          String?
+
+  @@unique([lessonId, sectionId])
+  @@index([tenantId, sectionId])
+}
+
+/// نصاب المعلم وتفضيلاته لعام دراسي
+model TeacherLoad {
+  id             String   @id @default(cuid())
+  tenantId       String
+  userId         String
+  academicYearId String
+  /// النصاب الأسبوعي
+  quota          Int      @default(24)
+  /// يوم الراحة المفضل (0=الأحد … 4=الخميس) أو null
+  freeDay        Int?
+  /// المواد المؤهل لتدريسها
+  subjectIds     String[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdById    String?
+  updatedById    String?
+
+  @@unique([userId, academicYearId])
+  @@index([tenantId, academicYearId])
+}
+
+model TeacherAssignment {
+  id             String   @id @default(cuid())
+  tenantId       String
+  academicYearId String
+  sectionId      String
+  section        Section  @relation(fields: [sectionId], references: [id])
+  subjectId      String
+  teacherId      String
+  weeklyPeriods  Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdById    String?
+  updatedById    String?
+
+  @@unique([academicYearId, sectionId, subjectId])
+  @@index([tenantId, teacherId])
+}
+
+/// جدول الجرس: أيام الدراسة وتوقيت الحصص لكل فرع
+model BellSchedule {
+  id          String   @id @default(cuid())
+  tenantId    String
+  branchId    String
+  name        String
+  /// أيام الدراسة (0=الأحد … 6=السبت)
+  days        Int[]
+  /// [{index, start: "07:00", end: "07:45"}] — الحصص فقط؛ الفسح بين الأوقات
+  periods     Json
+  /// أقصى عدد حصص متتالية للمعلم
+  maxConsecutive Int   @default(3)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+
+  @@unique([tenantId, branchId])
+}
+
+model TimetableSlot {
+  id             String   @id @default(cuid())
+  tenantId       String
+  academicYearId String
+  sectionId      String
+  day            Int
+  period         Int
+  subjectId      String
+  teacherId      String
+  roomId         String?
+  /// مثبّتة يدوياً: لا يغيّرها المولّد
+  locked         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdById    String?
+  updatedById    String?
+
+  @@unique([academicYearId, sectionId, day, period])
+  @@unique([academicYearId, teacherId, day, period])
+  @@unique([academicYearId, roomId, day, period])
+  @@index([tenantId, academicYearId])
+}
+
+model Substitution {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  slotId              String
+  date                DateTime @db.Date
+  absentTeacherId     String
+  substituteTeacherId String?
+  /// PENDING | ASSIGNED | CANCELLED
+  status              String   @default("PENDING")
+  note                String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  createdById         String?
+  updatedById         String?
+
+  @@unique([slotId, date])
+  @@index([tenantId, date])
+}
+
+enum ActivityKind {
+  CLUB
+  COMMITTEE
+  TRIP
+  COMPETITION
+  EVENT
+}
+
+enum ActivityStatus {
+  PLANNED
+  REGISTRATION
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Activity {
+  id              String         @id @default(cuid())
+  tenantId        String
+  branchId        String?
+  number          Int
+  title           String
+  kind            ActivityKind   @default(CLUB)
+  status          ActivityStatus @default(PLANNED)
+  description     String?
+  startAt         DateTime?
+  endAt           DateTime?
+  location        String?
+  supervisorId    String?
+  capacity        Int?
+  /// رسم النشاط بأصغر وحدة (يُفوتر في المرحلة ٣)
+  feeMinor        Int?
+  requiresConsent Boolean        @default(false)
+  gradeIds        String[]
+  calendarEventId String?
+  cover           String?
+  /// ألبوم الصور (FileValue[])
+  album           Json           @default("[]")
+  notes           Json?
+  customValues    Json           @default("{}")
+  position        Float          @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  createdById     String?
+  updatedById     String?
+  deletedAt       DateTime?
+
+  registrations ActivityRegistration[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+}
+
+model ActivityRegistration {
+  id            String   @id @default(cuid())
+  tenantId      String
+  activityId    String
+  activity      Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  studentId     String
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  /// REGISTERED | WAITLIST | CANCELLED | ATTENDED
+  status        String   @default("REGISTERED")
+  /// NOT_REQUIRED | PENDING | GRANTED | DENIED
+  consentStatus String   @default("NOT_REQUIRED")
+  consentBy     String?
+  consentAt     DateTime?
+  createdAt     DateTime @default(now())
+  createdById   String?
+  updatedAt     DateTime @updatedAt
+
+  @@unique([activityId, studentId])
+  @@index([tenantId, studentId])
 }

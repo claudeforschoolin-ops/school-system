@@ -30,7 +30,7 @@ export function EditableValue({
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const readOnly = !api.canEdit || COMPUTED_TYPES.has(prop.type);
+  const readOnly = !api.canEdit || COMPUTED_TYPES.has(prop.type) || Boolean(prop.config.systemReadOnly);
   const display = <ValueDisplay row={row} prop={prop} ctx={api.ctx} users={api.users} wrap={wrap} compact={compact} />;
   const commit = (value: unknown) => void api.updateRow(row.id, { values: { [prop.id]: value } });
 

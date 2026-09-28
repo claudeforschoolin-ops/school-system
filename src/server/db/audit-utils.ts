@@ -4,6 +4,8 @@
 
 /** حقول لا تُكتب قيمتها في سجل التدقيق أبداً */
 export const REDACTED_FIELDS = new Set([
+  "nationalIdEnc",
+  "nationalIdHash",
   "passwordHash",
   "twoFactorSecret",
   "twoFactorBackup",
@@ -100,6 +102,30 @@ export const ENTITY_LABELS: Record<string, string> = {
   Sequence: "تسلسل ترقيم",
   Auth: "الدخول",
   AuditLog: "سجل التدقيق",
+  Guardian: "ولي أمر",
+  Student: "طالب",
+  StudentGuardian: "ربط ولي أمر",
+  StudentDocument: "مستند طالب",
+  Admission: "طلب قبول",
+  Attendance: "حضور",
+  StudentLeave: "إجازة طالب",
+  Transfer: "تحويل",
+  BehaviorRecord: "سلوك",
+  CounselingCase: "حالة إرشادية",
+  CounselingSession: "جلسة إرشاد",
+  Room: "قاعة",
+  Subject: "مادة",
+  GradeSubject: "خطة دراسية",
+  CurriculumUnit: "وحدة منهج",
+  CurriculumLesson: "درس",
+  LessonProgress: "إنجاز درس",
+  TeacherLoad: "نصاب معلم",
+  TeacherAssignment: "إسناد مادة",
+  BellSchedule: "جدول الجرس",
+  TimetableSlot: "حصة",
+  Substitution: "حصة احتياط",
+  Activity: "نشاط",
+  ActivityRegistration: "تسجيل في نشاط",
 };
 
 export const ACTION_LABELS: Record<string, string> = {
@@ -123,5 +149,6 @@ export const ACTION_LABELS: Record<string, string> = {
   EXPORT: "تصدير",
   PERMISSION_CHANGE: "تغيير الصلاحيات",
   APPROVE: "اعتماد",
+  REVEAL: "كشف بيانات حساسة",
   REJECT: "رفض",
 };

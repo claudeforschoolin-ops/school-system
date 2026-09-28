@@ -82,6 +82,12 @@ export async function resolvePageAccess(
   const page = await db.page.findFirst({ where: { id: pageId, ...(options.includeDeleted ? {} : { deletedAt: null }) } });
   if (!page) throw notFound("الصفحة غير موجودة أو نُقلت إلى المهملات");
 
+  // صفحات المجموعات النظامية: الوصول من صلاحيات الوحدة (RBAC) لا من مساحة الفريق
+  if (page.systemKey?.startsWith("collection:")) {
+    const { systemAccessLevel } = await import("./system-db.service");
+    return { level: systemAccessLevel(session, page.systemKey.slice("collection:".length)), page, ancestors: [] };
+  }
+
   // سلسلة الأسلاف (العمق محدود عملياً)
   const ancestors: PageAccessResult["ancestors"] = [];
   const chainIds = [page.id];

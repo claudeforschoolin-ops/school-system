@@ -442,13 +442,13 @@ const TableRow = memo(function TableRow({ api, row, visibleProps, widths, rowHei
         <ContextMenuItem icon={<Maximize2 className="size-4" />} onSelect={() => onOpen(row.id)}>
           فتح في معاينة جانبية
         </ContextMenuItem>
-        <ContextMenuItem icon={<ExternalLink className="size-4" />} onSelect={() => router.push(`/r/${row.id}`)}>
+        <ContextMenuItem icon={<ExternalLink className="size-4" />} onSelect={() => router.push(api.rowHref(row.id))}>
           فتح كصفحة كاملة
         </ContextMenuItem>
         <ContextMenuItem
           icon={<Link2 className="size-4" />}
           onSelect={() => {
-            void navigator.clipboard.writeText(`${window.location.origin}/r/${row.id}`);
+            void navigator.clipboard.writeText(`${window.location.origin}${api.rowHref(row.id)}`);
             toast.success("نُسخ الرابط");
           }}
         >
@@ -456,9 +456,11 @@ const TableRow = memo(function TableRow({ api, row, visibleProps, widths, rowHei
         </ContextMenuItem>
         {api.canEdit ? (
           <>
-            <ContextMenuItem icon={<Copy className="size-4" />} onSelect={() => void api.duplicateRow(row.id)}>
-              تكرار
-            </ContextMenuItem>
+            {api.canDuplicate ? (
+              <ContextMenuItem icon={<Copy className="size-4" />} onSelect={() => void api.duplicateRow(row.id)}>
+                تكرار
+              </ContextMenuItem>
+            ) : null}
             <ContextMenuSeparator />
             <ContextMenuItem danger icon={<Trash2 className="size-4" />} onSelect={() => void api.trashRows([row.id])}>
               حذف
@@ -487,7 +489,7 @@ function TitleCell({ api, row, wrap }: { api: DatabaseApi; row: Row; wrap: boole
     if (api.justCreated === row.id) api.clearJustCreated();
     if (value.trim() !== row.title) void api.updateRow(row.id, { title: value.trim() });
   };
-  if (editing && api.canEdit) {
+  if (editing && api.canEditTitle) {
     return (
       <input
         ref={ref}
@@ -504,7 +506,7 @@ function TitleCell({ api, row, wrap }: { api: DatabaseApi; row: Row; wrap: boole
   }
   return (
     <span
-      onClick={() => api.canEdit && setEditing(true)}
+      onClick={() => api.canEditTitle && setEditing(true)}
       className={cn("min-w-0 flex-1 cursor-text py-1 font-medium", wrap ? "whitespace-normal break-words" : "truncate", !row.title && "text-fg-4")}
     >
       {row.title || "بدون عنوان"}

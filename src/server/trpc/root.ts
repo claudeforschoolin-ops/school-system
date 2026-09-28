@@ -2,6 +2,8 @@
  * الموجّه الجذري لواجهة tRPC.
  */
 import { createCallerFactory, router } from "./init";
+import { admissionsRouter, studentsRouter } from "./routers/students";
+import { academicRouter, moduleSettingsRouter } from "./routers/academic";
 import { accountRouter } from "./routers/account";
 import { auditRouter, orgRouter, rolesRouter, usersRouter } from "./routers/admin";
 import { authRouter } from "./routers/auth";
@@ -25,6 +27,10 @@ export const appRouter = router({
   roles: rolesRouter,
   org: orgRouter,
   audit: auditRouter,
+  students: studentsRouter,
+  admissions: admissionsRouter,
+  academic: academicRouter,
+  moduleSettings: moduleSettingsRouter,
 });
 
 export type AppRouter = typeof appRouter;

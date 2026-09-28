@@ -29,7 +29,7 @@ import { atLeast } from "@/lib/access-levels";
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 
-export function toPropertyDef(p: { id: string; name: string; type: string; config: unknown; position: number; description?: string | null }): PropertyDef {
+export function toPropertyDef(p: { id: string; name: string; type: string; config: unknown; position: number; description?: string | null; systemKey?: string | null }): PropertyDef {
   return {
     id: p.id,
     name: p.name,
@@ -37,6 +37,7 @@ export function toPropertyDef(p: { id: string; name: string; type: string; confi
     config: (p.config ?? {}) as PropertyConfig,
     position: p.position,
     description: p.description ?? null,
+    systemKey: p.systemKey ?? null,
   };
 }
 
@@ -122,22 +123,33 @@ export async function createDatabaseRecords(
 // القراءة
 // ---------------------------------------------------------------------
 
+/** مصدر قاعدة البيانات إن كانت مجموعة نظامية */
+export async function systemSourceOf(db: TenantDb, databaseId: string | null | undefined): Promise<string | null> {
+  if (!databaseId) return null;
+  const d = await db.database.findFirst({ where: { id: databaseId }, select: { source: true } });
+  return d?.source ?? null;
+}
+
 export async function getDatabaseBundle(db: TenantDb, session: SessionData, databaseId: string) {
   const { database, level, page } = await assertDatabaseAccess(db, session, databaseId, "VIEW");
+  const sys = database.source ? await import("./system-db.service") : null;
   const [properties, views, templates, automations] = await Promise.all([
     db.databaseProperty.findMany({ where: { databaseId }, orderBy: { position: "asc" } }),
     db.databaseView.findMany({
       where: { databaseId, OR: [{ isPersonal: false }, { ownerId: session.user.id }] },
       orderBy: { position: "asc" },
     }),
-    db.databaseTemplate.findMany({ where: { databaseId }, orderBy: { position: "asc" } }),
-    db.automation.findMany({ where: { databaseId }, orderBy: { createdAt: "asc" } }),
+    database.source ? Promise.resolve([]) : db.databaseTemplate.findMany({ where: { databaseId }, orderBy: { position: "asc" } }),
+    database.source ? Promise.resolve([]) : db.automation.findMany({ where: { databaseId }, orderBy: { createdAt: "asc" } }),
   ]);
+  const defs = properties.map(toPropertyDef);
   return {
-    database: { id: database.id, pageId: database.pageId, titleLabel: database.titleLabel, rowCounter: database.rowCounter },
+    database: { id: database.id, pageId: database.pageId, titleLabel: database.titleLabel, rowCounter: database.rowCounter, source: database.source },
+    /** بيانات المجموعة النظامية (رابط التفاصيل، زر الإنشاء…) أو null لقواعد البيانات العادية */
+    system: sys && database.source ? sys.bundleSystemMeta(session, database.source) : null,
     page: { id: page.id, title: page.title, icon: page.icon },
     level,
-    properties: properties.map(toPropertyDef),
+    properties: sys && database.source ? await sys.withDynamicOptions({ db, session }, database.source, defs) : defs,
     views: views.map((v) => ({ ...v, config: (v.config ?? {}) as ViewConfig, type: v.type as ViewType })),
     templates,
     automations,
@@ -147,7 +159,12 @@ export async function getDatabaseBundle(db: TenantDb, session: SessionData, data
 const ROW_LIMIT = 5000;
 
 export async function listRows(db: TenantDb, session: SessionData, databaseId: string) {
-  await assertDatabaseAccess(db, session, databaseId, "VIEW");
+  const { database } = await assertDatabaseAccess(db, session, databaseId, "VIEW");
+  if (database.source) {
+    const { listSystemRows } = await import("./system-db.service");
+    const rows = await listSystemRows(db, session, databaseId, database.source);
+    return { rows, truncated: rows.length >= ROW_LIMIT, relatedRows: [] as typeof rows, relatedDatabases: [] as Array<{ id: string; title: string; properties: PropertyDef[] }> };
+  }
   const [rows, properties] = await Promise.all([
     db.databaseRow.findMany({
       where: { databaseId, deletedAt: null },
@@ -356,6 +373,7 @@ export interface CreateRowInput {
 
 export async function createRow(db: TenantDb, session: SessionData, input: CreateRowInput) {
   const { database } = await assertDatabaseAccess(db, session, input.databaseId, "EDIT");
+  if (database.source) throw badRequest("أنشئ السجل من زر الإنشاء الخاص بالوحدة");
   const properties = (await db.databaseProperty.findMany({ where: { databaseId: database.id } })).map(toPropertyDef);
 
   let title = input.title ?? "";
@@ -452,6 +470,8 @@ async function notifyAssignments(
 
 export interface UpdateRowInput {
   rowId: string;
+  /** مطلوب لسجلات المجموعات النظامية */
+  databaseId?: string | null;
   title?: string;
   icon?: string | null;
   cover?: string | null;
@@ -460,6 +480,12 @@ export interface UpdateRowInput {
 }
 
 export async function updateRow(db: TenantDb, session: SessionData, input: UpdateRowInput) {
+  const source = await systemSourceOf(db, input.databaseId);
+  if (source && input.databaseId) {
+    await assertDatabaseAccess(db, session, input.databaseId, "VIEW");
+    const { updateSystemRow } = await import("./system-db.service");
+    return updateSystemRow(db, session, input.databaseId, source, input.rowId, { title: input.title, values: input.values });
+  }
   const { row, database } = await assertRowAccess(db, session, input.rowId, "EDIT");
   const properties = (await db.databaseProperty.findMany({ where: { databaseId: database.id } })).map(toPropertyDef);
   const before = (row.values ?? {}) as Record<string, unknown>;
@@ -499,8 +525,14 @@ export async function updateRow(db: TenantDb, session: SessionData, input: Updat
 export async function moveRow(
   db: TenantDb,
   session: SessionData,
-  input: { rowId: string; beforeRowId?: string | null; afterRowId?: string | null; values?: Record<string, unknown> },
+  input: { rowId: string; databaseId?: string | null; beforeRowId?: string | null; afterRowId?: string | null; values?: Record<string, unknown> },
 ) {
+  const source = await systemSourceOf(db, input.databaseId);
+  if (source && input.databaseId) {
+    await assertDatabaseAccess(db, session, input.databaseId, "VIEW");
+    const { updateSystemRow } = await import("./system-db.service");
+    return updateSystemRow(db, session, input.databaseId, source, input.rowId, { values: input.values, beforeRowId: input.beforeRowId, afterRowId: input.afterRowId, move: true });
+  }
   const { row } = await assertRowAccess(db, session, input.rowId, "EDIT");
   const [before, after] = await Promise.all([
     input.beforeRowId ? db.databaseRow.findFirst({ where: { id: input.beforeRowId, databaseId: row.databaseId } }) : null,
@@ -516,7 +548,12 @@ export async function moveRow(
   return { ...fresh, values: (fresh.values ?? {}) as Record<string, unknown> };
 }
 
-export async function trashRows(db: TenantDb, session: SessionData, rowIds: string[]) {
+export async function trashRows(db: TenantDb, session: SessionData, rowIds: string[], databaseId?: string | null) {
+  const source = await systemSourceOf(db, databaseId);
+  if (source) {
+    const { trashSystemRows } = await import("./system-db.service");
+    return trashSystemRows(db, session, source, rowIds);
+  }
   const now = new Date();
   for (const id of rowIds) {
     const { row } = await assertRowAccess(db, session, id, "EDIT");
@@ -525,7 +562,12 @@ export async function trashRows(db: TenantDb, session: SessionData, rowIds: stri
   return { count: rowIds.length };
 }
 
-export async function restoreRows(db: TenantDb, session: SessionData, rowIds: string[]) {
+export async function restoreRows(db: TenantDb, session: SessionData, rowIds: string[], databaseId?: string | null) {
+  const source = await systemSourceOf(db, databaseId);
+  if (source) {
+    const { trashSystemRows } = await import("./system-db.service");
+    return trashSystemRows(db, session, source, rowIds, true);
+  }
   for (const id of rowIds) {
     const { row } = await assertRowAccess(db, session, id, "EDIT", { includeDeleted: true });
     await db.databaseRow.update({ where: { id: row.id }, data: { deletedAt: null, updatedById: session.user.id } });
@@ -590,8 +632,9 @@ export async function createProperty(
   session: SessionData,
   input: { databaseId: string; name: string; type: PropertyType; config?: PropertyConfig; afterPropertyId?: string | null },
 ) {
-  await assertDatabaseAccess(db, session, input.databaseId, "EDIT");
+  const { database } = await assertDatabaseAccess(db, session, input.databaseId, "EDIT");
   const config = sanitizeConfig(input.type, input.config);
+  if (database.source && (input.type === "RELATION" || input.type === "ROLLUP")) throw badRequest("العلاقات غير متاحة في قواعد بيانات النظام");
   if (input.type === "RELATION") {
     if (!config.targetDatabaseId) throw badRequest("اختر قاعدة البيانات المرتبطة");
     await assertDatabaseAccess(db, session, config.targetDatabaseId, "VIEW");
@@ -651,6 +694,24 @@ export async function updateProperty(
   const prop = await db.databaseProperty.findFirst({ where: { id: input.propertyId } });
   if (!prop) throw notFound("الخاصية غير موجودة");
   await assertDatabaseAccess(db, session, prop.databaseId, "EDIT");
+  if (prop.systemKey) {
+    // الخاصية النظامية: يُسمح بتغيير الاسم والوصف وألوان الخيارات فقط
+    if (input.type && input.type !== prop.type) throw badRequest("لا يمكن تغيير نوع خاصية نظامية");
+    const current = (prop.config ?? {}) as PropertyConfig;
+    const colors = new Map((input.config?.options ?? []).map((o) => [o.id, o.color]));
+    const options = current.options?.map((o) => ({ ...o, color: (colors.get(o.id) as OptionColor | undefined) ?? o.color }));
+    const dynamicColors = current.dynamicOptions ? input.config?.options?.map((o) => ({ id: o.id, name: o.name, color: o.color })) : undefined;
+    const updated = await db.databaseProperty.update({
+      where: { id: prop.id },
+      data: {
+        ...(input.name !== undefined ? { name: input.name.trim().slice(0, 100) || prop.name } : {}),
+        ...(input.description !== undefined ? { description: input.description } : {}),
+        config: json({ ...current, ...(options ? { options } : {}), ...(dynamicColors ? { options: dynamicColors } : {}) }),
+        updatedById: session.user.id,
+      },
+    });
+    return toPropertyDef(updated);
+  }
   const newType = input.type ?? (prop.type as PropertyType);
   const mergedConfig = sanitizeConfig(newType, {
     ...(input.type && input.type !== prop.type ? {} : ((prop.config ?? {}) as PropertyConfig)),
@@ -695,6 +756,7 @@ export async function addSelectOption(
   const prop = await db.databaseProperty.findFirst({ where: { id: input.propertyId } });
   if (!prop) throw notFound("الخاصية غير موجودة");
   await assertDatabaseAccess(db, session, prop.databaseId, "EDIT");
+  if (prop.systemKey) throw badRequest("خيارات هذه الخاصية يحددها النظام");
   const config = (prop.config ?? {}) as PropertyConfig;
   const existing = config.options?.find((o) => o.name === input.name.trim());
   if (existing) return existing;
@@ -715,6 +777,7 @@ export async function deleteProperty(db: TenantDb, session: SessionData, propert
   const prop = await db.databaseProperty.findFirst({ where: { id: propertyId } });
   if (!prop) throw notFound("الخاصية غير موجودة");
   await assertDatabaseAccess(db, session, prop.databaseId, "EDIT");
+  if (prop.systemKey) throw badRequest("لا يمكن حذف خاصية نظامية؛ يمكنك إخفاؤها من العرض");
   const dependents = await db.databaseProperty.findMany({ where: { databaseId: prop.databaseId, type: "ROLLUP" } });
   if (dependents.some((d) => ((d.config ?? {}) as PropertyConfig).relationPropertyId === prop.id)) {
     throw new AppError("CONFLICT", "لا يمكن حذف العلاقة لوجود خاصية تجميع تعتمد عليها");
@@ -895,7 +958,7 @@ export async function deleteTemplate(db: TenantDb, session: SessionData, templat
 /** قواعد البيانات المتاحة للمستخدم (لاختيار هدف خاصية العلاقة) */
 export async function listAccessibleDatabases(db: TenantDb, session: SessionData) {
   const pages = await db.page.findMany({
-    where: { kind: "DATABASE", deletedAt: null },
+    where: { kind: "DATABASE", deletedAt: null, database: { source: null } },
     select: { id: true, title: true, icon: true, teamspaceId: true, ownerId: true, database: { select: { id: true } } },
     orderBy: { title: "asc" },
   });

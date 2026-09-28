@@ -15,7 +15,7 @@ import {
   Pin, Plane, Presentation, Printer, Puzzle, QrCode, Receipt, Rocket, Ruler, Scale, School, ScrollText, Search, Send, Server, Settings,
   Settings2, Shapes, ShieldCheck, ShieldHalf, ShoppingCart, Signature, Siren, Smartphone, Smile, Sparkles, Stamp, Star, Stethoscope, Store,
   Sun, Sunrise, Table2, Tag, Target, Telescope, Tent, TestTube, Ticket, Timer, TrafficCone, TreePine, TriangleAlert, Trophy, Truck, Tv,
-  UserCog, UserRound, Users, UsersRound, Utensils, Video, Wallet, Warehouse, Wifi, Workflow, Wrench, Zap, type LucideIcon,
+  UserCog, UserPlus, UserCheck, UserX, UserRound, Users, UsersRound, ArrowLeftRight, CalendarX, ClipboardPen, Grid3x3, Utensils, Video, Wallet, Warehouse, Wifi, Workflow, Wrench, Zap, type LucideIcon,
 } from "lucide-react";
 
 export interface IconDef {
@@ -82,6 +82,13 @@ export const ICONS: readonly IconDef[] = [
   def("users-round", UsersRound, "اجتماع فريق"),
   def("user-round", UserRound, "شخص مستخدم"),
   def("user-cog", UserCog, "إدارة مستخدم"),
+  def("user-plus", UserPlus, "قبول تسجيل طالب جديد"),
+  def("user-check", UserCheck, "حضور تحضير"),
+  def("user-x", UserX, "غياب"),
+  def("arrow-left-right", ArrowLeftRight, "تحويل نقل"),
+  def("calendar-x", CalendarX, "إجازة غياب"),
+  def("clipboard-pen", ClipboardPen, "سلوك ملاحظة"),
+  def("grid-3x3", Grid3x3, "جدول حصص"),
   def("contact", Contact, "جهة اتصال"),
   def("id-card", IdCard, "هوية موظف"),
   def("baby", Baby, "رياض أطفال"),

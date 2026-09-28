@@ -89,6 +89,10 @@ export interface StatusGroup {
 
 export interface PropertyConfig {
   options?: SelectOption[];
+  /** خاصية نظامية للقراءة فقط (تُعدَّل من صفحة التفاصيل) */
+  systemReadOnly?: boolean;
+  /** خيارات تُولَّد من البيانات ولا تُحرَّر يدوياً */
+  dynamicOptions?: boolean;
   groups?: StatusGroup[];
   /** NUMBER */
   numberFormat?: "number" | "integer" | "percent";
@@ -140,6 +144,8 @@ export interface PropertyDef {
   config: PropertyConfig;
   position: number;
   description?: string | null;
+  /** مفتاح الحقل في المجموعات النظامية (لا يُحذف ولا يتغير نوعه) */
+  systemKey?: string | null;
 }
 
 export interface DateValue {

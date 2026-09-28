@@ -4,7 +4,7 @@
  * + العرض النشط + المعاينة الجانبية. يعمل كصفحة كاملة أو مضمّناً داخل صفحة.
  */
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowUpRight, Maximize2, Minimize2, Search, X } from "lucide-react";
+import { ArrowUpRight, Maximize2, Minimize2, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -13,7 +13,9 @@ import { shortId } from "@/lib/database/defaults";
 import type { ViewConfig, ViewType } from "@/lib/database/types";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SystemCreateDialog, systemPrefill } from "@/components/students/create-dialogs";
 import { PageIcon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -79,10 +81,10 @@ export function DatabaseView({ databaseId, mode, title }: { databaseId: string; 
 
   const open = useCallback(
     (rowId: string) => {
-      if (config.openIn === "page") router.push(`/r/${rowId}`);
+      if (api.system || config.openIn === "page") router.push(api.rowHref(rowId));
       else setPeek(rowId);
     },
-    [config.openIn, router],
+    [api, config.openIn, router],
   );
 
   // فتح السجل المُنشأ حديثاً في العروض التي لا تدعم التحرير المباشر (تعديل الحالة أثناء العرض بدل التأثير)
@@ -125,7 +127,7 @@ export function DatabaseView({ databaseId, mode, title }: { databaseId: string; 
         <div className="ms-auto flex shrink-0 items-center gap-0.5">
           <SortButton properties={api.properties} sorts={config.sorts} onChange={(sorts) => setConfig({ sorts })} />
           <FilterButton properties={api.properties} filter={config.filter} onChange={(filter) => setConfig({ filter })} users={api.users} currency={api.ctx.defaultCurrency ?? "SAR"} />
-          <AutomationsButton api={api} />
+          {api.system ? null : <AutomationsButton api={api} />}
           <div className="flex items-center">
             <AnimatePresence initial={false}>
               {searchOpen ? (
@@ -183,7 +185,15 @@ export function DatabaseView({ databaseId, mode, title }: { databaseId: string; 
             title={api.bundle.page.title}
           />
           <span className="ms-1">
-            <NewButton api={api} onCreated={(id) => (activeView.type === "TABLE" || activeView.type === "BOARD" ? undefined : setPeek(id))} />
+            {api.system ? (
+              api.canEdit || api.system.canCreate ? (
+                <Button variant="primary" size="sm" icon={<Plus className="size-3.5" />} onClick={() => void api.createRow({})}>
+                  {api.system.createLabel}
+                </Button>
+              ) : null
+            ) : (
+              <NewButton api={api} onCreated={(id) => (activeView.type === "TABLE" || activeView.type === "BOARD" ? undefined : setPeek(id))} />
+            )}
           </span>
         </div>
       </div>
@@ -230,7 +240,19 @@ export function DatabaseView({ databaseId, mode, title }: { databaseId: string; 
         )}
       </div>
 
-      <SidePeek rowId={peek} onClose={() => setPeek(null)} onNavigate={setPeek} order={rows.map((r) => r.id)} />
+      {api.system ? null : <SidePeek rowId={peek} onClose={() => setPeek(null)} onNavigate={setPeek} order={rows.map((r) => r.id)} />}
+      {api.system && api.createRequest ? (
+        <SystemCreateDialog
+          source={api.system.source}
+          prefill={systemPrefill(api.createRequest.values, api.properties)}
+          onClose={api.clearCreateRequest}
+          onCreated={(id) => {
+            api.clearCreateRequest();
+            void api.refetchRows();
+            router.push(api.rowHref(id));
+          }}
+        />
+      ) : null}
     </div>
   );
 }
