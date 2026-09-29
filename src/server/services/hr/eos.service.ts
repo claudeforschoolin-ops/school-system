@@ -43,10 +43,11 @@ export async function previewEos(db: TenantDb, session: SessionData, input: { em
   const days = serviceDays(hire, input.lastWorkingDay);
   const wage = monthlyWage(c);
   const eos = eosAward(wage, days, input.reason, rules);
-  // رصيد الإجازة السنوية غير المستخدم
-  const annual = await db.leaveType.findFirst({ where: { code: "ANNUAL" } });
+  // رصيد الإجازة السنوية غير المستخدم (يُنشأ استحقاق السنة إن لم يُحتسب بعد)
   const year = Number(input.lastWorkingDay.slice(0, 4));
-  const bal = annual ? await db.leaveBalance.findFirst({ where: { employeeId: e.id, leaveTypeId: annual.id, year } }) : null;
+  const { balancesFor } = await import("./time.service");
+  const annualId = (await balancesFor(db, session, e.id, year)).find((b) => b.type.code === "ANNUAL")?.balanceId;
+  const bal = annualId ? await db.leaveBalance.findFirst({ where: { id: annualId } }) : null;
   // الاستحقاق النسبي للسنة الأخيرة: الأيام المستحقة حتى آخر يوم عمل
   const yearStart = `${year}-01-01`;
   const fromIso = hire > yearStart ? hire : yearStart;

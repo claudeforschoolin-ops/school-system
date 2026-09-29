@@ -7,7 +7,7 @@ import { Banknote, Calculator, Download, HandCoins, Plus, Printer, RefreshCw, Se
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { formatNumber } from "@/lib/numbers";
+import { applyDigits, formatNumber } from "@/lib/numbers";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -257,7 +257,7 @@ export function RunPage({ id }: { id: string }) {
                 </Link>
                 <span className="block text-[11px] text-fg-3">
                   {l.department ?? "—"}
-                  {det.notes?.length ? ` · ${det.notes.join(" · ")}` : ""}
+                  {det.notes?.length ? ` · ${applyDigits(det.notes.join(" · "), prefs.digits)}` : ""}
                 </span>
               </td>
               <td className={num}>{cell(l.basicMinor)}</td>
@@ -376,14 +376,16 @@ export function PayslipPage({ lineId }: { lineId: string }) {
           <p className="text-[12px] text-fg-3">مسير رقم {docNo(l.run.number, prefs.digits)}</p>
         </header>
         <dl className="mb-5 grid grid-cols-2 gap-x-6 gap-y-1 text-[13px]">
-          {[
-            ["الموظف", d.employee.fullName],
-            ["الرقم الوظيفي", docNo(d.employee.number ?? null, prefs.digits)],
-            ["القسم", d.employee.department ?? "—"],
-            ["المسمى", d.employee.position ?? "—"],
-            ["تاريخ المباشرة", fmtDate(d.employee.hireDate)],
-            ["الآيبان", d.employee.iban ?? "—"],
-          ].map(([k, v]) => (
+          {(
+            [
+              ["الموظف", d.employee.fullName],
+              ["الرقم الوظيفي", docNo(d.employee.number ?? null, prefs.digits)],
+              ["القسم", d.employee.department ?? "—"],
+              ["المسمى", d.employee.position ?? "—"],
+              ["تاريخ المباشرة", fmtDate(d.employee.hireDate)],
+              ["الآيبان", d.employee.iban ? <bdi dir="ltr">{d.employee.iban}</bdi> : "—"],
+            ] as Array<[string, React.ReactNode]>
+          ).map(([k, v]) => (
             <div key={k} className="flex justify-between gap-2 border-b border-line/50 py-1">
               <dt className="text-fg-3">{k}</dt>
               <dd className="font-medium">{v}</dd>
@@ -426,9 +428,16 @@ export function PayslipPage({ lineId }: { lineId: string }) {
           <span>صافي الراتب</span>
           <span className="tabular">{money.fmt(l.netMinor)}</span>
         </p>
-        {det.attendance ? (
+        {det.attendance && (det.attendance.absentDays || det.attendance.lateMinutes || det.attendance.unpaidLeaveDays) ? (
           <p className="mt-3 text-[12px] text-fg-3">
-            الحضور: غياب {formatNumber(det.attendance.absentDays, prefs.digits)} يوم · تأخر {formatNumber(det.attendance.lateMinutes, prefs.digits)} دقيقة · إجازة بدون راتب {formatNumber(det.attendance.unpaidLeaveDays, prefs.digits)} يوم
+            الحضور:{" "}
+            {[
+              det.attendance.absentDays ? `غياب ${formatNumber(det.attendance.absentDays, prefs.digits)} يوم` : null,
+              det.attendance.lateMinutes ? `تأخر ${formatNumber(det.attendance.lateMinutes, prefs.digits)} دقيقة` : null,
+              det.attendance.unpaidLeaveDays ? `إجازة بدون راتب ${formatNumber(det.attendance.unpaidLeaveDays, prefs.digits)} يوم` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
         ) : null}
       </article>

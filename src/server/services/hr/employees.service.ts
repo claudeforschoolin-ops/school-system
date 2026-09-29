@@ -70,9 +70,10 @@ export async function getEmployee(db: TenantDb, session: SessionData, id: string
   if (!e) throw notFound("الموظف غير موجود أو خارج نطاقك");
   const year = Number(today(session).slice(0, 4));
   const monthStart = dateOnly(`${today(session).slice(0, 7)}-01`);
+  const { balancesFor } = await import("./time.service");
   const [user, balances, types, requests, attendance, reviews, eos, shift, branch, lines] = await Promise.all([
     e.userId ? db.user.findFirst({ where: { id: e.userId }, select: { id: true, name: true, email: true, status: true } }) : null,
-    db.leaveBalance.findMany({ where: { employeeId: id, year } }),
+    e.status === "TERMINATED" ? [] : balancesFor(db, session, id, year),
     db.leaveType.findMany({ where: { isActive: true } }),
     db.staffLeaveRequest.findMany({ where: { employeeId: id, deletedAt: null }, orderBy: { startDate: "desc" }, take: 10 }),
     db.employeeAttendance.groupBy({ by: ["status"], where: { employeeId: id, date: { gte: monthStart } }, _count: { _all: true }, _sum: { lateMinutes: true, overtimeMinutes: true } }),
@@ -97,11 +98,7 @@ export async function getEmployee(db: TenantDb, session: SessionData, id: string
     branch: branch?.name ?? null,
     user,
     shift,
-    balances: types.map((t) => {
-      const b = balances.find((x) => x.leaveTypeId === t.id);
-      const entitled = (b?.entitledDays ?? 0) + (b?.carriedDays ?? 0) + (b?.adjustedDays ?? 0);
-      return { type: { id: t.id, name: t.name, color: t.color, annualDays: t.annualDays }, entitled, used: b?.usedDays ?? 0, remaining: t.annualDays === null ? null : entitled - (b?.usedDays ?? 0) };
-    }),
+    balances: balances.map((b) => ({ type: { id: b.type.id, name: b.type.name, color: b.type.color, annualDays: b.type.annualDays }, entitled: b.entitled, used: b.used, remaining: b.remaining as number | null })),
     leaveRequests: requests.map((r) => ({ ...r, type: types.find((t) => t.id === r.leaveTypeId)?.name ?? "" })),
     monthAttendance: attendance.map((a) => ({ status: a.status, days: a._count._all, lateMinutes: a._sum.lateMinutes ?? 0, overtimeMinutes: a._sum.overtimeMinutes ?? 0 })),
     reviews: reviews.map((r) => ({ id: r.id, cycle: r.cycle.name, status: r.status, finalBp: r.finalBp, rating: r.rating })),

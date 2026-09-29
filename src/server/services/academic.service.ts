@@ -421,7 +421,7 @@ async function nextGrades(db: TenantDb) {
 }
 
 /** مستحقات الطلاب المنتظمين في العام (لسياسة منع إعادة القيد مع المديونية) */
-async function studentDebts(db: TenantDb | Prisma.TransactionClient, yearId: string) {
+async function studentDebts(db: TenantDb, yearId: string) {
   const invoices = await db.invoice.findMany({ where: { status: { in: ["ISSUED", "PARTIAL"] }, deletedAt: null, student: { academicYearId: yearId, status: "ACTIVE", deletedAt: null } }, select: { studentId: true, totalMinor: true, paidMinor: true, creditedMinor: true } });
   const debts = new Map<string, number>();
   for (const i of invoices) debts.set(i.studentId, (debts.get(i.studentId) ?? 0) + i.totalMinor - i.paidMinor - i.creditedMinor);
