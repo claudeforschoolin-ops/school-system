@@ -266,7 +266,7 @@ export function ExamDetailPage({ id }: { id: string }) {
       </div>
       {tab === "schedule" ? <Schedule d={d} onEdit={(s) => setDialog({ session: s })} /> : <Committees d={d} onEdit={(c) => setDialog({ committee: c })} onAuto={() => setDialog("committees")} />}
       {dialog === "edit" ? <ExamDialog exam={e} termId={e.termId} terms={terms} onClose={() => setDialog(null)} /> : null}
-      {dialog === "auto" ? <AutoScheduleDialog examId={e.id} hasSessions={d.sessions.length > 0} onClose={() => setDialog(null)} /> : null}
+      {dialog === "auto" ? <AutoScheduleDialog examId={e.id} gradeIds={e.gradeIds} hasSessions={d.sessions.length > 0} onClose={() => setDialog(null)} /> : null}
       {dialog === "committees" ? <AutoCommitteesDialog examId={e.id} redo={d.committees.length > 0} onClose={() => setDialog(null)} /> : null}
       {dialog && typeof dialog === "object" && "session" in dialog ? <SessionDialog d={d} session={dialog.session} onClose={() => setDialog(null)} /> : null}
       {dialog && typeof dialog === "object" && "committee" in dialog ? <CommitteeDialog examId={e.id} committee={dialog.committee} onClose={() => setDialog(null)} /> : null}
@@ -409,9 +409,12 @@ function Committees({ d, onEdit, onAuto }: { d: ExamDetail; onEdit: (c: ExamDeta
   );
 }
 
-function AutoScheduleDialog({ examId, hasSessions, onClose }: { examId: string; hasSessions: boolean; onClose: () => void }) {
+function AutoScheduleDialog({ examId, gradeIds, hasSessions, onClose }: { examId: string; gradeIds: string[]; hasSessions: boolean; onClose: () => void }) {
   const utils = trpc.useUtils();
   const score = useScore();
+  const opts = trpc.assessment.exams.options.useQuery();
+  const subjects = [...new Map((opts.data?.grades ?? []).filter((g) => gradeIds.includes(g.id)).flatMap((g) => g.subjects).map((x) => [x.id, x])).values()];
+  const [excluded, setExcluded] = useState<string[]>([]);
   const [v, setV] = useState({ startTime: "08:00", durationMin: "90", max: "" });
   const maxTenths = v.max ? parseTenths(v.max) : null;
   const m = trpc.assessment.exams.autoSchedule.useMutation({
@@ -422,6 +425,19 @@ function AutoScheduleDialog({ examId, hasSessions, onClose }: { examId: string; 
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent title="جدولة تلقائية" description={`${hasSessions ? "يُستبدل الجدول الحالي. " : ""}تُوزَّع مواد كل صف من خطته على أيام الاختبار (الأحد–الخميس)، المواد الثقيلة أولاً، وجلستان يومياً إن زادت المواد عن الأيام.`}>
         <div className="grid grid-cols-3 gap-3 px-5 pb-4">
+          {subjects.length ? (
+            <div className="col-span-3">
+              <p className="mb-1 text-[13px] font-medium text-fg-3">المواد المختبرة (أزل مواد النشاط كالتربية البدنية والفنية)</p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                {subjects.map((x) => (
+                  <label key={x.id} className="flex items-center gap-1.5 text-[13px]">
+                    <Checkbox checked={!excluded.includes(x.id)} onChange={(on) => setExcluded(on ? excluded.filter((e) => e !== x.id) : [...excluded, x.id])} />
+                    {x.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <Field label="بداية الجلسة">
             <Input type="time" value={v.startTime} onChange={(e) => setV({ ...v, startTime: e.target.value })} />
           </Field>
@@ -436,7 +452,7 @@ function AutoScheduleDialog({ examId, hasSessions, onClose }: { examId: string; 
           <Button variant="ghost" onClick={onClose}>
             إلغاء
           </Button>
-          <Button variant="primary" loading={m.isPending} disabled={!/^\d{2}:\d{2}$/.test(v.startTime) || Number(v.durationMin) < 10 || (maxTenths !== null && Number.isNaN(maxTenths))} onClick={() => m.mutate({ examId, startTime: v.startTime, durationMin: Number(v.durationMin), maxTenths })}>
+          <Button variant="primary" loading={m.isPending} disabled={!/^\d{2}:\d{2}$/.test(v.startTime) || Number(v.durationMin) < 10 || (maxTenths !== null && Number.isNaN(maxTenths))} onClick={() => m.mutate({ examId, startTime: v.startTime, durationMin: Number(v.durationMin), maxTenths, excludeSubjectIds: excluded })}>
             توليد الجدول
           </Button>
         </DialogFooter>

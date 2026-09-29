@@ -756,12 +756,9 @@ export async function seedPhase3(tenantId: string) {
     description: "تحويل متحصلات الفصل الأول إلى الحساب الجاري",
   });
 
-  // رواتب أغسطس وسبتمبر (قيد إجمالي لحين وحدة الرواتب)
-  for (const [m, name] of [
-    [7, "أغسطس"],
-    [8, "سبتمبر"],
-  ] as const) {
-    const date = m === 8 ? addDays(today, -2) : monthEnd(m);
+  // رواتب أغسطس (قيد إجمالي من النظام السابق)؛ سبتمبر وما بعده من مسير الرواتب (المرحلة ٤)
+  for (const [m, name] of [[7, "أغسطس"]] as const) {
+    const date = monthEnd(m);
     if (date > today) continue;
     await accounting.createManualEntry(acc.db, acc.session, {
       date,

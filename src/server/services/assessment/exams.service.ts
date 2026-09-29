@@ -260,7 +260,7 @@ const addMinutes = (hhmm: string, min: number) => {
  * جدولة تلقائية: لكل صف مواده من الخطة (الثقيلة أولاً) موزعة على أيام الاختبار،
  * جلسة يومياً، وجلستان إن زادت المواد عن الأيام. الدرجة العظمى الافتراضية = وزن المكوّن.
  */
-export async function autoSchedule(db: TenantDb, session: SessionData, input: { examId: string; startTime: string; durationMin: number; maxTenths?: number | null }) {
+export async function autoSchedule(db: TenantDb, session: SessionData, input: { examId: string; startTime: string; durationMin: number; maxTenths?: number | null; excludeSubjectIds?: string[] }) {
   const scope = requireManage(session);
   const exam = await loadExam(db, session, input.examId);
   assertBranch(scope, exam.branchId);
@@ -269,7 +269,7 @@ export async function autoSchedule(db: TenantDb, session: SessionData, input: { 
   const days = examDays(iso(exam.startDate), iso(exam.endDate));
   if (!days.length) throw badRequest("لا أيام دراسية في فترة الاختبار");
   const grades = await db.grade.findMany({ where: { id: { in: exam.gradeIds } }, select: { id: true, stageId: true } });
-  const plan = await db.gradeSubject.findMany({ where: { gradeId: { in: exam.gradeIds } }, orderBy: [{ heavy: "desc" }, { weeklyPeriods: "desc" }] });
+  const plan = await db.gradeSubject.findMany({ where: { gradeId: { in: exam.gradeIds }, ...(input.excludeSubjectIds?.length ? { subjectId: { notIn: input.excludeSubjectIds } } : {}) }, orderBy: [{ heavy: "desc" }, { weeklyPeriods: "desc" }] });
   const rows: Array<{ gradeId: string; subjectId: string; date: string; startTime: string; maxTenths: number }> = [];
   for (const g of grades) {
     const scheme = await schemeFor(db, session.tenant.id, g.stageId);

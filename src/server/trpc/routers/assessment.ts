@@ -30,7 +30,7 @@ const examsRouter = router({
     .mutation(({ ctx, input }) => exams.upsertSession(ctx.db, ctx.session, input)),
   deleteSession: authedProcedure.input(z.object({ id })).mutation(({ ctx, input }) => exams.deleteSession(ctx.db, ctx.session, input.id)),
   autoSchedule: authedProcedure
-    .input(z.object({ examId: id, startTime: z.string().regex(/^\d{2}:\d{2}$/), durationMin: z.number().int().min(10).max(300), maxTenths: tenths.nullish() }))
+    .input(z.object({ examId: id, startTime: z.string().regex(/^\d{2}:\d{2}$/), durationMin: z.number().int().min(10).max(300), maxTenths: tenths.nullish(), excludeSubjectIds: z.array(id).max(30).optional() }))
     .mutation(({ ctx, input }) => exams.autoSchedule(ctx.db, ctx.session, input)),
   autoCommittees: authedProcedure
     .input(z.object({ examId: id, capacity: z.number().int().min(5).max(60), invigilatorsPerCommittee: z.number().int().min(1).max(4), interleaveGrades: z.boolean(), firstSeat: z.number().int().min(1).max(999_999).nullish() }))
@@ -99,7 +99,7 @@ const cardsRouter = router({
     .mutation(({ ctx, input }) => results.saveTemplate(ctx.db, ctx.session, input)),
   deleteTemplate: authedProcedure.input(z.object({ id })).mutation(({ ctx, input }) => results.deleteTemplate(ctx.db, ctx.session, input.id)),
   list: authedProcedure.input(z.object({ termId: id, sectionId: id })).query(({ ctx, input }) => results.reportCardList(ctx.db, ctx.session, input)),
-  issue: authedProcedure.input(z.object({ termId: id, sectionIds: z.array(id).min(1).max(100), templateId: id.nullish() })).mutation(({ ctx, input }) => results.issueReportCards(ctx.db, ctx.session, input)),
+  issue: authedProcedure.input(z.object({ termId: id, sectionIds: z.array(id).min(1).max(100), templateId: id.nullish(), progress: z.boolean().optional() })).mutation(({ ctx, input }) => results.issueReportCards(ctx.db, ctx.session, input)),
   print: authedProcedure.input(z.object({ termId: id, sectionId: id.nullish(), cardIds: z.array(id).max(500).nullish() })).query(({ ctx, input }) => results.printCards(ctx.db, ctx.session, input)),
   publication: authedProcedure.input(z.object({ termId: id })).query(({ ctx, input }) => ctx.db.resultPublication.findFirst({ where: { termId: input.termId } })),
   setPublication: authedProcedure.input(z.object({ termId: id, publishAt: z.coerce.date(), withholdOnDebt: z.boolean() })).mutation(({ ctx, input }) => results.setPublication(ctx.db, ctx.session, input)),

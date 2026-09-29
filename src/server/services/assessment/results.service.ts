@@ -269,6 +269,8 @@ export async function deleteTemplate(db: TenantDb, session: SessionData, id: str
 // ---------------------------------------------------------------------
 
 export interface CardSnapshot {
+  /** TERM = شهادة نهاية الفصل، PROGRESS = تقرير متابعة قبل اكتمال التقييم */
+  kind?: "TERM" | "PROGRESS";
   student: { name: string; academicNumber: string; grade: string; section: string; branch: string };
   term: { name: string; year: string };
   subjects: Array<{ name: string; bp: number | null; band: string | null; letter: string | null; points: number | null; pass: boolean; components: Array<{ name: string; weight: number; bp: number | null }> }>;
@@ -287,7 +289,7 @@ function newCode() {
 }
 
 /** إصدار شهادات فصول: لا يُصدر إلا بعد اعتماد كل الدرجات، وتُحفظ لقطة ثابتة ورمز تحقق */
-export async function issueReportCards(db: TenantDb, session: SessionData, input: { termId: string; sectionIds: string[]; templateId?: string | null }) {
+export async function issueReportCards(db: TenantDb, session: SessionData, input: { termId: string; sectionIds: string[]; templateId?: string | null; progress?: boolean }) {
   const scope = requireCards(session, "create");
   if (!input.sectionIds.length) throw badRequest("اختر فصلاً واحداً على الأقل");
   const sections = await db.section.findMany({ where: { id: { in: input.sectionIds }, deletedAt: null, ...(scope.kind === "all" ? {} : { branchId: { in: scope.branchIds } }) }, include: { branch: { select: { name: true } } } });
@@ -307,6 +309,7 @@ export async function issueReportCards(db: TenantDb, session: SessionData, input
     const scheme = data.schemes.get(r.student.stageId)!;
     const att = (s: string) => attendance.find((a) => a.studentId === r.student.id && a.status === s)?._count._all ?? 0;
     const snapshot: CardSnapshot = {
+      kind: input.progress ? "PROGRESS" : "TERM",
       student: { name: r.student.fullName, academicNumber: r.student.academicNumber, grade: r.student.grade, section: r.student.section, branch: sections.find((s) => s.id === r.student.sectionId)?.branch.name ?? "" },
       term: { name: data.term.name, year: data.term.academicYear.name },
       subjects: Object.entries(r.subjects).map(([sid, s]) => {
@@ -352,12 +355,19 @@ export async function reportCardList(db: TenantDb, session: SessionData, input: 
   };
 }
 
-/** مستحقات الطلاب غير المسددة (فواتير صادرة أو مسددة جزئياً) */
-export async function studentDebts(db: TenantDb, studentIds: string[]) {
-  const invoices = await db.invoice.findMany({ where: { studentId: { in: studentIds }, status: { in: ["ISSUED", "PARTIAL"] }, deletedAt: null }, select: { studentId: true, totalMinor: true, paidMinor: true, creditedMinor: true } });
+/**
+ * المستحقات المتأخرة للطلاب: ما حلّ موعده ولم يُسدَّد (الأقساط المستقبلية لا تُحتسب).
+ * للفاتورة المقسطة: الأقساط المستحقة غير المسددة بحد أقصى رصيد الفاتورة؛ وغيرها: الرصيد إن تجاوز تاريخ الاستحقاق.
+ */
+export async function studentDebts(db: TenantDb, studentIds: string[], asOf: Date = new Date()) {
+  const invoices = await db.invoice.findMany({ where: { studentId: { in: studentIds }, status: { in: ["ISSUED", "PARTIAL"] }, deletedAt: null }, select: { studentId: true, totalMinor: true, paidMinor: true, creditedMinor: true, dueDate: true, installments: { select: { dueDate: true, amountMinor: true, paidMinor: true } } } });
   const out = new Map<string, number>();
-  for (const i of invoices) out.set(i.studentId, (out.get(i.studentId) ?? 0) + i.totalMinor - i.paidMinor - i.creditedMinor);
-  for (const [k, v] of out) if (v <= 0) out.delete(k);
+  for (const i of invoices) {
+    const balance = i.totalMinor - i.paidMinor - i.creditedMinor;
+    if (balance <= 0) continue;
+    const overdue = i.installments.length ? Math.min(balance, i.installments.filter((x) => x.dueDate < asOf).reduce((s, x) => s + Math.max(0, x.amountMinor - x.paidMinor), 0)) : i.dueDate < asOf ? balance : 0;
+    if (overdue > 0) out.set(i.studentId, (out.get(i.studentId) ?? 0) + overdue);
+  }
   return out;
 }
 
@@ -454,7 +464,7 @@ export async function verifyReportCard(code: string) {
   if (!card) return null;
   const tenant = await rootDb.tenant.findUnique({ where: { id: card.tenantId }, select: { name: true, logoUrl: true, isDemo: true } });
   const snap = card.snapshot as unknown as CardSnapshot;
-  return { school: tenant?.name ?? "", isDemo: tenant?.isDemo ?? false, student: snap.student.name, grade: `${snap.student.grade} / ${snap.student.section}`, term: `${snap.term.name} — ${snap.term.year}`, averageBp: snap.averageBp, result: snap.result, issuedAt: card.issuedAt, subjects: snap.subjects.length };
+  return { school: tenant?.name ?? "", isDemo: tenant?.isDemo ?? false, progress: snap.kind === "PROGRESS", student: snap.student.name, grade: `${snap.student.grade} / ${snap.student.section}`, term: `${snap.term.name} — ${snap.term.year}`, averageBp: snap.averageBp, result: snap.result, issuedAt: card.issuedAt, subjects: snap.subjects.length };
 }
 
 // ---------------------------------------------------------------------

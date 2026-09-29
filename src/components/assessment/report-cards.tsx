@@ -58,6 +58,7 @@ export function ReportCardsPage() {
   const templates = trpc.assessment.cards.templates.useQuery();
   const [sectionId, setSectionId] = useState<string | null>(null);
   const [templateId, setTemplateId] = useState<string | null>(null);
+  const [progress, setProgress] = useState(true);
   const sid = sectionId ?? sections.data?.sections[0]?.id ?? null;
   const list = trpc.assessment.cards.list.useQuery({ termId: termId ?? "", sectionId: sid ?? "" }, { enabled: Boolean(termId && sid) });
   const issue = trpc.assessment.cards.issue.useMutation({
@@ -78,8 +79,9 @@ export function ReportCardsPage() {
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <Select className="w-[260px]" value={sid ?? undefined} onChange={setSectionId} options={sections.data.sections.map((s) => ({ value: s.id, label: `${s.name} — ${s.branch}` }))} />
             <Select className="w-[200px]" value={templateId ?? templates.data?.[0]?.id} onChange={setTemplateId} options={(templates.data ?? []).map((t) => ({ value: t.id, label: t.name }))} />
+            <Select className="w-[220px]" value={progress ? "PROGRESS" : "TERM"} onChange={(k) => setProgress(k === "PROGRESS")} options={[{ value: "PROGRESS", label: "تقرير متابعة (أثناء الفصل)" }, { value: "TERM", label: "شهادة نهاية الفصل" }]} />
             <div className="ms-auto flex flex-wrap gap-2">
-              <Button size="sm" variant="primary" icon={<FileCheck2 className="size-3.5" />} loading={issue.isPending} disabled={!sid || Boolean(d?.pendingApproval)} onClick={() => sid && issue.mutate({ termId, sectionIds: [sid], templateId: templateId ?? templates.data?.[0]?.id ?? null })}>
+              <Button size="sm" variant="primary" icon={<FileCheck2 className="size-3.5" />} loading={issue.isPending} disabled={!sid || Boolean(d?.pendingApproval)} onClick={() => sid && issue.mutate({ termId, sectionIds: [sid], templateId: templateId ?? templates.data?.[0]?.id ?? null, progress })}>
                 {issued ? "إعادة إصدار شهادات الفصل" : "إصدار شهادات الفصل"}
               </Button>
               {issued ? (
@@ -112,7 +114,7 @@ export function ReportCardsPage() {
                     <th>الترتيب</th>
                     <th>النتيجة</th>
                     <th>صدرت</th>
-                    <th>المستحقات</th>
+                    <th>مستحقات متأخرة</th>
                     <th>للأسرة</th>
                     <th />
                   </tr>
@@ -158,7 +160,7 @@ function PublicationCard({ termId }: { termId: string }) {
   return (
     <SettingsCard
       title="نشر النتائج للأسر"
-      description={q.data ? `مجدولة في ${fmtDate(q.data.publishAt, "long")}${q.data.withholdOnDebt ? " — مع حجب شهادات من عليهم مستحقات" : ""}` : "لم يُحدد موعد النشر؛ الشهادات غير مرئية لأولياء الأمور."}
+      description={q.data ? `مجدولة في ${fmtDate(q.data.publishAt, "long")}${q.data.withholdOnDebt ? " — مع حجب شهادات من عليهم مستحقات متأخرة" : ""}` : "لم يُحدد موعد النشر؛ الشهادات غير مرئية لأولياء الأمور."}
       footer={
         <Button size="sm" variant="primary" icon={<CalendarClock className="size-3.5" />} disabled={!current.at} loading={m.isPending} onClick={() => m.mutate({ termId, publishAt: new Date(current.at), withholdOnDebt: current.withhold })}>
           حفظ موعد النشر
@@ -170,7 +172,7 @@ function PublicationCard({ termId }: { termId: string }) {
           <Input type="datetime-local" value={current.at} onChange={(e) => setV({ ...current, at: e.target.value })} />
         </Field>
         <label className="flex items-center gap-2 pb-1.5 text-[14px]">
-          <Checkbox checked={current.withhold} onChange={(withhold) => setV({ ...current, withhold })} /> حجب شهادة من عليه مستحقات حتى السداد
+          <Checkbox checked={current.withhold} onChange={(withhold) => setV({ ...current, withhold })} /> حجب شهادة من عليه مستحقات متأخرة حتى السداد (الأقساط غير المستحقة بعد لا تُحتسب)
         </label>
       </div>
     </SettingsCard>
@@ -226,7 +228,7 @@ export function ReportCardView({ card, school, isDemo }: { card: Pick<Card, "ver
             )}
             <div className="flex-1">
               <p className="text-[20px] font-bold">{school.name}</p>
-              <p className="text-[14px] text-fg-2">{b.title || "شهادة نتيجة الطالب"}</p>
+              <p className="text-[14px] text-fg-2">{s.kind === "PROGRESS" ? "تقرير متابعة أداء الطالب" : b.title || "شهادة نتيجة الطالب"}</p>
             </div>
             <div className="text-end text-[13px] text-fg-2">
               <p>{s.term.name}</p>
@@ -258,7 +260,7 @@ export function ReportCardView({ card, school, isDemo }: { card: Pick<Card, "ver
                 <th className="text-start">{b.title || "المادة"}</th>
                 <th>الدرجة</th>
                 <th>التقدير</th>
-                <th>النتيجة</th>
+                <th>{s.kind === "PROGRESS" ? "المستوى" : "النتيجة"}</th>
               </tr>
             </thead>
             <tbody>
@@ -267,7 +269,7 @@ export function ReportCardView({ card, school, isDemo }: { card: Pick<Card, "ver
                   <td>{x.name}</td>
                   <td className="text-center tabular">{shown(x.bp, x.letter, x.points)}</td>
                   <td className="text-center">{x.band ?? "—"}</td>
-                  <td className={cn("text-center", !x.pass && x.bp !== null && "font-medium text-danger-700")}>{x.bp === null ? "—" : x.pass ? "ناجح" : "دون النجاح"}</td>
+                  <td className={cn("text-center", !x.pass && x.bp !== null && "font-medium text-danger-700")}>{x.bp === null ? "—" : x.pass ? (s.kind === "PROGRESS" ? "مطمئن" : "ناجح") : s.kind === "PROGRESS" ? "يحتاج دعماً" : "دون النجاح"}</td>
                 </tr>
               ))}
             </tbody>
@@ -312,9 +314,13 @@ export function ReportCardView({ card, school, isDemo }: { card: Pick<Card, "ver
                 <p className="text-[16px] font-bold tabular">{v}</p>
               </div>
             ))}
-            <p className="col-span-full text-[15px]">
-              النتيجة: <b className={cn(s.result === "FAIL" && "text-danger-700", s.result === "SECOND_ROUND" && "text-warning-700")}>{RESULT_STATUS[s.result]!.label}</b>
-            </p>
+            {s.kind === "PROGRESS" ? (
+              <p className="col-span-full text-[13px] text-fg-2">تقرير متابعة بما رُصد واعتُمد حتى تاريخه؛ النتيجة النهائية تُعلن في شهادة نهاية الفصل.</p>
+            ) : (
+              <p className="col-span-full text-[15px]">
+                النتيجة: <b className={cn(s.result === "FAIL" && "text-danger-700", s.result === "SECOND_ROUND" && "text-warning-700")}>{RESULT_STATUS[s.result]!.label}</b>
+              </p>
+            )}
           </div>
         );
       case "attendance":
@@ -612,9 +618,9 @@ export function MyResultsPage() {
                     <div key={c.id} className="rounded-lg bg-card p-4 shadow-card">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{c.term}</span>
-                        {c.status === "VISIBLE" && c.snapshot ? <Tag color={RESULT_STATUS[c.snapshot.result]!.color}>{RESULT_STATUS[c.snapshot.result]!.label}</Tag> : null}
+                        {c.status === "VISIBLE" && c.snapshot ? c.snapshot.kind === "PROGRESS" ? <Tag color="navy">تقرير متابعة</Tag> : <Tag color={RESULT_STATUS[c.snapshot.result]!.color}>{RESULT_STATUS[c.snapshot.result]!.label}</Tag> : null}
                         {c.status === "NOT_YET" ? <Tag color="gold">{c.publishAt ? `تُتاح ${fmtDate(c.publishAt)}` : "لم يُحدد موعد النشر"}</Tag> : null}
-                        {c.status === "WITHHELD" ? <Tag color="red">محجوبة لوجود مستحقات</Tag> : null}
+                        {c.status === "WITHHELD" ? <Tag color="red">محجوبة لوجود مستحقات متأخرة</Tag> : null}
                         <div className="ms-auto flex gap-2">
                           {c.status === "VISIBLE" ? (
                             <>

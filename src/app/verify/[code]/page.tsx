@@ -23,7 +23,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                 ["الصف / الفصل", card.grade],
                 ["الفصل الدراسي", card.term],
                 ["المعدل", card.averageBp === null ? "—" : `${bpToPercentString(card.averageBp)}٪`],
-                ["النتيجة", RESULT_LABEL[card.result]],
+                ["النتيجة", card.progress ? "تقرير متابعة (قبل نهاية الفصل)" : RESULT_LABEL[card.result]],
                 ["عدد المواد", String(card.subjects)],
                 ["تاريخ الإصدار", card.issuedAt.toISOString().slice(0, 10)],
               ].map(([k, v]) => (

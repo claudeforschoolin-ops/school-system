@@ -341,7 +341,7 @@ function SettingsForm({ initial, canEdit, opts }: { initial: AssessmentSettingsV
       >
         <div className="space-y-3">
           <label className="flex items-center gap-2 text-[14px]">
-            <Checkbox disabled={!canEdit} checked={v.withholdOnDebt} onChange={(withholdOnDebt) => setV({ ...v, withholdOnDebt })} /> السماح بحجب شهادات من عليهم مستحقات (يُفعَّل لكل فصل عند النشر)
+            <Checkbox disabled={!canEdit} checked={v.withholdOnDebt} onChange={(withholdOnDebt) => setV({ ...v, withholdOnDebt })} /> السماح بحجب شهادات من عليهم مستحقات متأخرة (يُفعَّل لكل فصل عند النشر)
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="حد التعثر ٪" hint="من معدله دونه يظهر في «الطلاب المتعثرون»">
