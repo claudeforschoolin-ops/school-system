@@ -1,7 +1,7 @@
 "use client";
 /**
  * نقطة البيع (متجر الزي والكتب، والمقصف): كتالوج بالبحث والباركود، سلة، طرق دفع (نقد، بطاقة، على حساب الطالب، المحفظة)،
- * إيصال مطبوع؛ تقارير المبيعات والهامش مع الإلغاء؛ ومحافظ الطلاب (شحن، حدود، فئات ممنوعة، حركات) للموظفين وأولياء الأمور.
+ * إيصال مطبوع؛ تقارير المبيعات والهامش مع الإلغاء؛ ومحافظ الطلاب (شحن، حدود، أصناف ممنوعة، حركات) للموظفين وأولياء الأمور.
  */
 import { Barcode, Minus, Plus, Printer, Search, ShoppingCart, Trash2, Wallet, XCircle } from "lucide-react";
 import Link from "next/link";
@@ -391,7 +391,7 @@ export function WalletDetail({ studentId, family }: { studentId: string; family?
             <Field label="تنبيه انخفاض الرصيد تحت"><MoneyInput disabled={!d.canEditLimits} value={l.low} onChange={(low) => setLimits({ ...l, low })} /></Field>
             <label className="flex items-center gap-2 text-[14px]"><Checkbox disabled={!d.canEditLimits} checked={l.notify} onChange={(notify) => setLimits({ ...l, notify })} /> إشعار بكل عملية شراء</label>
             <div>
-              <span className="mb-1.5 block text-[13px] font-medium text-fg-2">فئات ممنوعة</span>
+              <span className="mb-1.5 block text-[13px] font-medium text-fg-2">أصناف ممنوعة</span>
               <BlockedItems blocked={l.blocked} disabled={!d.canEditLimits} onChange={(blocked) => setLimits({ ...l, blocked })} />
             </div>
             {d.canEditLimits ? <Button variant="primary" disabled={!dirty} loading={save.isPending} onClick={() => save.mutate({ studentId, dailyLimitMinor: l.daily, blockedCategories: l.blocked, notifyPurchases: l.notify, lowBalanceMinor: l.low })}>حفظ الحدود</Button> : null}
@@ -435,9 +435,9 @@ export function WalletDetail({ studentId, family }: { studentId: string; family?
 
 /** منع أصناف مقصف بعينها (ولي الأمر) */
 function BlockedItems({ blocked, disabled, onChange }: { blocked: string[]; disabled: boolean; onChange: (b: string[]) => void }) {
-  const q = trpc.pos.catalog.useQuery({ kind: "CANTEEN" }, { retry: false });
-  const items = q.data?.items ?? [];
-  if (q.error) return <p className="text-[12px] text-fg-3">قائمة الأصناف متاحة للمقصف؛ الأصناف الممنوعة حالياً: {blocked.length}</p>;
+  const q = trpc.pos.menu.useQuery(undefined, { retry: false });
+  const items = q.data ?? [];
+  if (q.error) return <p className="text-[12px] text-fg-3">تعذر تحميل قائمة المقصف؛ الأصناف الممنوعة حالياً: {blocked.length}</p>;
   return (
     <div className="flex flex-wrap gap-1.5">
       {items.map((i) => {

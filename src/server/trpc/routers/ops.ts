@@ -148,6 +148,7 @@ const posKind = z.enum(["STORE", "CANTEEN"]);
 
 export const posRouter = router({
   catalog: p.input(z.object({ kind: posKind })).query(({ ctx, input }) => pos.posCatalog(ctx.db, ctx.session, input.kind)),
+  menu: p.query(({ ctx }) => pos.canteenMenu(ctx.db, ctx.session)),
   sell: p
     .input(z.object({ kind: posKind, warehouseId: id, paymentMethod: z.enum(["CASH", "CARD", "STUDENT_ACCOUNT", "WALLET"]), studentId: id.nullish(), customerName: opt(120), lines }))
     .mutation(({ ctx, input }) => pos.createSale(ctx.db, ctx.session, input)),

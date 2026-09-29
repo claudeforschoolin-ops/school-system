@@ -49,7 +49,8 @@ export function StopsMap({ stops, current, highlight }: { stops: Stop[]; current
   const W = 600;
   const H = 240;
   const pad = 30;
-  const x = (lng: number) => pad + ((lng - minLng) / (maxLng - minLng || 1)) * (W - 2 * pad);
+  const padX = 90; // مساحة لأسماء المحطات عند الطرفين
+  const x = (lng: number) => padX + ((lng - minLng) / (maxLng - minLng || 1)) * (W - 2 * padX);
   const y = (lat: number) => H - pad - ((lat - minLat) / (maxLat - minLat || 1)) * (H - 2 * pad);
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full rounded-lg bg-hover" role="img" aria-label="خريطة المحطات">
@@ -57,7 +58,7 @@ export function StopsMap({ stops, current, highlight }: { stops: Stop[]; current
       {pts.map((p, i) => (
         <g key={p.id ?? i}>
           <circle cx={x(p.lng!)} cy={y(p.lat!)} r={p.id === current ? 10 : 7} fill={p.id === current ? "var(--tag-navy-dot)" : p.id === highlight ? "var(--tag-gold-dot)" : "var(--bg-card, #fff)"} stroke="var(--tag-navy-dot)" strokeWidth={2} />
-          <text x={x(p.lng!)} y={y(p.lat!) - 14} textAnchor="middle" fontSize={12} fill="currentColor">{p.name}</text>
+          <text x={x(p.lng!)} y={y(p.lat!) < 36 ? y(p.lat!) + 24 : y(p.lat!) - 14} textAnchor="middle" fontSize={12} fill="currentColor" stroke="var(--bg-hover)" strokeWidth={4} paintOrder="stroke">{p.name}</text>
         </g>
       ))}
     </svg>

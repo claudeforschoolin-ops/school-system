@@ -4,6 +4,7 @@
  * القيود: المبيعات (الصندوق/البنك/المحافظ ← الإيراد + الضريبة)، تكلفة البضاعة (التكلفة ← المخزون)، الشحن (الصندوق ← أرصدة المحافظ).
  */
 import { toISODate } from "@/lib/dates";
+import { resolveScope } from "@/lib/rbac/access";
 import { exceedsDailyLimit, posTotals } from "@/lib/ops/calc";
 import type { SessionData } from "@/server/auth/session";
 import type { TenantDb } from "@/server/db/tenant";
@@ -30,6 +31,14 @@ async function guardianUsers(db: TenantDb, studentId: string) {
 // ---------------------------------------------------------------------
 // كتالوج البيع
 // ---------------------------------------------------------------------
+
+/** قائمة المقصف للقراءة (لمنع أصناف بعينها من محفظة الابن) — لكل من يرى المقصف بما فيهم الأسرة */
+export async function canteenMenu(db: TenantDb, session: SessionData) {
+  // أي نطاق عرض (بما فيه نطاق الأسرة) يكفي؛ القائمة أسماء وأسعار فقط
+  if (!resolveScope(session.access, "canteen", "view")) throw forbidden("ليست لديك صلاحية على المقصف");
+  const items = await db.inventoryItem.findMany({ where: { deletedAt: null, isActive: true, sellable: true, category: "CANTEEN" }, select: { id: true, name: true, salePriceMinor: true }, orderBy: { name: "asc" } });
+  return items.map((i) => ({ id: i.id, name: i.name, priceMinor: i.salePriceMinor ?? 0 }));
+}
 
 export async function posCatalog(db: TenantDb, session: SessionData, kind: "STORE" | "CANTEEN") {
   requireOps(session, MODULE[kind], "create");

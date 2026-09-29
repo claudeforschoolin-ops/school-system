@@ -337,6 +337,11 @@ export async function seedPhase5(tenantId: string) {
     if (status === "WAITING_PARTS") await maint.updateRequest(F.db, F.session, req.id, { status: "WAITING_PARTS", resolution: null });
     if (status === "DONE") await maint.completeRequest(F.db, F.session, req.id, { resolution: extCost ? "نُفذ بواسطة مقاول معتمد وتم الفحص" : "تم الإصلاح داخلياً", externalCostMinor: SAR(extCost), paidFrom: extCost ? "CASH" : null, vendorName: extCost ? "مؤسسة الخدمات الفنية" : null });
   }
+  // البلاغات أُنشئت على مدى الأسابيع الماضية؛ مدة الإنجاز واقعية (ساعات إلى أيام)
+  for (const [k, req] of (await rootDb.maintenanceRequest.findMany({ where: { tenantId }, orderBy: { number: "asc" } })).entries()) {
+    const createdAt = new Date(Date.now() - (20 - k) * 26 * 3_600_000);
+    await rootDb.maintenanceRequest.update({ where: { id: req.id }, data: { createdAt, ...(req.completedAt ? { completedAt: new Date(createdAt.getTime() + r.int(3, 52) * 3_600_000) } : {}) } });
+  }
   const schedDefs: Array<[string, string, number, number]> = [
     ["تنظيف فلاتر المكيفات", "HVAC", 90, 12],
     ["فحص طفايات الحريق وأجهزة الإنذار", "SAFETY", 30, 0],

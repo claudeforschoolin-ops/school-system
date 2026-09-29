@@ -2,7 +2,7 @@
 
 منصة عربية لإدارة المدارس الأهلية على طراز Notion: مساحات فرق وصفحات وقواعد بيانات بعروض متعددة، بصلاحيات دقيقة (وحدة × إجراء × نطاق)، وسجل تدقيق غير قابل للتعديل، وعزل كامل بين المدارس. واجهة عربية بالكامل من اليمين إلى اليسار، مع التقويم الهجري والميلادي، والوضع الداكن.
 
-> **الحالة:** المراحل ١ (الأساس) و٢ (الطلاب والشؤون الأكاديمية) و٣ (النظام المحاسبي والمالي) و٤ (التقييم والموارد البشرية والرواتب) مكتملة. انظر تقارير [المرحلة ١](docs/PHASE1-REPORT.md) و[المرحلة ٢](docs/PHASE2-REPORT.md) و[المرحلة ٣](docs/PHASE3-REPORT.md) و[المرحلة ٤](docs/PHASE4-REPORT.md) و[خطة المشروع](docs/PLAN.md).
+> **الحالة:** المراحل ١ (الأساس) و٢ (الطلاب والشؤون الأكاديمية) و٣ (النظام المحاسبي والمالي) و٤ (التقييم والموارد البشرية والرواتب) و٥ (العمليات والخدمات) مكتملة. انظر تقارير [المرحلة ١](docs/PHASE1-REPORT.md) و[المرحلة ٢](docs/PHASE2-REPORT.md) و[المرحلة ٣](docs/PHASE3-REPORT.md) و[المرحلة ٤](docs/PHASE4-REPORT.md) و[المرحلة ٥](docs/PHASE5-REPORT.md) و[خطة المشروع](docs/PLAN.md).
 
 **وحدات المرحلة ٢:**
 - **شؤون الطلاب:** القبول والتسجيل (مع نموذج تقديم عام)، ملفات الطلاب، الحضور والغياب، التحويلات والإجازات، السلوك والإرشاد.
@@ -45,7 +45,7 @@ npm run dev                       # http://localhost:3000
 | `FIELD_ENCRYPTION_KEY` | مفتاح تشفير الحقول الحساسة (AES-256-GCM) بطول 32 بايت base64: `openssl rand -base64 32` |
 | `APP_URL` | عنوان التطبيق (يُستخدم في روابط الدعوة وإعادة التعيين) |
 | `STORAGE_DRIVER` / `STORAGE_LOCAL_DIR` | تخزين الملفات (المحلي فقط في هذه المرحلة) |
-| `CRON_SECRET` | سر استدعاء المهام المجدولة `POST /api/cron/automations` و`POST /api/cron/finance` |
+| `CRON_SECRET` | سر استدعاء المهام المجدولة `POST /api/cron/automations` و`POST /api/cron/finance` و`POST /api/cron/hr` و`POST /api/cron/ops` |
 | `DEMO_MODE` | `true` لإظهار تلميحات الحسابات التجريبية في صفحة الدخول |
 
 ## الحسابات التجريبية
@@ -69,6 +69,8 @@ npm run dev                       # http://localhost:3000
 | مديرة موارد بشرية | `hr.manager@demo.manassa.sa` | ✓ |
 | موظف موارد بشرية | `hr@demo.manassa.sa` | |
 | أمينة المكتبة | `librarian@demo.manassa.sa` | |
+| ممرضة المدرسة | `nurse@demo.manassa.sa` | ✓ |
+| مسؤول المقصف | `canteen@demo.manassa.sa` | |
 | مسؤول المرافق | `facilities@demo.manassa.sa` | |
 | مسؤول المشتريات | `procurement@demo.manassa.sa` | |
 | مسؤول النقل | `transport@demo.manassa.sa` | |
@@ -95,6 +97,7 @@ npm run dev                       # http://localhost:3000
 | `npm run db:seed` | البيانات التجريبية (يرفض التشغيل إن كانت موجودة) |
 | `npm run demo:totp` | رمز المصادقة الثنائية الحالي للحسابات التجريبية |
 | `POST /api/cron/finance` | المهام المالية اليومية (تذكيرات السداد)، بترويسة `Authorization: Bearer $CRON_SECRET` |
+| `POST /api/cron/ops` | مهام العمليات اليومية (الصيانة الدورية، تذكيرات المكتبة، وثائق الحافلات، الإهلاك الشهري)، بالترويسة نفسها |
 | `npm run screens -- <email> <path>…` | لقطات شاشة (`--dark`، `--mobile`) |
 
 ## الخط

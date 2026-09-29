@@ -3,6 +3,7 @@
  * الأمن والسلامة: سجل الزوار (تسجيل، بطاقة QR، مسح الدخول والخروج)، استلام الطلاب (التحقق من المستلم ومطابقة الهوية)،
  * الحوادث، تمارين الإخلاء وخططه؛ والعيادة المدرسية (زيارات مشفّرة، أدوية، إشعار ولي الأمر)؛ وصفحة «المفوضون بالاستلام».
  */
+import { formatTime } from "@/lib/dates";
 import { AlertTriangle, BadgeCheck, ClipboardList, DoorOpen, FileText, HeartPulse, LogIn, LogOut, Pill, Plus, Printer, QrCode, ScanLine, ShieldAlert, Siren, Stethoscope, Thermometer, UserCheck, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -40,7 +41,8 @@ function useQr(text: string | null) {
   return url;
 }
 
-const time = (d: Date | string | null | undefined) => (d ? new Date(d).toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" }) : "—");
+// بتوقيت المدرسة لا توقيت المتصفح
+const time = (d: Date | string | null | undefined) => (d ? formatTime(d) : "—");
 
 // ---------------------------------------------------------------------
 // الزوار
