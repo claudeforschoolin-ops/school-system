@@ -44,6 +44,42 @@ export const MODULE_SETTINGS_SCHEMAS = {
     /** نسبة التحصيل المستهدفة من المستحق (نقاط أساس) */
     collectionTargetBp: z.number().int().min(0).max(10000),
   }),
+  assessment: z.object({
+    /** رئيس القسم لكل مادة (مراجعة الدرجات قبل اعتماد الوكيل): {subjectId: userId} */
+    subjectHeads: z.record(z.string().max(64), z.string().max(64)),
+    /** حجب الشهادة عن المدينين عند النشر (افتراضي لكل نشر جديد) */
+    withholdOnDebt: z.boolean(),
+    /** تنبيه «متعثر» تحت هذه النسبة (نقاط أساس) */
+    atRiskBp: z.number().int().min(0).max(10000),
+    /** نص إضافي أسفل الشهادة */
+    reportCardFooter: z.string().trim().max(300),
+  }),
+  hr: z.object({
+    /** نسبة استقطاع التأمينات من الموظف السعودي (نقاط أساس) */
+    gosiSaudiEmployeeBp: z.number().int().min(0).max(3000),
+    /** حصة صاحب العمل عن السعودي */
+    gosiSaudiEmployerBp: z.number().int().min(0).max(3000),
+    /** حصة صاحب العمل عن غير السعودي (الأخطار المهنية) */
+    gosiNonSaudiEmployerBp: z.number().int().min(0).max(3000),
+    /** سقف الأجر الخاضع للتأمينات (بالهللة) */
+    gosiCapMinor: z.number().int().min(0),
+    /** خصم الغياب بغير عذر بأجر اليوم */
+    deductAbsence: z.boolean(),
+    /** خصم التأخير بالدقيقة بعد مهلة شهرية */
+    deductLate: z.boolean(),
+    lateMonthlyGraceMinutes: z.number().int().min(0).max(600),
+    /** معامل أجر الساعة الإضافية (نقاط أساس: 15000 = ١٫٥) */
+    overtimeRateBp: z.number().int().min(10000).max(30000),
+    /** أيام الشهر لاحتساب أجر اليوم */
+    monthDays: z.number().int().min(22).max(31),
+    /** التنبيه قبل انتهاء الهوية/الإقامة/الجواز/العقد (أيام) */
+    expiryAlertDays: z.number().int().min(7).max(180),
+    /** مكافأة نهاية الخدمة: نصف شهر عن كل سنة من السنوات الخمس الأولى وشهر عما بعدها (نظام العمل) */
+    eosFirstYearsMonthsBp: z.number().int().min(0).max(20000),
+    eosLaterYearsMonthsBp: z.number().int().min(0).max(20000),
+    /** احتساب مخصص نهاية الخدمة شهرياً مع المسير */
+    accrueEosMonthly: z.boolean(),
+  }),
   messageTemplates: z.object(Object.fromEntries(Object.keys(DEFAULT_TEMPLATES).map((k) => [k, z.string().trim().max(500).optional()])) as Record<keyof typeof DEFAULT_TEMPLATES, z.ZodOptional<z.ZodString>>),
 } as const;
 export type ModuleSettingsKey = keyof typeof MODULE_SETTINGS_SCHEMAS;
@@ -64,11 +100,27 @@ export const MODULE_SETTINGS_DEFAULTS = {
     remindersEnabled: true,
     collectionTargetBp: 9000,
   },
+  assessment: { subjectHeads: {}, withholdOnDebt: true, atRiskBp: 6000, reportCardFooter: "" },
+  hr: {
+    gosiSaudiEmployeeBp: 975,
+    gosiSaudiEmployerBp: 1175,
+    gosiNonSaudiEmployerBp: 200,
+    gosiCapMinor: 4500000,
+    deductAbsence: true,
+    deductLate: true,
+    lateMonthlyGraceMinutes: 60,
+    overtimeRateBp: 15000,
+    monthDays: 30,
+    expiryAlertDays: 60,
+    eosFirstYearsMonthsBp: 5000,
+    eosLaterYearsMonthsBp: 10000,
+    accrueEosMonthly: true,
+  },
   messageTemplates: {},
 } as const;
 
 /** الوحدة التي تحكم كل مجموعة إعدادات */
-const OWNER_MODULE: Record<ModuleSettingsKey, string> = { students: "students", admissions: "admissions", attendance: "attendance", finance: "accounting", messageTemplates: "settings" };
+const OWNER_MODULE: Record<ModuleSettingsKey, string> = { students: "students", admissions: "admissions", attendance: "attendance", finance: "accounting", assessment: "grade_entry", hr: "employees", messageTemplates: "settings" };
 
 export function readModuleSettings<K extends ModuleSettingsKey>(tenantSettings: unknown, key: K): z.infer<(typeof MODULE_SETTINGS_SCHEMAS)[K]> {
   const raw = ((tenantSettings ?? {}) as Record<string, unknown>)[key];

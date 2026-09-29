@@ -2428,3 +2428,846 @@ model CashSession {
 
   @@index([tenantId, cashierId, status])
 }
+
+// =====================================================================
+// المرحلة ٤ — التقييم والدرجات
+// الدرجات بأعشار الدرجة (Int) والنسب بنقاط الأساس؛ لا float في التخزين
+// =====================================================================
+
+/// نظام التقييم لمرحلة (أو افتراضي للمدرسة): مكونات بأوزان، درجة النجاح، والتقديرات
+model GradingScheme {
+  id                     String   @id @default(cuid())
+  tenantId               String
+  /// null = النظام الافتراضي للمدرسة
+  stageId                String?
+  name                   String
+  /// [{key, name, weight}] — مجموع الأوزان ١٠٠
+  components             Json
+  /// درجة النجاح في المادة (نقاط أساس من ١٠٠٪)
+  passBp                 Int      @default(5000)
+  /// التقديرات: [{minBp, label, letter, points}] من الأعلى للأدنى
+  bands                  Json
+  /// أقصى عدد مواد للدور الثاني؛ أكثر منها رسوب (إعادة)
+  maxSecondRoundSubjects Int      @default(3)
+  /// طريقة عرض الدرجة في الشهادة: PERCENT | LETTER | POINTS
+  display                String   @default("PERCENT")
+  isActive               Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  createdById            String?
+  updatedById            String?
+
+  @@index([tenantId, stageId])
+}
+
+enum ExamKind {
+  /// يومي/قصير
+  DAILY
+  /// شهري
+  MONTHLY
+  /// منتصف الفصل
+  MIDTERM
+  /// نهائي
+  FINAL
+}
+
+/// دورة اختبارات (فترة اختبارات لصفوف محددة) بجلساتها ولجانها
+model Exam {
+  id             String    @id @default(cuid())
+  tenantId       String
+  number         Int
+  academicYearId String
+  termId         String
+  branchId       String?
+  title          String
+  kind           ExamKind  @default(MIDTERM)
+  /// مكوّن نظام التقييم الذي تغذيه (مثل midterm أو final)
+  componentKey   String
+  gradeIds       String[]
+  startDate      DateTime  @db.Date
+  endDate        DateTime  @db.Date
+  /// PLANNED | SCHEDULED | RUNNING | GRADING | DONE
+  status         String    @default("PLANNED")
+  instructions   String?
+  customValues   Json      @default("{}")
+  position       Float     @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  createdById    String?
+  updatedById    String?
+  deletedAt      DateTime?
+
+  sessions   ExamSession[]
+  committees ExamCommittee[]
+  seats      ExamSeat[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, termId])
+}
+
+/// جلسة اختبار مادة لصف في يوم ووقت
+model ExamSession {
+  id          String   @id @default(cuid())
+  tenantId    String
+  examId      String
+  exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  gradeId     String
+  subjectId   String
+  date        DateTime @db.Date
+  /// HH:MM
+  startTime   String
+  durationMin Int      @default(90)
+  /// الدرجة العظمى بالأعشار
+  maxTenths   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reports InvigilationReport[]
+
+  @@unique([examId, gradeId, subjectId])
+  @@index([tenantId, date])
+}
+
+/// لجنة اختبار: قاعة ومراقبون
+model ExamCommittee {
+  id             String   @id @default(cuid())
+  tenantId       String
+  examId         String
+  exam           Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  branchId       String
+  number         Int
+  roomId         String?
+  name           String
+  capacity       Int      @default(20)
+  invigilatorIds String[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  seats ExamSeat[]
+
+  @@unique([examId, number])
+}
+
+/// مقعد الطالب في لجنة برقم جلوس
+model ExamSeat {
+  id          String        @id @default(cuid())
+  tenantId    String
+  examId      String
+  exam        Exam          @relation(fields: [examId], references: [id], onDelete: Cascade)
+  committeeId String
+  committee   ExamCommittee @relation(fields: [committeeId], references: [id], onDelete: Cascade)
+  studentId   String
+  seatNumber  Int
+
+  @@unique([examId, studentId])
+  @@unique([examId, seatNumber])
+  @@index([committeeId])
+}
+
+/// محضر مراقبة لجلسة ولجنة: الغياب والملاحظات والمخالفات
+model InvigilationReport {
+  id               String      @id @default(cuid())
+  tenantId         String
+  sessionId        String
+  session          ExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  committeeId      String
+  absentStudentIds String[]
+  /// [{studentId, kind, note}]
+  incidents        Json        @default("[]")
+  notes            String?
+  submittedById    String?
+  submittedAt      DateTime    @default(now())
+
+  @@unique([sessionId, committeeId])
+}
+
+enum AssessmentStatus {
+  DRAFT
+  /// أرسلها المعلم للاعتماد
+  SUBMITTED
+  /// اعتمدها رئيس القسم
+  REVIEWED
+  /// اعتمدها الوكيل — مقفلة
+  APPROVED
+}
+
+/// بند تقييم لفصل ومادة في فصل دراسي (اختبار، مشاركة، واجب، مشروع…)
+model Assessment {
+  id            String           @id @default(cuid())
+  tenantId      String
+  termId        String
+  sectionId     String
+  subjectId     String
+  teacherId     String?
+  componentKey  String
+  title         String
+  maxTenths     Int
+  date          DateTime?        @db.Date
+  examSessionId String?
+  status        AssessmentStatus @default(DRAFT)
+  submittedAt   DateTime?
+  submittedById String?
+  reviewedAt    DateTime?
+  reviewedById  String?
+  approvedAt    DateTime?
+  approvedById  String?
+  /// ملاحظة الإعادة للمعلم
+  returnNote    String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  createdById   String?
+  updatedById   String?
+
+  marks          Mark[]
+  changeRequests GradeChangeRequest[]
+
+  @@index([tenantId, termId, sectionId, subjectId])
+  @@index([tenantId, status])
+}
+
+/// درجة طالب في بند تقييم (بالأعشار)
+model Mark {
+  id           String     @id @default(cuid())
+  tenantId     String
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  studentId    String
+  scoreTenths  Int?
+  absent       Boolean    @default(false)
+  /// غياب بعذر: لا يُحتسب البند للطالب
+  excused      Boolean    @default(false)
+  note         String?
+  updatedById  String?
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([assessmentId, studentId])
+  @@index([tenantId, studentId])
+}
+
+/// طلب تعديل درجة بعد اعتمادها (بموافقة، ويُسجَّل)
+model GradeChangeRequest {
+  id                String     @id @default(cuid())
+  tenantId          String
+  number            Int
+  assessmentId      String
+  assessment        Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  studentId         String
+  oldTenths         Int?
+  newTenths         Int?
+  oldAbsent         Boolean    @default(false)
+  newAbsent         Boolean    @default(false)
+  reason            String
+  /// PENDING | APPROVED | REJECTED | APPLIED
+  status            String     @default("PENDING")
+  approvalRequestId String?
+  requestedById     String?
+  appliedAt         DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+}
+
+/// قالب الشهادة: كتل مرتبة بالسحب مع التواقيع والختم
+model ReportCardTemplate {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  /// [{type, enabled, title?}] بالترتيب
+  blocks      Json
+  /// [{title, name}]
+  signatures  Json     @default("[]")
+  stampUrl    String?
+  footerNote  String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  updatedById String?
+}
+
+/// نشر نتائج فصل دراسي: تاريخ الإتاحة لأولياء الأمور وحجب المدينين
+model ResultPublication {
+  id             String   @id @default(cuid())
+  tenantId       String
+  termId         String   @unique
+  publishAt      DateTime
+  withholdOnDebt Boolean  @default(true)
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+/// شهادة صادرة (لقطة من النتائج وقت الإصدار) برمز تحقق
+model ReportCard {
+  id         String   @id @default(cuid())
+  tenantId   String
+  termId     String
+  studentId  String
+  sectionId  String?
+  verifyCode String   @unique
+  /// لقطة النتائج: المواد والمكونات والمعدل والترتيب والحضور
+  snapshot   Json
+  averageBp  Int
+  rank       Int?
+  /// PASS | SECOND_ROUND | FAIL | INCOMPLETE
+  result     String
+  templateId String?
+  issuedAt   DateTime @default(now())
+  issuedById String?
+  updatedAt  DateTime @updatedAt
+
+  @@unique([termId, studentId])
+  @@index([tenantId, termId])
+}
+
+// =====================================================================
+// المرحلة ٤ — الموارد البشرية
+// =====================================================================
+
+/// إدارة/قسم في الهيكل التنظيمي
+model Department {
+  id             String       @id @default(cuid())
+  tenantId       String
+  code           String
+  name           String
+  parentId       String?
+  parent         Department?  @relation("DepartmentTree", fields: [parentId], references: [id])
+  children       Department[] @relation("DepartmentTree")
+  headEmployeeId String?
+  /// ACADEMIC | ADMIN | SERVICES — يحدد حساب مصروف الرواتب
+  category       String       @default("ADMIN")
+  costCenterId   String?
+  position       Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  createdById    String?
+  updatedById    String?
+  deletedAt      DateTime?
+
+  positions Position[]
+  employees Employee[]
+
+  @@unique([tenantId, code])
+}
+
+/// مسمى وظيفي في قسم
+model Position {
+  id           String     @id @default(cuid())
+  tenantId     String
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  title        String
+  /// عدد الشواغر المعتمدة
+  headcount    Int        @default(1)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  employees Employee[]
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  /// في إجازة طويلة
+  ON_LEAVE
+  SUSPENDED
+  /// انتهت خدمته
+  TERMINATED
+}
+
+/// ملف الموظف
+model Employee {
+  id                String         @id @default(cuid())
+  tenantId          String
+  number            Int
+  /// حساب الدخول (للموظفين الذين يستخدمون المنصة)
+  userId            String?        @unique
+  branchId          String?
+  departmentId      String?
+  department        Department?    @relation(fields: [departmentId], references: [id])
+  positionId        String?
+  positionRef       Position?      @relation(fields: [positionId], references: [id])
+  managerId         String?
+  manager           Employee?      @relation("EmployeeManager", fields: [managerId], references: [id])
+  reports           Employee[]     @relation("EmployeeManager")
+  fullName          String
+  gender            Gender         @default(MALE)
+  birthDate         DateTime?      @db.Date
+  nationality       String         @default("SA")
+  maritalStatus     String?
+  idType            IdType         @default(NATIONAL_ID)
+  /// الهوية مشفّرة مع بصمة للبحث (كما في الطلاب)
+  nationalIdHash    String?
+  nationalIdEnc     String?
+  nationalIdLast4   String?
+  idExpiry          DateTime?      @db.Date
+  passportNumber    String?
+  passportExpiry    DateTime?      @db.Date
+  phone             String?
+  email             String?
+  address           String?
+  /// [{degree, major, institution, year}]
+  qualifications    Json           @default("[]")
+  /// [{employer, title, from, to}]
+  experiences       Json           @default("[]")
+  bankName          String?
+  iban              String?
+  /// الكفيل أو الجهة (لغير السعوديين)
+  sponsor           String?
+  hireDate          DateTime       @db.Date
+  status            EmployeeStatus @default(ACTIVE)
+  terminationDate   DateTime?      @db.Date
+  terminationReason String?
+  /// ACADEMIC | ADMIN | SERVICES
+  category          String         @default("ADMIN")
+  shiftId           String?
+  /// مسجّل في التأمينات الاجتماعية
+  gosiRegistered    Boolean        @default(true)
+  attachments       Json           @default("[]")
+  photoUrl          String?
+  notes             String?
+  customValues      Json           @default("{}")
+  position          Float          @default(0)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  createdById       String?
+  updatedById       String?
+  deletedAt         DateTime?
+
+  contracts     EmploymentContract[]
+  attendance    EmployeeAttendance[]
+  leaveBalances LeaveBalance[]
+  leaveRequests StaffLeaveRequest[]
+  loans         EmployeeLoan[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+}
+
+/// عقد العمل وهيكل الراتب
+model EmploymentContract {
+  id              String    @id @default(cuid())
+  tenantId        String
+  employeeId      String
+  employee        Employee  @relation(fields: [employeeId], references: [id])
+  number          Int
+  /// FIXED | UNLIMITED | PART_TIME
+  type            String    @default("FIXED")
+  startDate       DateTime  @db.Date
+  endDate         DateTime? @db.Date
+  probationEnd    DateTime? @db.Date
+  basicMinor      Int
+  housingMinor    Int       @default(0)
+  transportMinor  Int       @default(0)
+  /// [{name, amountMinor}]
+  otherAllowances Json      @default("[]")
+  hoursPerDay     Int       @default(8)
+  annualLeaveDays Int       @default(21)
+  /// ACTIVE | ENDED
+  status          String    @default("ACTIVE")
+  attachments     Json      @default("[]")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String?
+  updatedById     String?
+
+  @@unique([tenantId, number])
+  @@index([employeeId, status])
+}
+
+/// وظيفة شاغرة
+model JobOpening {
+  id           String    @id @default(cuid())
+  tenantId     String
+  number       Int
+  title        String
+  departmentId String?
+  positionId   String?
+  branchId     String?
+  description  String?
+  requirements String?
+  openings     Int       @default(1)
+  /// OPEN | ON_HOLD | CLOSED
+  status       String    @default("OPEN")
+  closingDate  DateTime? @db.Date
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  createdById  String?
+  updatedById  String?
+  deletedAt    DateTime?
+
+  applications JobApplication[]
+
+  @@unique([tenantId, number])
+}
+
+enum ApplicationStage {
+  APPLIED
+  SCREENING
+  INTERVIEW
+  OFFER
+  HIRED
+  REJECTED
+}
+
+/// طلب توظيف (لوحة كانبان بالمراحل)
+model JobApplication {
+  id               String           @id @default(cuid())
+  tenantId         String
+  number           Int
+  openingId        String
+  opening          JobOpening       @relation(fields: [openingId], references: [id])
+  fullName         String
+  email            String?
+  phone            String?
+  nationality      String           @default("SA")
+  gender           Gender           @default(MALE)
+  qualification    String?
+  experienceYears  Int              @default(0)
+  stage            ApplicationStage @default(APPLIED)
+  interviewAt      DateTime?
+  /// ١–٥
+  rating           Int?
+  offerSalaryMinor Int?
+  cv               Json?
+  notes            String?
+  employeeId       String?
+  customValues     Json             @default("{}")
+  position         Float            @default(0)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  createdById      String?
+  updatedById      String?
+  deletedAt        DateTime?
+
+  @@unique([tenantId, number])
+  @@index([tenantId, stage])
+}
+
+/// الدوام/الوردية
+model WorkShift {
+  id           String   @id @default(cuid())
+  tenantId     String
+  name         String
+  /// HH:MM
+  startTime    String
+  endTime      String
+  graceMinutes Int      @default(10)
+  /// ٠=الأحد … ٦=السبت
+  workDays     Int[]
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum StaffAttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  ON_LEAVE
+  HOLIDAY
+  /// غياب بعذر مقبول (لا خصم)
+  EXCUSED
+}
+
+/// حضور الموظف اليومي
+model EmployeeAttendance {
+  id                String                @id @default(cuid())
+  tenantId          String
+  employeeId        String
+  employee          Employee              @relation(fields: [employeeId], references: [id])
+  date              DateTime              @db.Date
+  checkIn           DateTime?
+  checkOut          DateTime?
+  status            StaffAttendanceStatus @default(PRESENT)
+  lateMinutes       Int                   @default(0)
+  earlyLeaveMinutes Int                   @default(0)
+  overtimeMinutes   Int                   @default(0)
+  /// MANUAL | DEVICE | SELF | LEAVE
+  source            String                @default("MANUAL")
+  note              String?
+  updatedById       String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  @@unique([employeeId, date])
+  @@index([tenantId, date])
+}
+
+/// نوع إجازة وسياسة استحقاقه
+model LeaveType {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  code               String
+  name               String
+  paid               Boolean  @default(true)
+  /// الاستحقاق السنوي بالأيام (null = بلا رصيد)
+  annualDays         Int?
+  /// YEARLY | MONTHLY | NONE
+  accrual            String   @default("YEARLY")
+  requiresAttachment Boolean  @default(false)
+  maxPerRequest      Int?
+  carryOverDays      Int      @default(0)
+  /// FEMALE | MALE | null
+  gender             String?
+  color              String   @default("teal")
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([tenantId, code])
+}
+
+/// رصيد إجازة موظف لنوع وسنة
+model LeaveBalance {
+  id           String   @id @default(cuid())
+  tenantId     String
+  employeeId   String
+  employee     Employee @relation(fields: [employeeId], references: [id])
+  leaveTypeId  String
+  year         Int
+  entitledDays Int      @default(0)
+  carriedDays  Int      @default(0)
+  usedDays     Int      @default(0)
+  adjustedDays Int      @default(0)
+  updatedAt    DateTime @updatedAt
+
+  @@unique([employeeId, leaveTypeId, year])
+}
+
+/// طلب إجازة موظف (بموافقة المدير المباشر ثم الموارد البشرية)
+model StaffLeaveRequest {
+  id                String    @id @default(cuid())
+  tenantId          String
+  number            Int
+  employeeId        String
+  employee          Employee  @relation(fields: [employeeId], references: [id])
+  leaveTypeId       String
+  startDate         DateTime  @db.Date
+  endDate           DateTime  @db.Date
+  days              Int
+  reason            String?
+  attachments       Json      @default("[]")
+  /// PENDING | APPROVED | REJECTED | CANCELLED
+  status            String    @default("PENDING")
+  approvalRequestId String?
+  decidedAt         DateTime?
+  customValues      Json      @default("{}")
+  position          Float     @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  createdById       String?
+  updatedById       String?
+  deletedAt         DateTime?
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+}
+
+/// سلفة موظف تُستقطع بأقساط شهرية
+model EmployeeLoan {
+  id                String   @id @default(cuid())
+  tenantId          String
+  number            Int
+  employeeId        String
+  employee          Employee @relation(fields: [employeeId], references: [id])
+  amountMinor       Int
+  installmentMinor  Int
+  /// أول شهر للاستقطاع YYYY-MM
+  startMonth        String
+  repaidMinor       Int      @default(0)
+  /// PENDING | ACTIVE | SETTLED | REJECTED
+  status            String   @default("PENDING")
+  reason            String?
+  approvalRequestId String?
+  journalEntryId    String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  createdById       String?
+
+  @@unique([tenantId, number])
+}
+
+/// بند متغير على راتب شهر: مكافأة، إضافي، جزاء، استقطاع أو بدل آخر
+model PayrollAdjustment {
+  id           String   @id @default(cuid())
+  tenantId     String
+  employeeId   String
+  /// YYYY-MM
+  month        String
+  /// BONUS | OVERTIME | PENALTY | DEDUCTION | ALLOWANCE
+  kind         String
+  amountMinor  Int
+  /// ساعات الإضافي (للاحتساب)
+  hours        Int?
+  description  String
+  payrollRunId String?
+  createdById  String?
+  createdAt    DateTime @default(now())
+
+  @@index([tenantId, month])
+}
+
+/// مسير رواتب شهري
+model PayrollRun {
+  id                String    @id @default(cuid())
+  tenantId          String
+  number            Int
+  /// YYYY-MM
+  month             String
+  periodStart       DateTime  @db.Date
+  periodEnd         DateTime  @db.Date
+  /// DRAFT | REVIEW | APPROVED | PAID | CANCELLED
+  status            String    @default("DRAFT")
+  grossMinor        Int       @default(0)
+  deductionsMinor   Int       @default(0)
+  netMinor          Int       @default(0)
+  employerGosiMinor Int       @default(0)
+  eosAccrualMinor   Int       @default(0)
+  employees         Int       @default(0)
+  approvalRequestId String?
+  approvedAt        DateTime?
+  approvedById      String?
+  paidAt            DateTime?
+  bankAccountId     String?
+  journalEntryId    String?
+  paymentEntryId    String?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  createdById       String?
+  updatedById       String?
+
+  lines PayrollLine[]
+
+  @@unique([tenantId, number])
+  @@unique([tenantId, month])
+}
+
+/// سطر موظف في المسير
+model PayrollLine {
+  id                   String     @id @default(cuid())
+  tenantId             String
+  runId                String
+  run                  PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  employeeId           String
+  departmentId         String?
+  category             String
+  branchId             String?
+  basicMinor           Int
+  housingMinor         Int        @default(0)
+  transportMinor       Int        @default(0)
+  otherAllowancesMinor Int        @default(0)
+  overtimeMinor        Int        @default(0)
+  bonusMinor           Int        @default(0)
+  grossMinor           Int
+  gosiEmployeeMinor    Int        @default(0)
+  gosiEmployerMinor    Int        @default(0)
+  absenceMinor         Int        @default(0)
+  lateMinor            Int        @default(0)
+  unpaidLeaveMinor     Int        @default(0)
+  loanMinor            Int        @default(0)
+  penaltyMinor         Int        @default(0)
+  otherDeductionMinor  Int        @default(0)
+  deductionsMinor      Int        @default(0)
+  netMinor             Int
+  eosAccrualMinor      Int        @default(0)
+  /// أيام العمل والغياب والتأخر وتفاصيل البنود
+  details              Json       @default("{}")
+  iban                 String?
+
+  @@unique([runId, employeeId])
+}
+
+/// تصفية نهاية الخدمة
+model EndOfService {
+  id                   String   @id @default(cuid())
+  tenantId             String
+  number               Int
+  employeeId           String
+  /// RESIGNATION | TERMINATION | CONTRACT_END | RETIREMENT | DEATH
+  reason               String
+  lastWorkingDay       DateTime @db.Date
+  serviceDays          Int
+  /// الأجر الأساس للمكافأة (أساسي + سكن)
+  wageMinor            Int
+  eosMinor             Int
+  leaveDays            Int      @default(0)
+  leaveEncashmentMinor Int      @default(0)
+  unpaidSalaryMinor    Int      @default(0)
+  loanBalanceMinor     Int      @default(0)
+  otherDeductionsMinor Int      @default(0)
+  netMinor             Int
+  /// خطوات الحساب للعرض والتدقيق
+  calculation          Json
+  /// DRAFT | APPROVED | PAID | CANCELLED
+  status               String   @default("DRAFT")
+  approvalRequestId    String?
+  journalEntryId       String?
+  paymentEntryId       String?
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  createdById          String?
+
+  @@unique([tenantId, number])
+  @@index([tenantId, employeeId])
+}
+
+/// قالب تقييم أداء: معايير بأوزان
+model ReviewTemplate {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  /// [{key, name, weight, description}]
+  criteria  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// دورة تقييم أداء
+model ReviewCycle {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  templateId  String
+  startDate   DateTime @db.Date
+  endDate     DateTime @db.Date
+  /// OPEN | CLOSED
+  status      String   @default("OPEN")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+
+  reviews PerformanceReview[]
+}
+
+/// تقييم أداء موظف في دورة
+model PerformanceReview {
+  id                 String      @id @default(cuid())
+  tenantId           String
+  cycleId            String
+  cycle              ReviewCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  employeeId         String
+  reviewerId         String?
+  /// {criterionKey: 1..5}
+  selfScores         Json        @default("{}")
+  managerScores      Json        @default("{}")
+  /// [{title, target, progressBp}]
+  goals              Json        @default("[]")
+  selfComment        String?
+  managerComment     String?
+  selfSubmittedAt    DateTime?
+  managerSubmittedAt DateTime?
+  /// النتيجة النهائية بنقاط الأساس من ١٠٠٪
+  finalBp            Int?
+  rating             String?
+  /// PENDING_SELF | PENDING_MANAGER | COMPLETED
+  status             String      @default("PENDING_SELF")
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@unique([cycleId, employeeId])
+}

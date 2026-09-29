@@ -248,9 +248,9 @@ function NavLink({ href, icon, children }: { href: string; icon: React.ReactNode
 
 /** الوحدات المبنية (حسب الصلاحية)، مجمّعة: شؤون الطلاب ثم الشؤون الأكاديمية */
 function ModulesGroup() {
-  const { can } = useApp();
+  const { can, scopeOf } = useApp();
   const pathname = usePathname();
-  const items = MODULE_NAV.filter((m) => can(m.module, m.action ?? "view"));
+  const items = MODULE_NAV.filter((m) => can(m.module, m.action ?? "view") && (!m.scopes || m.scopes.includes(scopeOf(m.module, m.action ?? "view")!)));
   if (!items.length) return null;
   return (
     <>

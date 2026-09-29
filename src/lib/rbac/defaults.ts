@@ -61,6 +61,9 @@ const commonStaff = merge(
   grant(["events", "announcements"], VIEW("ALL")),
   grant(["messages"], { view: "OWN", create: "OWN" }),
   grant(["approvals"], { view: "OWN" }),
+  // الخدمة الذاتية للموظف: تسجيل حضوره وطلب إجازته وقسائم راتبه
+  grant(["hr_attendance"], { view: "OWN", create: "OWN" }),
+  grant(["payroll", "performance"], VIEW("OWN")),
 );
 
 export const SYSTEM_ROLES: readonly SystemRoleDef[] = [

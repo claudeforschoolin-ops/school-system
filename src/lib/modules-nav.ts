@@ -1,6 +1,8 @@
 /**
  * روابط الوحدات المبنية في الشريط الجانبي ولوحة الأوامر (تظهر حسب الصلاحية).
  */
+import type { Scope } from "@/lib/rbac/catalog";
+
 export interface ModuleNavItem {
   key: string;
   label: string;
@@ -11,7 +13,9 @@ export interface ModuleNavItem {
   /** الإجراء المطلوب لإظهار الرابط (افتراضياً «عرض») */
   action?: "view" | "create" | "update";
   description: string;
-  group: "students" | "academic" | "finance";
+  group: "students" | "academic" | "assessment" | "hr" | "finance";
+  /** يظهر فقط لهذه النطاقات (مثل روابط الأسرة أو الخدمة الذاتية) */
+  scopes?: readonly Scope[];
   /** يُعدّ نشطاً عند تطابق المسار كاملاً فقط (للوحة الرئيسية لمجموعة) */
   exact?: boolean;
 }
@@ -27,6 +31,19 @@ export const MODULE_NAV: readonly ModuleNavItem[] = [
   { key: "assignments", label: "تعيين المعلمين", href: "/academic/assignments", icon: "lucide:user-cog", module: "teacher_assignments", description: "إسناد المواد للمعلمين حسب النصاب والتأهيل، مع عبء كل معلم", group: "academic" },
   { key: "timetable", label: "جداول الحصص", href: "/academic/timetable", icon: "lucide:calendar-clock", module: "timetable", description: "توليد الجدول بالقيود، والتعديل بالسحب، وحصص الانتظار", group: "academic" },
   { key: "activities", label: "الأنشطة والفعاليات", href: "/activities", icon: "lucide:trophy", module: "activities", description: "الأندية والرحلات والمسابقات: التسجيل وموافقات أولياء الأمور والألبوم", group: "academic" },
+  { key: "exams", label: "الاختبارات", href: "/assessment/exams", icon: "lucide:clipboard-list", module: "exams", description: "جداول الاختبارات واللجان والقاعات وأرقام الجلوس ومحاضر المراقبة", group: "assessment" },
+  { key: "grades", label: "رصد الدرجات", href: "/assessment/grades", icon: "lucide:file-pen", module: "grade_entry", description: "كشوف الرصد بجدول كالإكسل، ومسار الاعتماد، وطلبات تعديل الدرجات المعتمدة", group: "assessment" },
+  { key: "results", label: "النتائج والمعدلات", href: "/assessment/results", icon: "lucide:award", module: "gpa", description: "المعدل الفصلي والتراكمي، والترتيب على الفصل والصف والمدرسة، ونظام التقييم", group: "assessment" },
+  { key: "report-cards", label: "الشهادات", href: "/assessment/report-cards", icon: "lucide:file-check", module: "report_cards", action: "create", description: "قوالب الشهادات، والإصدار والطباعة الجماعية برمز تحقق، والنشر وحجب المدينين", group: "assessment" },
+  { key: "my-results", label: "النتائج والشهادات", href: "/assessment/my-results", icon: "lucide:graduation-cap", module: "report_cards", scopes: ["ASSIGNED", "OWN"], description: "شهادات الأبناء بعد نشر النتائج", group: "assessment" },
+  { key: "assessment-stats", label: "إحصاءات التحصيل", href: "/assessment/stats", icon: "lucide:chart-pie", module: "academic_reports", description: "توزيع الدرجات، ومقارنة الفصول والمواد والمعلمين، والمتعثرون والمتفوقون، وتحليل البنود", group: "assessment" },
+  { key: "employees", label: "الموظفون", href: "/hr/employees", icon: "lucide:id-card", module: "employees", description: "ملفات الموظفين وعقودهم، والهيكل التنظيمي، وتنبيهات انتهاء الوثائق", group: "hr" },
+  { key: "recruitment", label: "التوظيف", href: "/hr/recruitment", icon: "lucide:briefcase", module: "employees", action: "create", description: "الوظائف الشاغرة ولوحة المرشحين من التقديم حتى التعيين", group: "hr" },
+  { key: "staff-attendance", label: "الدوام والإجازات", href: "/hr/attendance", icon: "lucide:clock", module: "hr_attendance", action: "update", description: "الورديات والحضور اليومي، وأنواع الإجازات وأرصدتها وطلباتها", group: "hr" },
+  { key: "payroll", label: "الرواتب", href: "/hr/payroll", icon: "lucide:banknote", module: "payroll", action: "create", description: "مسيرات الرواتب والاستقطاعات والسلف، والقيد المحاسبي وملف حماية الأجور", group: "hr" },
+  { key: "performance", label: "تقييم الأداء", href: "/hr/performance", icon: "lucide:star", module: "performance", description: "دورات التقييم ونماذجها والتقييم الذاتي وتقييم المدير", group: "hr" },
+  { key: "end-of-service", label: "نهاية الخدمة", href: "/hr/end-of-service", icon: "lucide:door-open", module: "end_of_service", description: "مكافأة نهاية الخدمة وتسوية الإجازات وإخلاء الطرف", group: "hr" },
+  { key: "self-service", label: "خدماتي الوظيفية", href: "/hr/me", icon: "lucide:contact", module: "hr_attendance", scopes: ["OWN"], description: "تسجيل الحضور، وطلب الإجازة، ورصيدي، وقسائم راتبي", group: "hr" },
   { key: "finance", label: "لوحة المالية", href: "/finance", icon: "lucide:wallet", module: "finance_reports", description: "التحصيل مقابل المستهدف، الذمم المتأخرة، النقد، وما ينتظر إجراءك", group: "finance", exact: true },
   { key: "collect", label: "التحصيل", href: "/finance/collect", icon: "lucide:banknote", module: "collections", action: "create", description: "سند قبض سريع بالبحث، ووردية الصندوق، وسجل السندات والشيكات", group: "finance" },
   { key: "invoices", label: "الفواتير", href: "/finance/invoices", icon: "lucide:receipt-text", module: "invoices", description: "فواتير الرسوم وأقساطها، والفوترة الجماعية، وكشوف حساب الأسر", group: "finance" },
@@ -37,5 +54,5 @@ export const MODULE_NAV: readonly ModuleNavItem[] = [
   { key: "fee-setup", label: "إعداد الرسوم", href: "/finance/setup", icon: "lucide:sliders-horizontal", module: "invoices", action: "update", description: "بنود الرسوم وجداولها، خطط الأقساط، الخصومات والمنح، ورموز الضريبة", group: "finance" },
 ];
 
-export const MODULE_GROUP_LABELS = { students: "شؤون الطلاب", academic: "الشؤون الأكاديمية", finance: "المالية والمحاسبة" } as const;
-export const MODULE_GROUP_ICONS = { students: "lucide:users", academic: "lucide:graduation-cap", finance: "lucide:wallet" } as const;
+export const MODULE_GROUP_LABELS = { students: "شؤون الطلاب", academic: "الشؤون الأكاديمية", assessment: "التقييم والدرجات", hr: "الموارد البشرية", finance: "المالية والمحاسبة" } as const;
+export const MODULE_GROUP_ICONS = { students: "lucide:users", academic: "lucide:graduation-cap", assessment: "lucide:award", hr: "lucide:id-card", finance: "lucide:wallet" } as const;

@@ -36,6 +36,7 @@ const APPROVAL_HOOKS: Record<string, () => Promise<ApprovalHook>> = {
   student_discount: () => import("./finance/billing.service").then((m) => m.onDiscountApproval),
   finance_refund: () => import("./finance/collections.service").then((m) => m.onRefundApproval),
   payment_voucher: () => import("./finance/banking.service").then((m) => m.onVoucherApproval),
+  grade_change: () => import("./assessment/grades.service").then((m) => m.onGradeChangeApproval),
 };
 
 async function runApprovalHook(db: TenantDb, session: SessionData, request: { id: string; entityType: string | null; entityId: string | null; type: string }, event: ApprovalHookEvent) {
