@@ -17,6 +17,7 @@ import { Field, Input, Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SkeletonLines } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
+import { readRegion } from "@/lib/region";
 import { IdentityFields, emptyIdentity, identityErrors, type IdentityForm } from "@/components/students/create-dialogs";
 
 async function publicUpload(slug: string, file: File): Promise<UploadedFile> {
@@ -31,12 +32,13 @@ async function publicUpload(slug: string, file: File): Promise<UploadedFile> {
 export function PublicApplyForm({ slug }: { slug: string }) {
   const form = trpc.admissions.publicForm.useQuery({ slug }, { retry: false });
   const [id, setId] = useState<IdentityForm>(() => emptyIdentity());
+  const region = useMemo(() => readRegion(form.data?.regionSettings), [form.data?.regionSettings]);
   const [extra, setExtra] = useState({ previousSchool: "", guardianEmail: "", motherName: "", motherPhone: "", address: "", source: "", notes: "", website: "" });
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [consent, setConsent] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const errors = useMemo(() => identityErrors(id), [id]);
+  const errors = useMemo(() => identityErrors(id, region), [id, region]);
   const apply = trpc.admissions.publicApply.useMutation({ onError: (e) => toast.error(e.message) });
 
   if (form.error) return <EmptyState illustration="lock" title="نموذج التقديم غير متاح" description="تواصل مع المدرسة للحصول على الرابط الصحيح." />;
@@ -109,7 +111,7 @@ export function PublicApplyForm({ slug }: { slug: string }) {
         {school.intro ? <p className="mt-2 whitespace-pre-line text-[14px] leading-7 text-fg-2">{school.intro}</p> : <p className="mt-2 text-[14px] text-fg-3">عبّئ البيانات بدقة كما في الهوية. يستغرق النموذج نحو ٥ دقائق.</p>}
       </header>
       <section className="rounded-xl bg-card p-6 shadow-card">
-        <IdentityFields form={id} set={(p) => setId((f) => ({ ...f, ...p }))} errors={errors} options={form.data} showErrors={showErrors} />
+        <IdentityFields region={region} form={id} set={(p) => setId((f) => ({ ...f, ...p }))} errors={errors} options={form.data} showErrors={showErrors} />
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <Field label="بريد ولي الأمر (اختياري)">
             <Input type="email" value={extra.guardianEmail} onChange={(e) => setExtra({ ...extra, guardianEmail: e.target.value })} dir="ltr" className="text-end" />

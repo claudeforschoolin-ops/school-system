@@ -10,7 +10,6 @@ import { useState } from "react";
 import { applyDigits, formatNumber } from "@/lib/numbers";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog, Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input } from "@/components/ui/input";
@@ -20,8 +19,7 @@ import { Tag } from "@/components/ui/tag";
 import { toast } from "@/components/ui/toast";
 import { useApp, usePrefs } from "@/components/shell/app-context";
 import { ModuleShell, StatCard } from "@/components/modules/module-shell";
-import { SettingsCard } from "@/components/settings/settings-shell";
-import { DocLink, docNo, FinTable, MoneyInput, num, PercentInput, useFmtDate, useMoney, useToday } from "@/components/finance/common";
+import { DocLink, docNo, FinTable, MoneyInput, num, useFmtDate, useMoney, useToday } from "@/components/finance/common";
 import { ADJ_KIND, hrNav, LOAN_STATUS, PAYROLL_TABS, RUN_STATUS, useMonthLabel } from "./common";
 import { LoanDialog } from "./me";
 
@@ -580,101 +578,5 @@ export function LoansPage() {
       {dialog === "new" ? <LoanDialog employees={(opts.data?.employees ?? []).map((e) => ({ id: e.id, fullName: e.fullName }))} onClose={() => setDialog(null)} /> : null}
       {dialog && typeof dialog === "object" ? <PayDialog id={dialog.pay.id} netMinor={dialog.pay.amountMinor} kind="loan" onClose={() => setDialog(null)} /> : null}
     </ModuleShell>
-  );
-}
-
-// ---------------------------------------------------------------------
-// الإعدادات
-// ---------------------------------------------------------------------
-
-interface HrSettingsValues {
-  gosiSaudiEmployeeBp: number;
-  gosiSaudiEmployerBp: number;
-  gosiNonSaudiEmployerBp: number;
-  gosiCapMinor: number;
-  deductAbsence: boolean;
-  deductLate: boolean;
-  lateMonthlyGraceMinutes: number;
-  overtimeRateBp: number;
-  monthDays: number;
-  expiryAlertDays: number;
-  eosFirstYearsMonthsBp: number;
-  eosLaterYearsMonthsBp: number;
-  accrueEosMonthly: boolean;
-}
-
-export function PayrollSettingsPage() {
-  const q = trpc.moduleSettings.get.useQuery({ key: "hr" });
-  return (
-    <ModuleShell nav={hrNav("payroll")} tabs={PAYROLL_TABS}>
-      {q.error ? <EmptyState illustration="lock" title="لا يمكن عرض الإعدادات" description={q.error.message} /> : q.data ? <HrSettingsForm initial={q.data.values as unknown as HrSettingsValues} canEdit={q.data.canEdit} /> : <SkeletonLines lines={10} />}
-    </ModuleShell>
-  );
-}
-
-function HrSettingsForm({ initial, canEdit }: { initial: HrSettingsValues; canEdit: boolean }) {
-  const utils = trpc.useUtils();
-  const [v, setV] = useState(initial);
-  const save = trpc.moduleSettings.update.useMutation({ onSuccess: async () => (await Promise.all([utils.moduleSettings.get.invalidate({ key: "hr" }), utils.account.context.invalidate()]), toast.success("حُفظت إعدادات الرواتب")), onError: (e) => toast.error(e.message) });
-  const int = (s: string, min: number, max: number) => Math.max(min, Math.min(max, Math.trunc(Number(s) || 0)));
-  return (
-    <div>
-      {!canEdit ? <p className="mb-4 rounded-md bg-hover px-3 py-2 text-[13px] text-fg-2">عرض فقط: التعديل لمدير الموارد البشرية.</p> : null}
-      <SettingsCard title="التأمينات الاجتماعية" description="النسب الافتراضية وفق نظام التأمينات للموظفين الجدد: السعودي ٩٫٧٥٪ على الموظف و١١٫٧٥٪ على المنشأة، وغير السعودي ٢٪ على المنشأة (الأخطار المهنية). تحقق من النسب السارية لمنشأتك.">
-        <div className="grid gap-3 sm:grid-cols-4">
-          <Field label="حصة الموظف السعودي ٪">
-            <PercentInput disabled={!canEdit} bp={v.gosiSaudiEmployeeBp} onChange={(gosiSaudiEmployeeBp) => setV({ ...v, gosiSaudiEmployeeBp })} />
-          </Field>
-          <Field label="حصة المنشأة (سعودي) ٪">
-            <PercentInput disabled={!canEdit} bp={v.gosiSaudiEmployerBp} onChange={(gosiSaudiEmployerBp) => setV({ ...v, gosiSaudiEmployerBp })} />
-          </Field>
-          <Field label="حصة المنشأة (غير سعودي) ٪">
-            <PercentInput disabled={!canEdit} bp={v.gosiNonSaudiEmployerBp} onChange={(gosiNonSaudiEmployerBp) => setV({ ...v, gosiNonSaudiEmployerBp })} />
-          </Field>
-          <Field label="سقف الأجر الخاضع">
-            <MoneyInput disabled={!canEdit} value={v.gosiCapMinor} onChange={(a) => setV({ ...v, gosiCapMinor: a ?? 0 })} />
-          </Field>
-        </div>
-      </SettingsCard>
-      <SettingsCard title="الحضور والإضافي">
-        <div className="grid gap-3 sm:grid-cols-4">
-          <label className="flex items-center gap-2 text-[14px]">
-            <Checkbox disabled={!canEdit} checked={v.deductAbsence} onChange={(deductAbsence) => setV({ ...v, deductAbsence })} /> خصم الغياب بأجر اليوم
-          </label>
-          <label className="flex items-center gap-2 text-[14px]">
-            <Checkbox disabled={!canEdit} checked={v.deductLate} onChange={(deductLate) => setV({ ...v, deductLate })} /> خصم التأخر بالدقيقة
-          </label>
-          <Field label="مهلة التأخر الشهرية (دقيقة)">
-            <Input disabled={!canEdit} type="number" value={v.lateMonthlyGraceMinutes} onChange={(e) => setV({ ...v, lateMonthlyGraceMinutes: int(e.target.value, 0, 600) })} />
-          </Field>
-          <Field label="أيام الشهر لأجر اليوم">
-            <Input disabled={!canEdit} type="number" value={v.monthDays} onChange={(e) => setV({ ...v, monthDays: int(e.target.value, 22, 31) })} />
-          </Field>
-          <Field label="معامل أجر الساعة الأساسي للإضافي ٪" hint="١٥٠٪ = الأجر + ٥٠٪ من الأساسي">
-            <PercentInput disabled={!canEdit} bp={v.overtimeRateBp} onChange={(overtimeRateBp) => setV({ ...v, overtimeRateBp: Math.max(10000, overtimeRateBp) })} />
-          </Field>
-          <Field label="التنبيه قبل انتهاء الوثائق (يوم)">
-            <Input disabled={!canEdit} type="number" value={v.expiryAlertDays} onChange={(e) => setV({ ...v, expiryAlertDays: int(e.target.value, 7, 180) })} />
-          </Field>
-        </div>
-      </SettingsCard>
-      <SettingsCard
-        title="مكافأة نهاية الخدمة"
-        description="نظام العمل (م٨٤): نصف أجر شهر عن كل سنة من السنوات الخمس الأولى، وأجر شهر عن كل سنة بعدها."
-        footer={canEdit ? <Button variant="primary" loading={save.isPending} onClick={() => save.mutate({ key: "hr", patch: { ...v } })}>حفظ</Button> : undefined}
-      >
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Field label="أشهر لكل سنة (أول ٥ سنوات) ٪">
-            <PercentInput disabled={!canEdit} bp={v.eosFirstYearsMonthsBp} onChange={(eosFirstYearsMonthsBp) => setV({ ...v, eosFirstYearsMonthsBp })} />
-          </Field>
-          <Field label="أشهر لكل سنة (بعد ٥ سنوات) ٪">
-            <PercentInput disabled={!canEdit} bp={v.eosLaterYearsMonthsBp} onChange={(eosLaterYearsMonthsBp) => setV({ ...v, eosLaterYearsMonthsBp })} />
-          </Field>
-          <label className="flex items-center gap-2 text-[14px]">
-            <Checkbox disabled={!canEdit} checked={v.accrueEosMonthly} onChange={(accrueEosMonthly) => setV({ ...v, accrueEosMonthly })} /> تكوين المخصص شهرياً مع المسير
-          </label>
-        </div>
-      </SettingsCard>
-    </div>
   );
 }

@@ -68,7 +68,7 @@ export function NewVoucherDialog({ onClose, onCreated }: CreateDialogProps) {
             <Input
               value={v.payee}
               onChange={(e) => setV({ ...v, payee: e.target.value })}
-              placeholder="مثال: شركة الكهرباء السعودية"
+              placeholder="مثال: شركة الكهرباء"
               autoFocus
             />
           </Field>

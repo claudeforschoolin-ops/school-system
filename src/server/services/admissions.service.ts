@@ -4,7 +4,8 @@
  * فاتورة رسوم التسجيل تُصدر آلياً عند بناء النظام المحاسبي (المرحلة ٣) من نقطة الربط onStudentAccepted.
  */
 import type { Prisma } from "@/generated/prisma/client";
-import { ADMISSION_STAGE, OPEN_ADMISSION_STAGES, composeFullName, normalizeSaudiMobile, validateIdNumber, type AdmissionStageKey } from "@/lib/students";
+import { guessIdType, normalizeMobile, readRegion, validateIdNumber } from "@/lib/region";
+import { ADMISSION_STAGE, OPEN_ADMISSION_STAGES, composeFullName, type AdmissionStageKey } from "@/lib/students";
 import type { SessionData } from "@/server/auth/session";
 import type { TenantDb } from "@/server/db/tenant";
 import { badRequest, forbidden, notFound } from "@/server/errors";
@@ -76,12 +77,12 @@ export async function assertNoDuplicateId(db: TenantDb, tenantId: string, nation
 }
 
 export async function createAdmission(db: TenantDb, tenant: TenantInfo, actorId: string | null, input: AdmissionInput, via: "STAFF" | "PUBLIC_FORM") {
-  const idError = validateIdNumber(input.idType, input.nationalId);
+  const idError = validateIdNumber(input.idType, input.nationalId, readRegion(tenant.tenant.settings));
   if (idError) throw badRequest(idError);
-  const phone = normalizeSaudiMobile(input.guardianPhone);
+  const phone = normalizeMobile(input.guardianPhone, readRegion(tenant.tenant.settings));
   if (!phone) throw badRequest("رقم جوال ولي الأمر غير صالح (05xxxxxxxx)");
   if (input.guardianNationalId) {
-    const gErr = validateIdNumber(/^2/.test(input.guardianNationalId) ? "IQAMA" : "NATIONAL_ID", input.guardianNationalId);
+    const gErr = validateIdNumber(guessIdType(input.guardianNationalId, readRegion(tenant.tenant.settings)), input.guardianNationalId, readRegion(tenant.tenant.settings));
     if (gErr) throw badRequest(`هوية ولي الأمر: ${gErr}`);
   }
   const [branch, grade] = await Promise.all([
@@ -107,7 +108,7 @@ export async function createAdmission(db: TenantDb, tenant: TenantInfo, actorId:
     },
   ];
   if (input.motherName?.trim() && input.guardianRelation !== "MOTHER") {
-    contacts.push({ relation: "MOTHER", name: input.motherName.trim(), phone: input.motherPhone ? normalizeSaudiMobile(input.motherPhone) : null });
+    contacts.push({ relation: "MOTHER", name: input.motherName.trim(), phone: input.motherPhone ? normalizeMobile(input.motherPhone, readRegion(tenant.tenant.settings)) : null });
   }
 
   const attachments = await validAttachments(db, input.attachments ?? []);
@@ -452,13 +453,13 @@ export async function updateAdmission(db: TenantDb, session: SessionData, id: st
   }
   if (patch.nationalId !== undefined) {
     const type = patch.idType ?? a.idType;
-    const err = validateIdNumber(type, patch.nationalId);
+    const err = validateIdNumber(type, patch.nationalId, readRegion(session.tenant.settings));
     if (err) throw badRequest(err);
     await assertNoDuplicateId(db, session.tenant.id, patch.nationalId, id);
     Object.assign(data, protectId(session.tenant.id, patch.nationalId), { idType: type });
   }
   if (patch.guardianPhone !== undefined && patch.guardianPhone !== null) {
-    const p = normalizeSaudiMobile(patch.guardianPhone);
+    const p = normalizeMobile(patch.guardianPhone, readRegion(session.tenant.settings));
     if (!p) throw badRequest("رقم الجوال غير صالح");
     data.guardianPhone = p;
   }

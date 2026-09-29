@@ -287,6 +287,48 @@ describe("المرحلة ٤ — الموارد البشرية والرواتب",
     expect(pay.lines.reduce((a, l) => a + Number(l.debitMinor), 0)).toBe(paid.netMinor);
   });
 
+  it("منصة دولية: تغيير الدولة يغيّر صيغ الهوية والآيبان وتعريف المواطن، وقواعد التأمين والجزاءات من الإعدادات", async () => {
+    const s = await hrSchool();
+    const owner = await s.as((await makeUser(s.t, "OWNER", { name: "المالك" })).id);
+    let hro = await s.as(s.hro.id);
+    let hrm = await s.as(s.hrm.id);
+    // أخصائي الموارد البشرية لا يعدّل إعدادات الإقليم
+    await expect(hro.moduleSettings.update({ key: "region", patch: { country: "EG" } })).rejects.toThrow();
+    const r = await owner.moduleSettings.update({ key: "region", patch: { country: "EG" } });
+    expect(r.values).toMatchObject({ country: "EG", ibanCountry: "EG", citizenIdLabel: "رقم قومي" });
+    await expect(owner.moduleSettings.update({ key: "region", patch: { citizenIdPattern: "([" } })).rejects.toThrow();
+    await hrm.moduleSettings.update({ key: "hr", patch: { insuranceSchemes: [{ name: "التأمينات الاجتماعية", appliesTo: "ALL", employeeBp: 1100, employerBp: 1875 }], insuranceBase: "FULL", insuranceCapMinor: 0, penaltiesTreatment: "LIABILITY", eosEnabled: false } });
+    // الجلسة تُحمَّل مع كل طلب: جلسات جديدة بالإعدادات المحدثة
+    hro = await s.as(s.hro.id);
+    hrm = await s.as(s.hrm.id);
+
+    const base = { ...s.base, nationality: "EG" };
+    // هوية سعودية وآيبان سعودي لم يعودا مقبولين
+    await expect(hro.hr.employees.create({ ...base, fullName: "محمد أحمد علي حسن", nationalId: fakeNationalId(9), hireDate: "2022-01-01" })).rejects.toThrow(/رقم قومي/);
+    await expect(hro.hr.employees.create({ ...base, fullName: "محمد أحمد علي حسن", hireDate: "2022-01-01", iban: iban(21) })).rejects.toThrow(/آيبان/);
+    const eg = await hro.hr.employees.create({ ...base, fullName: "محمد أحمد علي حسن", nationalId: "29001011234567", hireDate: "2022-01-01" });
+    const sa = await hro.hr.employees.create({ ...base, nationality: "SA", idType: "PASSPORT", nationalId: "K1234567", fullName: "سعد بن محمد الغامدي", hireDate: "2022-01-01" });
+    for (const id of [eg.id, sa.id]) await hrm.hr.employees.saveContract({ employeeId: id, type: "UNLIMITED", startDate: "2022-01-01", basicMinor: 1_000_000, housingMinor: 250_000, transportMinor: 100_000, otherAllowances: [], hoursPerDay: 8, annualLeaveDays: 21 });
+    const month = today().slice(0, 7);
+    await hro.hr.payroll.saveAdjustment({ employeeId: eg.id, month, kind: "PENALTY", amountMinor: 20_000, hours: null, description: "جزاء تأخر متكرر" });
+    const run = await hro.hr.payroll.create({ month });
+    const detail = await hro.hr.payroll.run({ id: run.id });
+    const lEg = detail.lines.find((l) => l.employeeId === eg.id)!;
+    const lSa = detail.lines.find((l) => l.employeeId === sa.id)!;
+    // النظام على الجميع، على الأجر الكامل وبلا سقف
+    expect(lEg.gosiEmployeeMinor).toBe(148_500);
+    expect(lSa.gosiEmployeeMinor).toBe(148_500);
+    expect(lEg.gosiEmployerMinor).toBe(253_125);
+    expect(lEg.eosAccrualMinor).toBe(0);
+    const submitted = await hro.hr.payroll.submit({ id: run.id });
+    await hrm.approval.decide({ requestId: submitted.approvalRequestId!, decision: "APPROVED" });
+    await (await s.as(s.principalU.id)).approval.decide({ requestId: submitted.approvalRequestId!, decision: "APPROVED" });
+    const approved = await rootDb.payrollRun.findUniqueOrThrow({ where: { id: run.id } });
+    const entry = await rootDb.journalEntry.findUniqueOrThrow({ where: { id: approved.journalEntryId! }, include: { lines: { include: { account: true } } } });
+    expect(entry.lines.reduce((a, l) => a + Number(l.debitMinor), 0)).toBe(entry.lines.reduce((a, l) => a + Number(l.creditMinor), 0));
+    expect(entry.lines.filter((l) => l.account.systemKey === "PENALTIES_PAYABLE").reduce((a, l) => a + Number(l.creditMinor), 0)).toBe(20_000);
+  });
+
   it("الإجازة: طلب ذاتي ← المدير المباشر ← الموارد البشرية ← خصم الرصيد وتسجيل الحضور، والإجازة غير المدفوعة تُخصم من الراتب", async () => {
     const s = await hrSchool();
     const hro = await s.as(s.hro.id);

@@ -22,7 +22,7 @@ import { Tag } from "@/components/ui/tag";
 import { toast } from "@/components/ui/toast";
 import { ModuleShell } from "@/components/modules/module-shell";
 import { SettingsCard } from "@/components/settings/settings-shell";
-import { downloadCsv, Figure, PercentInput } from "@/components/finance/common";
+import { downloadCsv, Figure, MoneyInput, PercentInput } from "@/components/finance/common";
 import { assessmentNav, RESULT_STATUS, RESULTS_TABS, scoreTone, useScore } from "./common";
 
 type Results = RouterOutputs["assessment"]["results"]["section"];
@@ -288,6 +288,8 @@ function SchemeForm({ scheme, canEdit }: { scheme: Schemes["schemes"][number]; c
 interface AssessmentSettingsValues {
   subjectHeads: Record<string, string>;
   withholdOnDebt: boolean;
+  withholdMinOverdueMinor: number;
+  progressVisibleToParents: boolean;
   atRiskBp: number;
   reportCardFooter: string;
 }
@@ -343,7 +345,13 @@ function SettingsForm({ initial, canEdit, opts }: { initial: AssessmentSettingsV
           <label className="flex items-center gap-2 text-[14px]">
             <Checkbox disabled={!canEdit} checked={v.withholdOnDebt} onChange={(withholdOnDebt) => setV({ ...v, withholdOnDebt })} /> السماح بحجب شهادات من عليهم مستحقات متأخرة (يُفعَّل لكل فصل عند النشر)
           </label>
+          <label className="flex items-center gap-2 text-[14px]">
+            <Checkbox disabled={!canEdit} checked={v.progressVisibleToParents} onChange={(progressVisibleToParents) => setV({ ...v, progressVisibleToParents })} /> إظهار تقارير المتابعة (أثناء الفصل) لأولياء الأمور
+          </label>
           <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="لا حجب إن كان المتأخر أقل من" hint="صفر = أي مبلغ متأخر يحجب">
+              <MoneyInput disabled={!canEdit} value={v.withholdMinOverdueMinor} onChange={(a) => setV({ ...v, withholdMinOverdueMinor: a ?? 0 })} />
+            </Field>
             <Field label="حد التعثر ٪" hint="من معدله دونه يظهر في «الطلاب المتعثرون»">
               <PercentInput disabled={!canEdit} bp={v.atRiskBp} onChange={(atRiskBp) => setV({ ...v, atRiskBp })} />
             </Field>

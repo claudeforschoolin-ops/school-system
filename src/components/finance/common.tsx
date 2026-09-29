@@ -8,7 +8,7 @@ import { useState, type ReactNode } from "react";
 import { toISODate } from "@/lib/dates";
 import { formatDate } from "@/lib/dates";
 import { MODULE_NAV, type ModuleNavItem } from "@/lib/modules-nav";
-import { formatMoney, minorToDecimalString, parseMoney } from "@/lib/money";
+import { currencySymbol, formatMoney, minorToDecimalString, parseMoney } from "@/lib/money";
 import { formatNumber } from "@/lib/numbers";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -72,8 +72,10 @@ export function useMoney() {
     /** مبلغ بالريال الصحيح (للمؤشرات الكبيرة)؛ يُقتطع النص العشري دون عمليات عشرية */
     whole: (minor: number) => {
       const [int] = minorToDecimalString(minor, currency).split(".");
-      return `${formatNumber(Number(int), prefs.digits)} ${currency === "SAR" ? "ر.س." : currency}`;
+      return `${formatNumber(Number(int), prefs.digits)} ${currencySymbol(currency)}`;
     },
+    /** نص عشري دقيق للتصدير */
+    dec: (minor: number) => minorToDecimalString(minor, currency),
   };
 }
 

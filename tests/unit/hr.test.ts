@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_HR_RULES, eosAward, lateMinutes, leaveEncashment, monthlyEosAccrual, salaryLine, serviceDays, validIban, workingDays, type SalaryInput } from "@/lib/hr/calc";
 
-const base: SalaryInput = { basicMinor: 1_000_000, housingMinor: 250_000, transportMinor: 100_000, otherAllowancesMinor: 0, hoursPerDay: 8, saudi: true, gosiRegistered: true, absentDays: 0, unpaidLeaveDays: 0, lateMinutes: 0, overtimeMinutes: 0, bonusMinor: 0, allowanceAdjMinor: 0, penaltyMinor: 0, otherDeductionMinor: 0, loanDueMinor: 0 };
+const base: SalaryInput = { basicMinor: 1_000_000, housingMinor: 250_000, transportMinor: 100_000, otherAllowancesMinor: 0, hoursPerDay: 8, citizen: true, gosiRegistered: true, absentDays: 0, unpaidLeaveDays: 0, lateMinutes: 0, overtimeMinutes: 0, bonusMinor: 0, allowanceAdjMinor: 0, penaltyMinor: 0, otherDeductionMinor: 0, loanDueMinor: 0 };
 
 describe("مكافأة نهاية الخدمة", () => {
   it("نصف شهر لكل سنة من الخمس الأولى وشهر لما بعدها", () => {
@@ -28,15 +28,15 @@ describe("مكافأة نهاية الخدمة", () => {
 });
 
 describe("سطر الراتب", () => {
-  it("الإجمالي والتأمينات للسعودي", () => {
+  it("الإجمالي والتأمينات للمواطن (الإعداد الافتراضي)", () => {
     const l = salaryLine(base);
     expect(l.grossMinor).toBe(1_350_000);
     expect(l.gosiEmployeeMinor).toBe(121_875); // 9.75% × 12,500
     expect(l.gosiEmployerMinor).toBe(146_875); // 11.75%
     expect(l.netMinor).toBe(1_350_000 - 121_875);
   });
-  it("غير السعودي: حصة صاحب العمل للأخطار المهنية فقط", () => {
-    const l = salaryLine({ ...base, saudi: false });
+  it("غير المواطن: حصة صاحب العمل للأخطار المهنية فقط", () => {
+    const l = salaryLine({ ...base, citizen: false });
     expect(l.gosiEmployeeMinor).toBe(0);
     expect(l.gosiEmployerMinor).toBe(25_000);
   });
@@ -71,5 +71,29 @@ describe("أدوات الدوام", () => {
     expect(lateMinutes("07:08", "07:00", 10)).toBe(0);
     expect(validIban("SA0380000000608010167519")).toBe(true);
     expect(validIban("SA0380000000608010167518")).toBe(false);
+  });
+});
+
+describe("القواعد قابلة للتعديل لأي دولة", () => {
+  it("أنظمة تأمين مخصصة: على الجميع، بلا سقف، وعلى الأجر الكامل", () => {
+    const rules = { ...DEFAULT_HR_RULES, insuranceSchemes: [{ name: "ضمان", appliesTo: "ALL" as const, employeeBp: 700, employerBp: 1400 }], insuranceBase: "FULL" as const, insuranceCapMinor: 0 };
+    const l = salaryLine({ ...base, citizen: false }, rules);
+    expect(l.gosiEmployeeMinor).toBe(94_500); // 7% × 1,350,000
+    expect(l.gosiEmployerMinor).toBe(189_000);
+  });
+  it("الإضافي بالأجر الكامل × المعامل", () => {
+    const l = salaryLine({ ...base, overtimeMinutes: 600 }, { ...DEFAULT_HR_RULES, overtimeMode: "FULL_WAGE", overtimeRateBp: 12500 });
+    expect(l.overtimeMinor).toBe(70_313); // 5625 × 1.25 × 10
+  });
+  it("سقف الاستقطاعات التقديرية من الإعدادات", () => {
+    const l = salaryLine({ ...base, gosiRegistered: false, loanDueMinor: 900_000 }, { ...DEFAULT_HR_RULES, deductionCapBp: 2000 });
+    expect(l.loanMinor).toBe(270_000);
+  });
+  it("مكافأة نهاية خدمة بجدول مخصص، أو معطلة", () => {
+    const rules = { ...DEFAULT_HR_RULES, eosFirstYears: 3, eosFirstYearsMonthsBp: 7000, eosLaterYearsMonthsBp: 10000, eosResignation: [{ minYears: 1, factorBp: 5000 }] };
+    expect(eosAward(1_000_000, 365 * 4, "TERMINATION", rules).awardMinor).toBe(3_100_000);
+    expect(eosAward(1_000_000, 365 * 4, "RESIGNATION", rules).awardMinor).toBe(1_550_000);
+    expect(eosAward(1_000_000, 365 * 4, "TERMINATION", { ...rules, eosEnabled: false }).awardMinor).toBe(0);
+    expect(monthlyEosAccrual(1_200_000, 400, { ...rules, eosEnabled: false })).toBe(0);
   });
 });

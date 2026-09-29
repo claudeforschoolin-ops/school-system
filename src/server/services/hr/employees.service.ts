@@ -3,7 +3,7 @@
  * العقود وهيكل الراتب، الهيكل التنظيمي (أقسام ومسميات ومدير مباشر)، وتنبيهات انتهاء الوثائق.
  */
 import type { Prisma } from "@/generated/prisma/client";
-import { validIban } from "@/lib/hr/calc";
+import { ibanHint, idTypeLabel, readRegion, validateIdNumber, validIban } from "@/lib/region";
 import type { SessionData } from "@/server/auth/session";
 import type { TenantDb } from "@/server/db/tenant";
 import { badRequest, notFound } from "@/server/errors";
@@ -35,7 +35,7 @@ export async function listEmployees(db: TenantDb, session: SessionData, input: {
   const canSalary = isHrStaff(session, "payroll", "view");
   return rows.map((e) => {
     const c = e.contracts[0];
-    const soon = [e.idExpiry && e.idExpiry.getTime() <= limit ? "الهوية/الإقامة" : null, e.passportExpiry && e.passportExpiry.getTime() <= limit ? "الجواز" : null, c?.endDate && c.endDate.getTime() <= limit ? "العقد" : null].filter(Boolean) as string[];
+    const soon = [e.idExpiry && e.idExpiry.getTime() <= limit ? idTypeLabel(e.idType, readRegion(session.tenant.settings)) : null, e.passportExpiry && e.passportExpiry.getTime() <= limit ? "الجواز" : null, c?.endDate && c.endDate.getTime() <= limit ? "العقد" : null].filter(Boolean) as string[];
     return {
       id: e.id,
       number: e.number,
@@ -140,10 +140,11 @@ export interface EmployeeInput {
 
 async function validateEmployee(db: TenantDb, session: SessionData, input: EmployeeInput, id: string | null) {
   if (input.fullName.trim().split(/\s+/).length < 3) throw badRequest("الاسم الرباعي أو الثلاثي على الأقل");
-  if (input.iban && !validIban(input.iban)) throw badRequest("رقم الآيبان غير صحيح (SA و٢٢ رقماً مع رقم تحقق صالح)");
+  const region = readRegion(session.tenant.settings);
+  if (input.iban && !validIban(input.iban, region)) throw badRequest(`رقم الآيبان غير صحيح (${ibanHint(region)} مع رقم تحقق صالح)`);
   if (input.nationalId) {
-    const digits = input.nationalId.replace(/\D/g, "");
-    if ((input.idType === "NATIONAL_ID" && !/^1\d{9}$/.test(digits)) || (input.idType === "IQAMA" && !/^2\d{9}$/.test(digits))) throw badRequest(input.idType === "IQAMA" ? "رقم الإقامة ١٠ أرقام يبدأ بـ٢" : "رقم الهوية الوطنية ١٠ أرقام يبدأ بـ١");
+    const idErr = validateIdNumber(input.idType as "NATIONAL_ID", input.nationalId, region);
+    if (idErr) throw badRequest(idErr);
     const p = protectId(session.tenant.id, input.nationalId);
     const dup = await db.employee.findFirst({ where: { nationalIdHash: p.nationalIdHash, deletedAt: null, ...(id ? { id: { not: id } } : {}) } });
     if (dup) throw badRequest(`رقم الهوية مسجل للموظف ${dup.fullName}`);
@@ -337,7 +338,7 @@ export async function expiryAlerts(db: TenantDb, session: Pick<SessionData, "ten
     if (d && d <= limit) out.push({ employeeId: id, name, kind, date: isoOf(d)!, daysLeft: Math.round((d.getTime() - t0.getTime()) / 86_400_000) });
   };
   for (const e of emps) {
-    push(e.id, e.fullName, e.idType === "IQAMA" ? "الإقامة" : "الهوية الوطنية", e.idExpiry);
+    push(e.id, e.fullName, idTypeLabel(e.idType, readRegion(session.tenant.settings)), e.idExpiry);
     push(e.id, e.fullName, "جواز السفر", e.passportExpiry);
   }
   for (const c of contracts) push(c.employee.id, c.employee.fullName, "عقد العمل", c.endDate);

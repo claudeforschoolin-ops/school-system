@@ -3,6 +3,8 @@
  * وملف الموظف المرتبط بحساب المستخدم، والتواريخ.
  */
 import type { HrRules } from "@/lib/hr/calc";
+import { isCitizen, readRegion } from "@/lib/region";
+import { formatMoney } from "@/lib/money";
 import { toISODate } from "@/lib/dates";
 import { resolveScope } from "@/lib/rbac/access";
 import type { Action } from "@/lib/rbac/catalog";
@@ -17,8 +19,39 @@ export function hrSettings(session: Pick<SessionData, "tenant">) {
 
 export function hrRules(session: Pick<SessionData, "tenant">): HrRules {
   const s = hrSettings(session);
-  return { gosiSaudiEmployeeBp: s.gosiSaudiEmployeeBp, gosiSaudiEmployerBp: s.gosiSaudiEmployerBp, gosiNonSaudiEmployerBp: s.gosiNonSaudiEmployerBp, gosiCapMinor: s.gosiCapMinor, deductAbsence: s.deductAbsence, deductLate: s.deductLate, lateMonthlyGraceMinutes: s.lateMonthlyGraceMinutes, overtimeRateBp: s.overtimeRateBp, monthDays: s.monthDays, eosFirstYearsMonthsBp: s.eosFirstYearsMonthsBp, eosLaterYearsMonthsBp: s.eosLaterYearsMonthsBp };
+  // توافق مع الإعدادات القديمة (نسب التأمينات بأسماء سعودية)
+  const legacy = s as unknown as { gosiSaudiEmployeeBp?: number; gosiSaudiEmployerBp?: number; gosiNonSaudiEmployerBp?: number; gosiCapMinor?: number };
+  const raw = ((session.tenant.settings ?? {}) as { hr?: Record<string, unknown> }).hr ?? {};
+  const legacySchemes = legacy.gosiSaudiEmployeeBp !== undefined && !("insuranceSchemes" in raw);
+  return {
+    insuranceSchemes: legacySchemes
+      ? [
+          { name: "تأمينات المواطنين", appliesTo: "CITIZEN", employeeBp: legacy.gosiSaudiEmployeeBp ?? 0, employerBp: legacy.gosiSaudiEmployerBp ?? 0 },
+          { name: "الأخطار المهنية", appliesTo: "NON_CITIZEN", employeeBp: 0, employerBp: legacy.gosiNonSaudiEmployerBp ?? 0 },
+        ]
+      : s.insuranceSchemes,
+    insuranceBase: s.insuranceBase,
+    insuranceCapMinor: legacySchemes ? (legacy.gosiCapMinor ?? s.insuranceCapMinor) : s.insuranceCapMinor,
+    deductAbsence: s.deductAbsence,
+    deductLate: s.deductLate,
+    lateMonthlyGraceMinutes: s.lateMonthlyGraceMinutes,
+    overtimeMode: s.overtimeMode,
+    overtimeRateBp: s.overtimeRateBp,
+    monthDays: s.monthDays,
+    deductionCapBp: s.deductionCapBp,
+    eosEnabled: s.eosEnabled,
+    eosFirstYears: s.eosFirstYears,
+    eosFirstYearsMonthsBp: s.eosFirstYearsMonthsBp,
+    eosLaterYearsMonthsBp: s.eosLaterYearsMonthsBp,
+    eosWageBasis: s.eosWageBasis,
+    eosResignation: s.eosResignation,
+    eosYearDays: s.eosYearDays,
+  };
 }
+
+/** الإقليم (جنسية المواطن وصيغ الهوية والآيبان) */
+export const regionOf = (session: Pick<SessionData, "tenant">) => readRegion(session.tenant.settings);
+export const citizenOf = (session: Pick<SessionData, "tenant">, nationality: string | null | undefined) => isCitizen(nationality, regionOf(session));
 
 /** صلاحية موظف الموارد البشرية (المدرسة أو فرع)؛ نطاق «الخاص» وحده خدمة ذاتية لا تكفي */
 export function isHrStaff(session: SessionData, module: string, action: Action) {
@@ -58,3 +91,6 @@ export const monthlyWage = (c: { basicMinor: number; housingMinor: number; trans
 export const otherTotal = (json: unknown) => (Array.isArray(json) ? (json as Array<{ amountMinor?: number }>).reduce((s, a) => s + (Number.isSafeInteger(a.amountMinor) ? a.amountMinor! : 0), 0) : 0);
 
 export const CATEGORY_ACCOUNT: Record<string, string> = { ACADEMIC: "key:SAL_ACADEMIC", ADMIN: "key:SAL_ADMIN", SERVICES: "key:SAL_SERVICES" };
+
+/** مبلغ منسق بعملة المدرسة (لعناوين الموافقات والإشعارات) */
+export const money = (session: Pick<SessionData, "tenant">, minor: number) => formatMoney(minor, { currency: session.tenant.currency, digits: "arab" });

@@ -191,7 +191,7 @@ export const admissionsRouter = router({
     if (!tenant || settings.admissions?.publicFormEnabled === false) throw new TRPCError({ code: "NOT_FOUND", message: "نموذج التقديم غير متاح" });
     const db = createTenantDb({ tenantId: tenant.id, actor: null });
     const intro = (tenant.settings as { admissions?: { intro?: string } } | null)?.admissions?.intro ?? "";
-    return { school: { name: tenant.name, platformName: tenant.platformName, logoUrl: tenant.logoUrl, isDemo: tenant.isDemo, intro }, ...(await admissions.admissionFormOptions(db)) };
+    return { school: { name: tenant.name, platformName: tenant.platformName, logoUrl: tenant.logoUrl, isDemo: tenant.isDemo, intro }, regionSettings: { region: (tenant.settings as { region?: unknown } | null)?.region ?? null }, ...(await admissions.admissionFormOptions(db)) };
   }),
 
   /** التقديم العام: يُنشئ طلب قبول دون حساب (مع حدّ للمحاولات وحقل مصيدة للبرامج الآلية) */

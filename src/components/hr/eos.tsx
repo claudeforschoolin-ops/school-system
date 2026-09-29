@@ -29,7 +29,7 @@ const REASONS = [
   { value: "CONTRACT_END", label: "انتهاء العقد" },
   { value: "RETIREMENT", label: "تقاعد" },
   { value: "DEATH", label: "وفاة" },
-  { value: "ARTICLE_80", label: "فصل وفق المادة ٨٠" },
+  { value: "ARTICLE_80", label: "فصل تأديبي (دون مكافأة)" },
 ] as const;
 type Reason = (typeof REASONS)[number]["value"];
 const STATUS: Record<string, { label: string; color: string }> = {

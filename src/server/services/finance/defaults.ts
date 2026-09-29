@@ -19,7 +19,7 @@ export const DEFAULT_COA: Acc[] = [
   ["11", "النقد وما في حكمه", "ASSET", "1", { group: true }],
   ["1101", "الصندوق الرئيسي", "ASSET", "11", { key: "CASH", cf: "CASH" }],
   ["1102", "صندوق فرع البنات", "ASSET", "11", { key: "CASH_GIRLS", cf: "CASH" }],
-  ["1111", "البنك الأهلي السعودي — الحساب الجاري", "ASSET", "11", { key: "BANK_DEFAULT", cf: "CASH" }],
+  ["1111", "البنك الرئيسي — الحساب الجاري", "ASSET", "11", { key: "BANK_DEFAULT", cf: "CASH" }],
   ["1112", "مصرف الراجحي — حساب التحصيل", "ASSET", "11", { key: "BANK_COLLECTION", cf: "CASH" }],
   ["1121", "عهد نقدية", "ASSET", "11", { cf: "CASH" }],
   ["1131", "محفظة بوابة الدفع", "ASSET", "11", { key: "PAYMENT_GATEWAY", cf: "CASH" }],

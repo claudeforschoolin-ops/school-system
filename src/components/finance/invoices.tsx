@@ -3,6 +3,7 @@
  * الفواتير: الصفحة الرئيسية (قاعدة بيانات بعروضها)، صفحة الفاتورة (طباعة ضريبية برمز QR، الأقساط،
  * المدفوعات، الإشعارات الدائنة/المدينة، الإلغاء)، ونافذة إصدار فاتورة بمعاينة حيّة.
  */
+import { currencyName } from "@/lib/money";
 import {
   Ban,
   Banknote,
@@ -377,6 +378,7 @@ function SideList({ title, children, empty }: { title: string; children: React.R
 
 /** الفاتورة الضريبية المبسطة كما تُطبع */
 function InvoiceDocument({ inv }: { inv: Invoice }) {
+  const { tenant } = useApp();
   const prefs = usePrefs();
   const money = useMoney();
   const fmtDate = useFmtDate();
@@ -565,8 +567,7 @@ function InvoiceDocument({ inv }: { inv: Invoice }) {
       ) : null}
       {inv.notes ? <p className="mt-5 whitespace-pre-line text-[13px] text-fg-2">{inv.notes}</p> : null}
       <p className="mt-6 text-[11px] text-fg-3">
-        جميع المبالغ بالريال السعودي. الرسوم الدراسية والتسجيل والنقل للطلاب المواطنين بنسبة صفر وفق قرار
-        وزارة المالية، وبقية البنود خاضعة للنسبة الأساسية.
+        جميع المبالغ بعملة {currencyName(tenant.currency)}. الضريبة لكل بند حسب إعداداته، وضريبة «المواطن» للطلاب من جنسية دولة المدرسة.
       </p>
     </article>
   );

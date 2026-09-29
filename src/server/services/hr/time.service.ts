@@ -11,7 +11,8 @@ import { badRequest, forbidden, notFound } from "@/server/errors";
 import { createApprovalRequest, type ApprovalHookEvent } from "@/server/services/approval.service";
 import { notify } from "@/server/services/notifications.service";
 import { nextNumber } from "@/server/services/sequence.service";
-import { dateOnly, hrBranchWhere, isHrStaff, isoOf, myEmployee, requireHr, requireMyEmployee, today } from "./common";
+import { readModuleSettings } from "@/server/services/module-settings.service";
+import { dateOnly, hrBranchWhere, hrSettings, isHrStaff, isoOf, myEmployee, requireHr, requireMyEmployee, today } from "./common";
 
 const DEFAULT_WORK_DAYS = [0, 1, 2, 3, 4];
 
@@ -49,7 +50,7 @@ const minutesOf = (hhmm: string) => {
 function localHHMM(d: Date, timezone: string) {
   return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: timezone }).format(d);
 }
-/** تحويل «تاريخ + وقت محلي» إلى لحظة (السعودية بلا توقيت صيفي) */
+/** تحويل «تاريخ + وقت محلي» إلى لحظة (يعالج أي منطقة زمنية بفارقها في ذلك اليوم) */
 function atLocal(dateIso: string, hhmm: string, timezone: string) {
   const guess = new Date(`${dateIso}T${hhmm}:00Z`);
   const shown = localHHMM(guess, timezone);
@@ -57,13 +58,13 @@ function atLocal(dateIso: string, hhmm: string, timezone: string) {
   return new Date(guess.getTime() - offset * 60_000);
 }
 
-function computeTimes(shift: { startTime: string; endTime: string; graceMinutes: number } | null, inHHMM: string | null, outHHMM: string | null) {
+function computeTimes(shift: { startTime: string; endTime: string; graceMinutes: number } | null, inHHMM: string | null, outHHMM: string | null, overtimeMin = 30) {
   if (!shift) return { late: 0, early: 0, overtime: 0 };
   const late = inHHMM ? lateMinutes(inHHMM, shift.startTime, shift.graceMinutes) : 0;
   const early = outHHMM && minutesOf(outHHMM) < minutesOf(shift.endTime) ? minutesOf(shift.endTime) - minutesOf(outHHMM) : 0;
-  // الإضافي يُحتسب بعد ٣٠ دقيقة من نهاية الدوام، ويحتاج اعتماد الموارد البشرية في المسير
+  // الإضافي يُسجَّل بعد مدة من نهاية الدوام (إعدادات الرواتب، الافتراضي ٣٠ دقيقة)، ويحتاج اعتماد الموارد البشرية في المسير
   const after = outHHMM ? minutesOf(outHHMM) - minutesOf(shift.endTime) : 0;
-  return { late, early, overtime: after >= 30 ? after : 0 };
+  return { late, early, overtime: after >= overtimeMin ? after : 0 };
 }
 
 // ---------------------------------------------------------------------
@@ -103,7 +104,7 @@ export async function setAttendance(db: TenantDb, session: SessionData, input: {
   if (input.date > today(session)) throw badRequest("لا يُسجَّل حضور لتاريخ مستقبلي");
   const shift = await shiftOf(db, e.shiftId);
   const present = input.status === "PRESENT" || input.status === "LATE";
-  const t = present ? computeTimes(shift, input.checkIn ?? null, input.checkOut ?? null) : { late: 0, early: 0, overtime: 0 };
+  const t = present ? computeTimes(shift, input.checkIn ?? null, input.checkOut ?? null, hrSettings(session).overtimeMinMinutes) : { late: 0, early: 0, overtime: 0 };
   const status: StaffAttendanceStatus = present ? (t.late ? "LATE" : "PRESENT") : input.status;
   const data = { status, checkIn: present && input.checkIn ? atLocal(input.date, input.checkIn, session.tenant.timezone) : null, checkOut: present && input.checkOut ? atLocal(input.date, input.checkOut, session.tenant.timezone) : null, lateMinutes: t.late, earlyLeaveMinutes: t.early, overtimeMinutes: t.overtime, source: "MANUAL", note: input.note ?? null, updatedById: session.user.id };
   return db.employeeAttendance.upsert({ where: { employeeId_date: { employeeId: e.id, date: dateOnly(input.date) } }, create: { tenantId: session.tenant.id, employeeId: e.id, date: dateOnly(input.date), ...data }, update: data });
@@ -135,7 +136,7 @@ export async function selfCheck(db: TenantDb, session: SessionData, kind: "IN" |
     return db.employeeAttendance.upsert({ where: { employeeId_date: { employeeId: e.id, date: dateOnly(date) } }, create: { tenantId: session.tenant.id, employeeId: e.id, date: dateOnly(date), ...data }, update: data });
   }
   if (!current?.checkIn) throw badRequest("سجّل الحضور أولاً");
-  const t = computeTimes(shift, localHHMM(current.checkIn, session.tenant.timezone), hhmm);
+  const t = computeTimes(shift, localHHMM(current.checkIn, session.tenant.timezone), hhmm, hrSettings(session).overtimeMinMinutes);
   return db.employeeAttendance.update({ where: { id: current.id }, data: { checkOut: now, earlyLeaveMinutes: t.early, overtimeMinutes: t.overtime, updatedById: session.user.id } });
 }
 
@@ -156,7 +157,7 @@ export async function importAttendance(db: TenantDb, session: SessionData, rows:
       continue;
     }
     const shift = await shiftOf(db, e.shiftId);
-    const t = computeTimes(shift, r.checkIn, r.checkOut);
+    const t = computeTimes(shift, r.checkIn, r.checkOut, hrSettings(session).overtimeMinMinutes);
     const status: StaffAttendanceStatus = r.checkIn ? (t.late ? "LATE" : "PRESENT") : "ABSENT";
     const data = { status, checkIn: r.checkIn ? atLocal(r.date, r.checkIn, session.tenant.timezone) : null, checkOut: r.checkOut ? atLocal(r.date, r.checkOut, session.tenant.timezone) : null, lateMinutes: t.late, earlyLeaveMinutes: t.early, overtimeMinutes: t.overtime, source: "DEVICE", updatedById: session.user.id };
     const existing = await db.employeeAttendance.findFirst({ where: { employeeId: e.id, date: dateOnly(r.date) } });
@@ -246,8 +247,14 @@ export async function saveLeaveType(db: TenantDb, session: SessionData, input: {
   return input.id ? db.leaveType.update({ where: { id: input.id }, data }) : db.leaveType.create({ data: { tenantId: session.tenant.id, ...data } });
 }
 
-/** الاستحقاق السنوي: الإجازة السنوية حسب العقد (٢١ يوماً، و٣٠ بعد خمس سنوات — م١٠٩)، والباقي من نوع الإجازة */
-async function ensureBalance(db: TenantDb, tenantId: string, employee: { id: string; hireDate: Date }, type: { id: string; code: string; annualDays: number | null; carryOverDays: number }, year: number) {
+async function seniorLeaveRule(db: TenantDb, tenantId: string) {
+  const t = await db.tenant.findFirst({ where: { id: tenantId }, select: { settings: true } });
+  const hs = readModuleSettings(t?.settings, "hr");
+  return { days: hs.seniorLeaveDays, afterYears: hs.seniorLeaveAfterYears };
+}
+
+/** الاستحقاق السنوي: الإجازة السنوية من نوعها أو العقد، وتزيد بالأقدمية حسب إعدادات الرواتب (الافتراضي ٣٠ يوماً بعد خمس سنوات)، والباقي من نوع الإجازة */
+async function ensureBalance(db: TenantDb, tenantId: string, employee: { id: string; hireDate: Date }, type: { id: string; code: string; annualDays: number | null; carryOverDays: number }, year: number, seniorRule?: { days: number; afterYears: number }) {
   const found = await db.leaveBalance.findFirst({ where: { employeeId: employee.id, leaveTypeId: type.id, year } });
   if (found) return found;
   let entitled = type.annualDays ?? 0;
@@ -255,7 +262,9 @@ async function ensureBalance(db: TenantDb, tenantId: string, employee: { id: str
   if (type.code === "ANNUAL") {
     const contract = await db.employmentContract.findFirst({ where: { employeeId: employee.id, status: "ACTIVE" } });
     const years = serviceDays(isoOf(employee.hireDate)!, `${year}-01-01`) / 365;
-    entitled = Math.max(contract?.annualLeaveDays ?? 21, years >= 5 ? 30 : 21);
+    const base = type.annualDays ?? 0;
+    const senior = seniorRule ?? (await seniorLeaveRule(db, tenantId));
+    entitled = Math.max(contract?.annualLeaveDays ?? base, senior.days > 0 && senior.afterYears > 0 && years >= senior.afterYears ? senior.days : base);
     const prev = await db.leaveBalance.findFirst({ where: { employeeId: employee.id, leaveTypeId: type.id, year: year - 1 } });
     if (prev) carried = Math.min(type.carryOverDays, Math.max(0, prev.entitledDays + prev.carriedDays + prev.adjustedDays - prev.usedDays));
   }
@@ -268,7 +277,8 @@ export async function balancesFor(db: TenantDb, session: SessionData, employeeId
   const types = await listLeaveTypes(db, session);
   const out = [];
   for (const t of types.filter((x) => x.isActive && x.annualDays !== null && (!x.gender || x.gender === e.gender))) {
-    const b = await ensureBalance(db, session.tenant.id, e, t, year);
+    const hs = hrSettings(session);
+    const b = await ensureBalance(db, session.tenant.id, e, t, year, { days: hs.seniorLeaveDays, afterYears: hs.seniorLeaveAfterYears });
     out.push({ type: t, entitled: b.entitledDays + b.carriedDays + b.adjustedDays, used: b.usedDays, remaining: b.entitledDays + b.carriedDays + b.adjustedDays - b.usedDays, balanceId: b.id });
   }
   return out;

@@ -5,7 +5,9 @@
  */
 import { useMemo, useState, type ReactNode } from "react";
 import type { PropertyDef } from "@/lib/database/types";
-import { GENDER, GUARDIAN_RELATION, ID_TYPE, NATIONALITIES, ADMISSION_SOURCES, normalizeSaudiMobile, validateIdNumber } from "@/lib/students";
+import { GENDER, GUARDIAN_RELATION, NATIONALITIES, ADMISSION_SOURCES, normalizeMobile, validateIdNumber, guessIdType } from "@/lib/students";
+import { idTypeOptions, type RegionSettings } from "@/lib/region";
+import { useRegion } from "@/components/shell/app-context";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
@@ -60,14 +62,14 @@ export interface IdentityForm {
   guardianNationalId: string;
 }
 
-export const emptyIdentity = (prefill: Record<string, unknown> = {}): IdentityForm => ({
+export const emptyIdentity = (prefill: Record<string, unknown> = {}, country = "SA"): IdentityForm => ({
   firstName: "",
   fatherName: "",
   grandfatherName: "",
   familyName: "",
   gender: typeof prefill.gender === "string" ? (prefill.gender as "MALE") : "",
-  nationality: "SA",
-  idType: "NATIONAL_ID",
+  nationality: NATIONALITIES.some((n) => n.id === country) ? country : "OTHER",
+  idType: NATIONALITIES.some((n) => n.id === country) ? "NATIONAL_ID" : "PASSPORT",
   nationalId: "",
   birthDate: "",
   branchId: typeof prefill.branch === "string" ? prefill.branch : "",
@@ -79,18 +81,18 @@ export const emptyIdentity = (prefill: Record<string, unknown> = {}): IdentityFo
 });
 
 /** أخطاء التحقق في الواجهة قبل الإرسال (الخادم يتحقق مجدداً) */
-export function identityErrors(f: IdentityForm): Partial<Record<keyof IdentityForm, string>> {
+export function identityErrors(f: IdentityForm, region: RegionSettings): Partial<Record<keyof IdentityForm, string>> {
   const e: Partial<Record<keyof IdentityForm, string>> = {};
   for (const k of ["firstName", "fatherName", "grandfatherName", "familyName"] as const) if (!f[k].trim()) e[k] = "مطلوب";
   if (!f.gender) e.gender = "اختر الجنس";
   if (!f.branchId) e.branchId = "اختر الفرع";
   if (!f.gradeId) e.gradeId = "اختر الصف";
   if (!f.birthDate) e.birthDate = "مطلوب";
-  const idErr = f.nationalId ? validateIdNumber(f.idType, f.nationalId) : "مطلوب";
+  const idErr = f.nationalId ? validateIdNumber(f.idType, f.nationalId, region) : "مطلوب";
   if (idErr) e.nationalId = idErr;
   if (f.guardianName.trim().length < 3) e.guardianName = "اكتب اسم ولي الأمر";
-  if (!normalizeSaudiMobile(f.guardianPhone)) e.guardianPhone = "جوال سعودي 05xxxxxxxx";
-  if (f.guardianNationalId && validateIdNumber(/^2/.test(f.guardianNationalId) ? "IQAMA" : "NATIONAL_ID", f.guardianNationalId)) e.guardianNationalId = "رقم الهوية غير صالح";
+  if (!normalizeMobile(f.guardianPhone, region)) e.guardianPhone = `رقم جوال غير صالح (${region.mobileHint})`;
+  if (f.guardianNationalId && validateIdNumber(guessIdType(f.guardianNationalId, region), f.guardianNationalId, region)) e.guardianNationalId = "رقم الهوية غير صالح";
   return e;
 }
 
@@ -101,7 +103,9 @@ export function IdentityFields({
   options,
   showErrors,
   extra,
+  region,
 }: {
+  region: RegionSettings;
   form: IdentityForm;
   set: (patch: Partial<IdentityForm>) => void;
   errors: Partial<Record<keyof IdentityForm, string>>;
@@ -134,10 +138,10 @@ export function IdentityFields({
             <Segmented value={form.gender || "MALE"} onChange={(v) => set({ gender: v })} options={[{ value: "MALE", label: GENDER.MALE.label }, { value: "FEMALE", label: GENDER.FEMALE.label }]} />
           </Field>
           <Field label="الجنسية">
-            <Select value={form.nationality} onChange={(v) => set({ nationality: v, idType: v === "SA" ? "NATIONAL_ID" : "IQAMA" })} options={NATIONALITIES.map((n) => ({ value: n.id, label: n.name }))} />
+            <Select value={form.nationality} onChange={(v) => set({ nationality: v, idType: v === region.country ? "NATIONAL_ID" : "IQAMA" })} options={NATIONALITIES.map((n) => ({ value: n.id, label: n.name }))} />
           </Field>
           <Field label="نوع الهوية">
-            <Select value={form.idType} onChange={(v) => set({ idType: v as IdentityForm["idType"] })} options={Object.entries(ID_TYPE).map(([value, o]) => ({ value, label: o.label }))} />
+            <Select value={form.idType} onChange={(v) => set({ idType: v as IdentityForm["idType"] })} options={idTypeOptions(region)} />
           </Field>
           <Field label="رقم الهوية" error={err("nationalId")}>
             <Input value={form.nationalId} onChange={(e) => set({ nationalId: e.target.value })} dir="ltr" inputMode="numeric" className="text-end tabular" />
@@ -166,7 +170,7 @@ export function IdentityFields({
             <Select value={form.guardianRelation} onChange={(v) => set({ guardianRelation: v as IdentityForm["guardianRelation"] })} options={Object.entries(GUARDIAN_RELATION).map(([value, o]) => ({ value, label: o.label }))} />
           </Field>
           <Field label="الجوال" error={err("guardianPhone")}>
-            <Input value={form.guardianPhone} onChange={(e) => set({ guardianPhone: e.target.value })} dir="ltr" inputMode="tel" placeholder="05xxxxxxxx" className="text-end" />
+            <Input value={form.guardianPhone} onChange={(e) => set({ guardianPhone: e.target.value })} dir="ltr" inputMode="tel" placeholder={region.mobileHint} className="text-end" />
           </Field>
           <Field label="هوية ولي الأمر (اختياري)" error={err("guardianNationalId")} className="col-span-2" hint="تربط الأشقاء تلقائياً">
             <Input value={form.guardianNationalId} onChange={(e) => set({ guardianNationalId: e.target.value })} dir="ltr" inputMode="numeric" className="text-end" />
@@ -178,10 +182,11 @@ export function IdentityFields({
 }
 
 function useIdentity(prefill: Record<string, unknown>) {
-  const [form, setForm] = useState<IdentityForm>(() => emptyIdentity(prefill));
+  const region = useRegion();
+  const [form, setForm] = useState<IdentityForm>(() => emptyIdentity(prefill, region.country));
   const [showErrors, setShowErrors] = useState(false);
-  const errors = useMemo(() => identityErrors(form), [form]);
-  return { form, set: (patch: Partial<IdentityForm>) => setForm((f) => ({ ...f, ...patch })), errors, showErrors, setShowErrors, valid: Object.keys(errors).length === 0 };
+  const errors = useMemo(() => identityErrors(form, region), [form, region]);
+  return { form, set: (patch: Partial<IdentityForm>) => setForm((f) => ({ ...f, ...patch })), errors, showErrors, setShowErrors, region, valid: Object.keys(errors).length === 0 };
 }
 
 // ---------------------------------------------------------------------
@@ -221,6 +226,7 @@ function NewAdmissionDialog({ prefill, onClose, onCreated }: CreateDialogProps) 
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent title="طلب قبول جديد" description="تُرسل رسالة استلام لولي الأمر، ويُشعَر فريق القبول." width={760}>
         <IdentityFields
+          region={id.region}
           form={id.form}
           set={id.set}
           errors={id.errors}
@@ -283,6 +289,7 @@ function NewStudentDialog({ prefill, onClose, onCreated }: CreateDialogProps) {
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent title="إضافة طالب" description="للطلاب الحاليين عند بدء استخدام المنصة. الطلاب الجدد يمرّون عبر «طلبات القبول»." width={760}>
         <IdentityFields
+          region={id.region}
           form={id.form}
           set={id.set}
           errors={id.errors}

@@ -7,6 +7,7 @@ import type { PaymentMethod, Prisma } from "@/generated/prisma/client";
 import { formatMoney, parseMoney } from "@/lib/money";
 import { applyBp } from "@/lib/finance/calc";
 import type { SessionData } from "@/server/auth/session";
+import { ibanHint, readRegion, validIban } from "@/lib/region";
 import type { TenantDb } from "@/server/db/tenant";
 import { badRequest, notFound } from "@/server/errors";
 import { createApprovalRequest, type ApprovalHookEvent } from "@/server/services/approval.service";
@@ -71,7 +72,8 @@ export async function saveBankAccount(
 ) {
   requirePerm(session, "banking", "update", "إدارة الحسابات البنكية من صلاحية المحاسب");
   const iban = input.iban.replace(/\s+/g, "").toUpperCase();
-  if (!/^SA\d{22}$/.test(iban)) throw badRequest("رقم الآيبان السعودي: SA متبوعاً بـ٢٢ رقماً");
+  const region = readRegion(session.tenant.settings);
+  if (!validIban(iban, region)) throw badRequest(`رقم الآيبان غير صالح (${ibanHint(region)})`);
   if (id)
     return db.bankAccount.update({
       where: { id },

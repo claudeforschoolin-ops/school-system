@@ -7,6 +7,7 @@ import type { Action, Scope } from "@/lib/rbac/catalog";
 import type { CalendarPreference } from "@/lib/dates";
 import type { DigitsPreference } from "@/lib/numbers";
 import { trpc, type RouterOutputs } from "@/lib/trpc/client";
+import { readRegion } from "@/lib/region";
 
 export type AppContextData = RouterOutputs["account"]["context"];
 
@@ -98,4 +99,10 @@ export function useApp(): AppContextValue {
 /** تنسيق حسب تفضيلات المستخدم */
 export function usePrefs() {
   return useApp().prefs;
+}
+
+/** إعدادات الإقليم للمدرسة (صيغ الهوية والجوال والآيبان وجنسية المواطن) */
+export function useRegion() {
+  const settings = useApp().tenant.settings;
+  return useMemo(() => readRegion(settings), [settings]);
 }

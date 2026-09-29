@@ -345,12 +345,14 @@ export async function reportCardList(db: TenantDb, session: SessionData, input: 
   ]);
   const debts = await studentDebts(db, students.map((s) => s.id));
   const withhold = Boolean(publication?.withholdOnDebt && assessmentSettings(session).withholdOnDebt);
+  // لا حجب تحت الحد الأدنى للمتأخرات (إعدادات التقييم)
+  const minOverdue = assessmentSettings(session).withholdMinOverdueMinor;
   return {
     publication,
     pendingApproval: pending,
     rows: students.map((s) => {
       const c = cards.find((x) => x.studentId === s.id);
-      return { student: s, card: c ? { id: c.id, averageBp: c.averageBp, rank: c.rank, result: c.result as ResultStatus, issuedAt: c.issuedAt, verifyCode: c.verifyCode } : null, debtMinor: debts.get(s.id) ?? 0, withheld: withhold && (debts.get(s.id) ?? 0) > 0 };
+      return { student: s, card: c ? { id: c.id, averageBp: c.averageBp, rank: c.rank, result: c.result as ResultStatus, issuedAt: c.issuedAt, verifyCode: c.verifyCode } : null, debtMinor: debts.get(s.id) ?? 0, withheld: withhold && (debts.get(s.id) ?? 0) > minOverdue };
     }),
   };
 }
@@ -426,7 +428,8 @@ async function familyVisibility(db: TenantDb, session: SessionData, termId: stri
   const pub = await db.resultPublication.findFirst({ where: { termId } });
   const out = new Map<string, "VISIBLE" | "NOT_YET" | "WITHHELD">();
   const debts = pub?.withholdOnDebt && assessmentSettings(session).withholdOnDebt ? await studentDebts(db, studentIds) : new Map<string, number>();
-  for (const id of studentIds) out.set(id, !pub || pub.publishAt > new Date() ? "NOT_YET" : (debts.get(id) ?? 0) > 0 ? "WITHHELD" : "VISIBLE");
+  const minOverdue = assessmentSettings(session).withholdMinOverdueMinor;
+  for (const id of studentIds) out.set(id, !pub || pub.publishAt > new Date() ? "NOT_YET" : (debts.get(id) ?? 0) > minOverdue ? "WITHHELD" : "VISIBLE");
   return out;
 }
 
@@ -441,10 +444,13 @@ export async function familyResults(db: TenantDb, session: SessionData) {
   ]);
   const terms = await db.term.findMany({ where: { id: { in: [...new Set(cards.map((c) => c.termId))] } }, include: { academicYear: { select: { name: true } } } });
   const pubs = await db.resultPublication.findMany({ where: { termId: { in: terms.map((t) => t.id) } } });
+  const showProgress = assessmentSettings(session).progressVisibleToParents;
   const out = [];
   for (const s of students) {
     const list = [];
     for (const c of cards.filter((x) => x.studentId === s.id)) {
+      // تقارير المتابعة للأسر حسب الإعدادات
+      if (!showProgress && (c.snapshot as unknown as CardSnapshot | null)?.kind === "PROGRESS") continue;
       const vis = (await familyVisibility(db, session, c.termId, [s.id])).get(s.id)!;
       const term = terms.find((t) => t.id === c.termId);
       list.push({ id: c.id, termId: c.termId, term: term ? `${term.name} — ${term.academicYear.name}` : "", status: vis, publishAt: pubs.find((p) => p.termId === c.termId)?.publishAt ?? null, snapshot: vis === "VISIBLE" ? (c.snapshot as unknown as CardSnapshot) : null, verifyCode: vis === "VISIBLE" ? c.verifyCode : null });

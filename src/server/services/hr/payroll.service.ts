@@ -3,7 +3,8 @@
  * والبنود المتغيرة والسلف، مع التأمينات الاجتماعية واستحقاق مخصص نهاية الخدمة.
  * الاعتماد يرحّل قيد الاستحقاق تلقائياً، والصرف يرحّل قيد البنك، ويُولَّد ملف حماية الأجور وقسائم الراتب.
  */
-import { monthlyEosAccrual, salaryLine, serviceDays, type SalaryLine } from "@/lib/hr/calc";
+import { monthlyEosAccrual, salaryLine, serviceDays, wageBy, type SalaryLine } from "@/lib/hr/calc";
+import { minorToDecimalString } from "@/lib/money";
 import type { SessionData } from "@/server/auth/session";
 import type { TenantDb } from "@/server/db/tenant";
 import { badRequest, forbidden, notFound } from "@/server/errors";
@@ -11,7 +12,7 @@ import { createApprovalRequest, type ApprovalHookEvent } from "@/server/services
 import { branchCostCenter, postEntry, type Tx } from "@/server/services/finance/ledger";
 import { notify } from "@/server/services/notifications.service";
 import { nextNumber } from "@/server/services/sequence.service";
-import { CATEGORY_ACCOUNT, dateOnly, hrRules, hrSettings, isHrStaff, isoOf, myEmployee, otherTotal, requireHr, today } from "./common";
+import { CATEGORY_ACCOUNT, citizenOf, dateOnly, hrRules, hrSettings, isHrStaff, isoOf, money, myEmployee, otherTotal, regionOf, requireHr, today } from "./common";
 import { monthSummary } from "./time.service";
 
 export const RUN_STATUS: Record<string, { label: string; color: string }> = {
@@ -37,19 +38,20 @@ const monthRange = (month: string) => {
 
 /** حسابات الرواتب النظامية (تُكمَّل في دليل حسابات قديم عند أول استخدام) */
 export async function ensurePayrollAccounts(db: TenantDb, tenantId: string) {
-  const byKey = async (key: string, code: string, name: string) => {
+  const byKey = async (key: string, code: string, name: string, type: "EXPENSE" | "LIABILITY" = "EXPENSE") => {
     if (await db.account.findFirst({ where: { systemKey: key, deletedAt: null } })) return;
     const existing = await db.account.findFirst({ where: { code, deletedAt: null } });
     if (existing) {
       await db.account.update({ where: { id: existing.id }, data: { systemKey: key } });
       return;
     }
-    const parent = await db.account.findFirst({ where: { code: "6", deletedAt: null } });
-    await db.account.create({ data: { tenantId, code, name, type: "EXPENSE", normalSide: "DEBIT", parentId: parent?.id ?? null, systemKey: key } });
+    const parent = await db.account.findFirst({ where: { code: type === "EXPENSE" ? "6" : "2", deletedAt: null } });
+    await db.account.create({ data: { tenantId, code, name, type, normalSide: type === "EXPENSE" ? "DEBIT" : "CREDIT", parentId: parent?.id ?? null, systemKey: key } });
   };
   await byKey("ALLOWANCES", "6201", "بدلات ومكافآت");
   await byKey("GOSI_EXPENSE", "6301", "تأمينات اجتماعية");
   await byKey("EOS_EXPENSE", "6202", "مكافأة نهاية الخدمة");
+  await byKey("PENALTIES_PAYABLE", "2190", "جزاءات الموظفين المستحقة لصندوق العمال", "LIABILITY");
 }
 
 // ---------------------------------------------------------------------
@@ -123,7 +125,7 @@ async function buildLines(db: TenantDb, session: SessionData, month: string) {
         transportMinor: c.transportMinor,
         otherAllowancesMinor: otherTotal(c.otherAllowances),
         hoursPerDay: c.hoursPerDay,
-        saudi: e.nationality === "SA",
+        citizen: citizenOf(session, e.nationality),
         gosiRegistered: e.gosiRegistered,
         paidDays: paidDays >= days ? undefined : Math.round((paidDays * rules.monthDays) / days),
         absentDays: s.absentDays,
@@ -139,7 +141,7 @@ async function buildLines(db: TenantDb, session: SessionData, month: string) {
       },
       rules,
     );
-    const wage = c.basicMinor + c.housingMinor + c.transportMinor + otherTotal(c.otherAllowances);
+    const wage = wageBy(rules.eosWageBasis, { basicMinor: c.basicMinor, housingMinor: c.housingMinor, transportMinor: c.transportMinor, otherAllowancesMinor: otherTotal(c.otherAllowances) });
     const eos = accrue ? monthlyEosAccrual(wage, serviceDays(isoOf(e.hireDate)!, isoOf(end)!), rules) : 0;
     const { cappedMinor, notes, ...amounts } = calc;
     return {
@@ -194,7 +196,7 @@ export async function submitRun(db: TenantDb, session: SessionData, id: string) 
   const approval = await createApprovalRequest(db, session, {
     type: "payroll_run",
     title: `مسير رواتب ${run.month}: ${run.employees} موظفاً`,
-    description: `صافي ${(run.netMinor / 100).toFixed(2)} ر.س.`,
+    description: `صافي ${money(session, run.netMinor)}`,
     entityType: "PayrollRun",
     entityId: run.id,
     link: `/hr/payroll/${run.id}`,
@@ -227,12 +229,14 @@ export async function onPayrollApproval(db: TenantDb, session: SessionData, requ
   await ensurePayrollAccounts(db, run.tenantId);
   const departments = await db.department.findMany({ select: { id: true, costCenterId: true } });
   // تجميع حسب الفئة ومركز التكلفة (القسم وإلا الفرع)
+  // الجزاءات: تخفيض لمصروف الرواتب، أو التزام يودع في صندوق/جهة حسب الإعدادات
+  const penaltiesToFund = hrSettings(session).penaltiesTreatment === "LIABILITY";
   const groups = new Map<string, { category: string; costCenterId: string | null; salary: number; allowances: number; gosiEmployer: number; eos: number }>();
   for (const l of run.lines) {
     const cc = departments.find((d) => d.id === l.departmentId)?.costCenterId ?? (await branchCostCenter(db, run.tenantId, l.branchId));
     const key = `${l.category}|${cc ?? ""}`;
     const g = groups.get(key) ?? { category: l.category, costCenterId: cc ?? null, salary: 0, allowances: 0, gosiEmployer: 0, eos: 0 };
-    g.salary += l.basicMinor + l.housingMinor + l.transportMinor + l.otherAllowancesMinor - l.absenceMinor - l.lateMinor - l.unpaidLeaveMinor - l.penaltyMinor - l.otherDeductionMinor;
+    g.salary += l.basicMinor + l.housingMinor + l.transportMinor + l.otherAllowancesMinor - l.absenceMinor - l.lateMinor - l.unpaidLeaveMinor - (penaltiesToFund ? 0 : l.penaltyMinor) - l.otherDeductionMinor;
     g.allowances += l.overtimeMinor + l.bonusMinor;
     g.gosiEmployer += l.gosiEmployerMinor;
     g.eos += l.eosAccrualMinor;
@@ -258,6 +262,7 @@ export async function onPayrollApproval(db: TenantDb, session: SessionData, requ
         { account: "key:GOSI_PAYABLE", credit: t("gosiEmployeeMinor") + t("gosiEmployerMinor"), description: "التأمينات الاجتماعية المستحقة" },
         { account: "key:AR_STAFF", credit: t("loanMinor"), description: "أقساط السلف المستردة" },
         { account: "key:EOS_PROVISION", credit: t("eosAccrualMinor"), description: "مخصص نهاية الخدمة" },
+        ...(penaltiesToFund ? [{ account: "key:PENALTIES_PAYABLE", credit: run.lines.reduce((x, l) => x + l.penaltyMinor, 0), description: "جزاءات مستقطعة مستحقة للصندوق" }] : []),
       ],
     });
     // أقساط السلف
@@ -297,7 +302,7 @@ export async function payRun(db: TenantDb, session: SessionData, input: { id: st
 }
 
 /**
- * ملف حماية الأجور (CSV): صيغة عامة بحقول نظام «مدد»/البنوك (رقم الهوية، الاسم، الآيبان، رمز البنك،
+ * ملف حماية الأجور (CSV): صيغة عامة قابلة للضبط من الإعدادات (الفاصل، رقم المنشأة، سطر العناوين) (رقم الهوية، الاسم، الآيبان، رمز البنك،
  * الأساسي، السكن، البدلات الأخرى، الاستقطاعات، الصافي). تتطلب بعض البنوك صيغة SIF خاصة — راجع التقرير.
  */
 export async function wpsFile(db: TenantDb, session: SessionData, id: string) {
@@ -306,14 +311,19 @@ export async function wpsFile(db: TenantDb, session: SessionData, id: string) {
   if (d.run.status !== "APPROVED" && d.run.status !== "PAID") throw badRequest("ملف الأجور للمسير المعتمد");
   const emps = await db.employee.findMany({ where: { id: { in: d.lines.map((l) => l.employeeId) } }, select: { id: true, nationalIdLast4: true, nationalIdEnc: true, idType: true } });
   const { revealId } = await import("@/server/pii");
-  const amount = (m: number) => (m / 100).toFixed(2);
-  const header = ["EmployeeID", "IDType", "EmployeeName", "IBAN", "BankCode", "BasicSalary", "HousingAllowance", "OtherEarnings", "Deductions", "NetSalary", "PaymentMonth"];
+  const settings = hrSettings(session);
+  const region = regionOf(session);
+  const amount = (m: number) => minorToDecimalString(m, session.tenant.currency);
+  const header = ["EmployerID", "EmployeeID", "IDType", "EmployeeName", "IBAN", "BankCode", "BasicSalary", "HousingAllowance", "OtherEarnings", "Deductions", "NetSalary", "PaymentMonth"];
   const rows = d.lines.map((l) => {
     const e = emps.find((x) => x.id === l.employeeId);
-    return [revealId(e?.nationalIdEnc) ?? "", e?.idType === "IQAMA" ? "I" : "N", l.employee.fullName, l.iban ?? "", l.iban ? l.iban.slice(4, 6) : "", amount(l.basicMinor), amount(l.housingMinor), amount(l.transportMinor + l.otherAllowancesMinor + l.overtimeMinor + l.bonusMinor), amount(l.deductionsMinor), amount(l.netMinor), d.run.month];
+    const bankCode = l.iban ? (region.ibanCountry === "SA" || l.iban.startsWith("SA") ? l.iban.slice(4, 6) : l.iban.slice(4, 8)) : "";
+    return [settings.wpsEmployerId, revealId(e?.nationalIdEnc) ?? "", e?.idType === "IQAMA" ? "R" : e?.idType === "PASSPORT" ? "P" : "N", l.employee.fullName, l.iban ?? "", bankCode, amount(l.basicMinor), amount(l.housingMinor), amount(l.transportMinor + l.otherAllowancesMinor + l.overtimeMinor + l.bonusMinor), amount(l.deductionsMinor), amount(l.netMinor), d.run.month];
   });
-  const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-  return { filename: `WPS-${d.run.month}.csv`, content: [header, ...rows].map((r) => r.map(esc).join(",")).join("\n"), missingIban: d.missingIban };
+  const sep = { COMMA: ",", SEMICOLON: ";", TAB: "\t" }[settings.wpsDelimiter];
+  const esc = (v: string) => (v.includes(sep) || /["\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  const all = settings.wpsIncludeHeader ? [header, ...rows] : rows;
+  return { filename: `WPS-${d.run.month}.csv`, content: all.map((r) => r.map(esc).join(sep)).join("\n"), missingIban: d.missingIban };
 }
 
 /** قسيمة راتب: للموظف نفسه أو موظفي الرواتب */
@@ -378,10 +388,11 @@ export async function requestLoan(db: TenantDb, session: SessionData, input: { e
   if (!e) throw notFound("الموظف غير موجود");
   if (input.installmentMinor <= 0 || input.installmentMinor > input.amountMinor) throw badRequest("القسط أكبر من صفر ولا يتجاوز المبلغ");
   const basic = e.contracts[0]?.basicMinor ?? 0;
-  if (input.amountMinor > basic * 3) throw badRequest("السلفة لا تتجاوز ثلاثة رواتب أساسية");
+  const maxSalaries = hrSettings(session).loanMaxSalaries;
+  if (maxSalaries > 0 && input.amountMinor > basic * maxSalaries) throw badRequest(`السلفة لا تتجاوز ${maxSalaries} رواتب أساسية (إعدادات الرواتب)`);
   if (await db.employeeLoan.findFirst({ where: { employeeId: e.id, status: { in: ["PENDING", "ACTIVE"] } } })) throw badRequest("لدى الموظف سلفة قائمة");
   const loan = await db.employeeLoan.create({ data: { tenantId: session.tenant.id, number: await nextNumber(db, session.tenant.id, "loan"), employeeId: e.id, amountMinor: input.amountMinor, installmentMinor: input.installmentMinor, startMonth: input.startMonth, reason: input.reason.trim(), createdById: session.user.id } });
-  const approval = await createApprovalRequest(db, session, { type: "employee_loan", title: `سلفة ${e.fullName}: ${(input.amountMinor / 100).toFixed(2)} ر.س. على ${Math.ceil(input.amountMinor / input.installmentMinor)} أقساط`, description: input.reason, entityType: "EmployeeLoan", entityId: loan.id, link: "/hr/payroll/loans", steps: [{ name: "اعتماد مدير الموارد البشرية", approverRoleKey: "HR_MANAGER" }] });
+  const approval = await createApprovalRequest(db, session, { type: "employee_loan", title: `سلفة ${e.fullName}: ${money(session, input.amountMinor)} على ${Math.ceil(input.amountMinor / input.installmentMinor)} أقساط`, description: input.reason, entityType: "EmployeeLoan", entityId: loan.id, link: "/hr/payroll/loans", steps: [{ name: "اعتماد مدير الموارد البشرية", approverRoleKey: "HR_MANAGER" }] });
   return db.employeeLoan.update({ where: { id: loan.id }, data: { approvalRequestId: approval.id } });
 }
 

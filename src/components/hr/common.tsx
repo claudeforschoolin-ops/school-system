@@ -2,6 +2,7 @@
 /**
  * عناصر مشتركة للموارد البشرية: روابط الوحدات وتبويباتها، ووسوم الحالات.
  */
+import { NATIONALITIES as REGION_NATIONALITIES, nationalityName } from "@/lib/region";
 import { monthTitle } from "@/lib/dates";
 import { MODULE_NAV, type ModuleNavItem } from "@/lib/modules-nav";
 import { usePrefs } from "@/components/shell/app-context";
@@ -71,19 +72,8 @@ export const ADJ_KIND: Record<string, { label: string; color: string }> = {
   PENALTY: { label: "جزاء", color: "red" },
   DEDUCTION: { label: "استقطاع", color: "orange" },
 };
-export const NATIONALITIES = [
-  { value: "SA", label: "سعودي" },
-  { value: "EG", label: "مصري" },
-  { value: "JO", label: "أردني" },
-  { value: "SD", label: "سوداني" },
-  { value: "PK", label: "باكستاني" },
-  { value: "IN", label: "هندي" },
-  { value: "PH", label: "فلبيني" },
-  { value: "SY", label: "سوري" },
-  { value: "YE", label: "يمني" },
-  { value: "TN", label: "تونسي" },
-];
-export const nationalityLabel = (c: string) => NATIONALITIES.find((n) => n.value === c)?.label ?? c;
+export const NATIONALITIES = REGION_NATIONALITIES.map((n) => ({ value: n.id, label: n.name }));
+export const nationalityLabel = nationalityName;
 export const WEEKDAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 
 /** شهر YYYY-MM بالعربية وبتفضيل الأرقام */

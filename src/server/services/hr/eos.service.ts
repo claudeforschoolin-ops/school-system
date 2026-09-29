@@ -1,9 +1,9 @@
 /**
- * نهاية الخدمة: احتساب المكافأة (نظام العمل م٨٤–٨٥) وبدل رصيد الإجازة وراتب الأيام الأخيرة ناقص السلف،
+ * نهاية الخدمة: احتساب المكافأة (حسب قواعد إعدادات الرواتب) وبدل رصيد الإجازة وراتب الأيام الأخيرة ناقص السلف،
  * بموافقة الموارد البشرية ثم المدير. الاعتماد يرحّل القيد (من المخصص أولاً) ويُنهي الخدمة:
  * إيقاف حساب الدخول وجلساته، وإعادة إسناد مهامه وفصوله وموافقاته المعلقة لمديره المباشر.
  */
-import { eosAward, leaveEncashment, serviceDays, type EosReason } from "@/lib/hr/calc";
+import { eosAward, leaveEncashment, serviceDays, wageBy, WAGE_BASIS_LABEL, type EosReason } from "@/lib/hr/calc";
 import type { SessionData } from "@/server/auth/session";
 import { rootDb } from "@/server/db/client";
 import type { TenantDb } from "@/server/db/tenant";
@@ -12,7 +12,7 @@ import { badRequest, notFound } from "@/server/errors";
 import { createApprovalRequest, type ApprovalHookEvent } from "@/server/services/approval.service";
 import { accountByKey, postEntry, type Tx } from "@/server/services/finance/ledger";
 import { nextNumber } from "@/server/services/sequence.service";
-import { CATEGORY_ACCOUNT, dateOnly, hrRules, isoOf, monthlyWage, requireHr } from "./common";
+import { CATEGORY_ACCOUNT, dateOnly, hrRules, hrSettings, isoOf, money, monthlyWage, otherTotal, requireHr } from "./common";
 import { ensurePayrollAccounts } from "./payroll.service";
 
 export const EOS_REASON: Record<EosReason, string> = {
@@ -21,7 +21,7 @@ export const EOS_REASON: Record<EosReason, string> = {
   CONTRACT_END: "انتهاء العقد",
   RETIREMENT: "تقاعد",
   DEATH: "وفاة",
-  ARTICLE_80: "فصل وفق المادة ٨٠",
+  ARTICLE_80: "فصل تأديبي (دون مكافأة)",
 };
 export const EOS_STATUS: Record<string, { label: string; color: string }> = {
   DRAFT: { label: "بانتظار الاعتماد", color: "gold" },
@@ -42,7 +42,9 @@ export async function previewEos(db: TenantDb, session: SessionData, input: { em
   const rules = hrRules(session);
   const days = serviceDays(hire, input.lastWorkingDay);
   const wage = monthlyWage(c);
-  const eos = eosAward(wage, days, input.reason, rules);
+  const parts = { basicMinor: c.basicMinor, housingMinor: c.housingMinor, transportMinor: c.transportMinor, otherAllowancesMinor: otherTotal(c.otherAllowances) };
+  const eosWage = wageBy(rules.eosWageBasis, parts);
+  const eos = eosAward(eosWage, days, input.reason, rules);
   // رصيد الإجازة السنوية غير المستخدم (يُنشأ استحقاق السنة إن لم يُحتسب بعد)
   const year = Number(input.lastWorkingDay.slice(0, 4));
   const { balancesFor } = await import("./time.service");
@@ -51,9 +53,9 @@ export async function previewEos(db: TenantDb, session: SessionData, input: { em
   // الاستحقاق النسبي للسنة الأخيرة: الأيام المستحقة حتى آخر يوم عمل
   const yearStart = `${year}-01-01`;
   const fromIso = hire > yearStart ? hire : yearStart;
-  const accruedDays = bal ? Math.floor((bal.entitledDays * serviceDays(fromIso, input.lastWorkingDay)) / 365) + bal.carriedDays + bal.adjustedDays : 0;
+  const accruedDays = bal ? Math.floor((bal.entitledDays * serviceDays(fromIso, input.lastWorkingDay)) / rules.eosYearDays) + bal.carriedDays + bal.adjustedDays : 0;
   const leaveDays = Math.max(0, accruedDays - (bal?.usedDays ?? 0));
-  const leave = leaveEncashment(wage, leaveDays, rules.monthDays);
+  const leave = leaveEncashment(wageBy(hrSettings(session).leaveEncashmentBasis, parts), leaveDays, rules.monthDays);
   // راتب الأيام الأخيرة إن لم يشملها مسير معتمد
   const month = input.lastWorkingDay.slice(0, 7);
   const paid = await db.payrollLine.findFirst({ where: { employeeId: e.id, run: { month, status: { in: ["APPROVED", "PAID", "REVIEW"] } } } });
@@ -70,7 +72,7 @@ export async function previewEos(db: TenantDb, session: SessionData, input: { em
   return {
     employee: { id: e.id, fullName: e.fullName, hireDate: e.hireDate, category: e.category, status: e.status },
     serviceDays: days,
-    wageMinor: wage,
+    wageMinor: eosWage,
     eos,
     leaveDays,
     leaveEncashmentMinor: leave,
@@ -81,7 +83,7 @@ export async function previewEos(db: TenantDb, session: SessionData, input: { em
     otherDeductionsMinor: otherDeducted,
     netMinor: net,
     remainingLoanMinor: loanBalance - loanDeducted,
-    steps: [...eos.steps, `الأجر الفعلي الأخير (أساسي + بدلات ثابتة): ${(wage / 100).toFixed(2)}`, `رصيد الإجازة المستحق: ${leaveDays} يوماً`, workedDays ? `راتب ${workedDays} يوماً من الشهر الأخير` : "الشهر الأخير مشمول في مسير", ...(loanBalance ? [`سلف قائمة ${(loanBalance / 100).toFixed(2)}${loanBalance > loanDeducted ? " (يتجاوز المستحقات؛ يبقى الفرق ذمة)" : ""}`] : [])],
+    steps: [...eos.steps, `أجر المكافأة (${WAGE_BASIS_LABEL[rules.eosWageBasis]}): ${money(session, eosWage)}`, `رصيد الإجازة المستحق: ${leaveDays} يوماً`, workedDays ? `راتب ${workedDays} يوماً من الشهر الأخير` : "الشهر الأخير مشمول في مسير", ...(loanBalance ? [`سلف قائمة ${money(session, loanBalance)}${loanBalance > loanDeducted ? " (يتجاوز المستحقات؛ يبقى الفرق ذمة)" : ""}`] : [])],
   };
 }
 
@@ -113,7 +115,7 @@ export async function createSettlement(db: TenantDb, session: SessionData, input
   });
   const approval = await createApprovalRequest(db, session, {
     type: "end_of_service",
-    title: `تصفية نهاية خدمة ${p.employee.fullName} (${EOS_REASON[input.reason]}): صافي ${(p.netMinor / 100).toFixed(2)} ر.س.`,
+    title: `تصفية نهاية خدمة ${p.employee.fullName} (${EOS_REASON[input.reason]}): صافي ${money(session, p.netMinor)}`,
     description: p.steps.join("\n"),
     entityType: "EndOfService",
     entityId: eos.id,

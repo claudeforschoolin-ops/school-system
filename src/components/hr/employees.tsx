@@ -3,6 +3,7 @@
  * الموظفون: القائمة بالبحث والتصفية، نموذج الإضافة والتعديل (الهوية مشفّرة، الآيبان بفحص صحة)،
  * ملف الموظف الكامل (العقد والراتب، الأرصدة، الحضور، السلف، التقييمات، القسائم)، وتنبيهات انتهاء الوثائق.
  */
+import { ibanHint, idTypeLabel, idTypeOptions, validIban } from "@/lib/region";
 import { AlertTriangle, CalendarClock, FilePlus2, Link2, Pencil, Plus, Printer, Search, UserMinus, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,7 +21,7 @@ import { Select } from "@/components/ui/select";
 import { SkeletonLines } from "@/components/ui/skeleton";
 import { Tag } from "@/components/ui/tag";
 import { toast } from "@/components/ui/toast";
-import { useApp, usePrefs } from "@/components/shell/app-context";
+import { useApp, usePrefs, useRegion } from "@/components/shell/app-context";
 import { ModuleShell, StatCard } from "@/components/modules/module-shell";
 import { docNo, MoneyInput, useFmtDate, useMoney, useToday } from "@/components/finance/common";
 import { ATT_STATUS, CATEGORY, EMPLOYEE_STATUS, EMPLOYEE_TABS, hrNav, LEAVE_STATUS, LOAN_STATUS, nationalityLabel, NATIONALITIES, RUN_STATUS, useMonthLabel } from "./common";
@@ -29,6 +30,7 @@ type Options = RouterOutputs["hr"]["employees"]["options"];
 type Profile = RouterOutputs["hr"]["employees"]["get"];
 
 export function EmployeesPage() {
+  const region = useRegion();
   const { can } = useApp();
   const prefs = usePrefs();
   const money = useMoney();
@@ -59,7 +61,7 @@ export function EmployeesPage() {
           <section className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
             <StatCard label="الموظفون" value={list.data ? rows.length : undefined} icon={<Users className="size-4" />} />
             <StatCard label="هيئة تعليمية" value={list.data ? rows.filter((r) => r.category === "ACADEMIC").length : undefined} icon={<Users className="size-4" />} />
-            <StatCard label="سعوديون" value={list.data ? rows.filter((r) => r.nationality === "SA").length : undefined} icon={<Users className="size-4" />} hint={rows.length ? `نسبة التوطين ${formatNumber(Math.round((rows.filter((r) => r.nationality === "SA").length * 100) / rows.length), prefs.digits)}٪` : undefined} />
+            <StatCard label="مواطنون" value={list.data ? rows.filter((r) => r.nationality === region.country).length : undefined} icon={<Users className="size-4" />} hint={rows.length ? `نسبة التوطين ${formatNumber(Math.round((rows.filter((r) => r.nationality === region.country).length * 100) / rows.length), prefs.digits)}٪` : undefined} />
             <StatCard label="وثائق تنتهي قريباً" value={list.data ? expiring : undefined} tone={expiring ? "warning" : undefined} icon={<AlertTriangle className="size-4" />} href="/hr/employees/alerts" />
           </section>
           <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -142,6 +144,7 @@ function FmtDate({ d }: { d: Date | string | null | undefined }) {
 const isoOf = (d: Date | string | null | undefined) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
 function EmployeeDialog({ employee, onClose }: { employee: Profile["employee"] | null; onClose: () => void }) {
+  const region = useRegion();
   const utils = trpc.useUtils();
   const router = useRouter();
   const opts = trpc.hr.employees.options.useQuery();
@@ -150,7 +153,7 @@ function EmployeeDialog({ employee, onClose }: { employee: Profile["employee"] |
     fullName: employee?.fullName ?? "",
     gender: (employee?.gender ?? "MALE") as "MALE" | "FEMALE",
     birthDate: isoOf(employee?.birthDate),
-    nationality: employee?.nationality ?? "SA",
+    nationality: employee?.nationality ?? (NATIONALITIES.some((n) => n.value === region.country) ? region.country : "OTHER"),
     maritalStatus: employee?.maritalStatus ?? "",
     idType: (employee?.idType ?? "NATIONAL_ID") as "NATIONAL_ID" | "IQAMA" | "PASSPORT",
     nationalId: "",
@@ -179,7 +182,7 @@ function EmployeeDialog({ employee, onClose }: { employee: Profile["employee"] |
   const o: Options | undefined = opts.data;
   const nul = (s: string) => s.trim() || null;
   const payload = { ...v, birthDate: nul(v.birthDate), maritalStatus: nul(v.maritalStatus), nationalId: nul(v.nationalId), idExpiry: nul(v.idExpiry), passportNumber: nul(v.passportNumber), passportExpiry: nul(v.passportExpiry), phone: nul(v.phone), email: nul(v.email), address: nul(v.address), branchId: nul(v.branchId), departmentId: nul(v.departmentId), positionId: nul(v.positionId), managerId: nul(v.managerId), bankName: nul(v.bankName), iban: nul(v.iban), sponsor: nul(v.sponsor), shiftId: nul(v.shiftId), notes: nul(v.notes), qualifications: employee ? (employee.qualifications as never) : [], experiences: employee ? (employee.experiences as never) : [] };
-  const ibanOk = !v.iban || /^SA\d{22}$/.test(v.iban.replace(/\s/g, ""));
+  const ibanOk = !v.iban || validIban(v.iban, region);
   const valid = v.fullName.trim().split(/\s+/).length >= 3 && v.hireDate && ibanOk;
   const none = { value: "", label: "—" };
   return (
@@ -208,21 +211,21 @@ function EmployeeDialog({ employee, onClose }: { employee: Profile["employee"] |
                 <Select value={v.gender} onChange={(g) => setV({ ...v, gender: g as "MALE" })} options={[{ value: "MALE", label: "ذكر" }, { value: "FEMALE", label: "أنثى" }]} />
               </Field>
               <Field label="الجنسية">
-                <Select value={v.nationality} onChange={(nationality) => setV({ ...v, nationality, idType: nationality === "SA" ? "NATIONAL_ID" : "IQAMA" })} options={NATIONALITIES} />
+                <Select value={v.nationality} onChange={(nationality) => setV({ ...v, nationality, idType: nationality === region.country ? "NATIONAL_ID" : "IQAMA" })} options={NATIONALITIES} />
               </Field>
               <Field label="نوع الهوية">
-                <Select value={v.idType} onChange={(t) => setV({ ...v, idType: t as "IQAMA" })} options={[{ value: "NATIONAL_ID", label: "هوية وطنية" }, { value: "IQAMA", label: "إقامة" }, { value: "PASSPORT", label: "جواز سفر" }]} />
+                <Select value={v.idType} onChange={(t) => setV({ ...v, idType: t as "IQAMA" })} options={idTypeOptions(region)} />
               </Field>
               <Field label={employee ? "رقم الهوية (اتركه فارغاً لعدم التغيير)" : "رقم الهوية"}>
-                <Input dir="ltr" inputMode="numeric" value={v.nationalId} placeholder={employee?.nationalId ?? ""} onChange={(e) => setV({ ...v, nationalId: e.target.value.replace(/\D/g, "").slice(0, 10) })} />
+                <Input dir="ltr" inputMode="numeric" value={v.nationalId} placeholder={employee?.nationalId ?? ""} onChange={(e) => setV({ ...v, nationalId: e.target.value.replace(/[^0-9A-Za-z]/g, "").slice(0, 20) })} />
               </Field>
-              <Field label="انتهاء الهوية/الإقامة">
+              <Field label="انتهاء الهوية">
                 <Input type="date" value={v.idExpiry} onChange={(e) => setV({ ...v, idExpiry: e.target.value })} />
               </Field>
               <Field label="تاريخ الميلاد">
                 <Input type="date" value={v.birthDate} onChange={(e) => setV({ ...v, birthDate: e.target.value })} />
               </Field>
-              {v.nationality !== "SA" ? (
+              {v.nationality !== region.country ? (
                 <>
                   <Field label="رقم الجواز">
                     <Input dir="ltr" value={v.passportNumber} onChange={(e) => setV({ ...v, passportNumber: e.target.value })} />
@@ -274,10 +277,10 @@ function EmployeeDialog({ employee, onClose }: { employee: Profile["employee"] |
               <Field label="البنك">
                 <Input value={v.bankName} onChange={(e) => setV({ ...v, bankName: e.target.value })} />
               </Field>
-              <Field label="الآيبان" error={ibanOk ? null : "آيبان سعودي: SA و٢٢ رقماً"}>
-                <Input dir="ltr" value={v.iban} placeholder={employee?.iban ?? "SA"} onChange={(e) => setV({ ...v, iban: e.target.value.toUpperCase().replace(/\s/g, "") })} />
+              <Field label="الآيبان" error={ibanOk ? null : ibanHint(region)}>
+                <Input dir="ltr" value={v.iban} placeholder={employee?.iban ?? region.ibanCountry} onChange={(e) => setV({ ...v, iban: e.target.value.toUpperCase().replace(/\s/g, "") })} />
               </Field>
-              {v.nationality !== "SA" ? (
+              {v.nationality !== region.country ? (
                 <Field label="الكفيل / جهة الاستقدام">
                   <Input value={v.sponsor} onChange={(e) => setV({ ...v, sponsor: e.target.value })} />
                 </Field>
@@ -306,6 +309,7 @@ function EmployeeDialog({ employee, onClose }: { employee: Profile["employee"] |
 // ---------------------------------------------------------------------
 
 export function EmployeeProfilePage({ id }: { id: string }) {
+  const region = useRegion();
   const q = trpc.hr.employees.get.useQuery({ id });
   const prefs = usePrefs();
   const money = useMoney();
@@ -379,7 +383,7 @@ export function EmployeeProfilePage({ id }: { id: string }) {
           <h2 className="mb-2 text-[14px] font-semibold">البيانات الشخصية</h2>
           <dl>
             {row("الجنسية", nationalityLabel(e.nationality))}
-            {row(e.idType === "IQAMA" ? "رقم الإقامة" : e.idType === "PASSPORT" ? "رقم الجواز" : "رقم الهوية", <bdi className="tabular">{e.nationalId}</bdi>)}
+            {row(`رقم ${idTypeLabel(e.idType, region)}`, <bdi className="tabular">{e.nationalId}</bdi>)}
             {row("انتهاء الهوية", e.idExpiry ? fmtDate(e.idExpiry) : null)}
             {e.passportNumber ? row("انتهاء الجواز", fmtDate(e.passportExpiry)) : null}
             {row("تاريخ الميلاد", e.birthDate ? fmtDate(e.birthDate) : null)}

@@ -45,13 +45,14 @@ function useGridParams(meta: RouterOutputs["timetable"]["meta"] | undefined) {
 }
 
 export function TimetableHome() {
+  const tenantTz = useApp().tenant.timezone;
   const prefs = usePrefs();
   const meta = trpc.timetable.meta.useQuery();
   const m = meta.data;
   const { kind, id, go } = useGridParams(m);
   const grid = trpc.timetable.grid.useQuery({ kind, id: id! }, { enabled: Boolean(id) });
   const [generating, setGenerating] = useState<string | null>(null);
-  const today = toISODate(new Date(), "Asia/Riyadh");
+  const today = toISODate(new Date(), tenantTz);
   const myDay = trpc.timetable.myDay.useQuery({ date: today }, { enabled: Boolean(m?.me) });
   const kinds: Kind[] = [
     ...(m?.sections.length ? (["section"] as Kind[]) : []),

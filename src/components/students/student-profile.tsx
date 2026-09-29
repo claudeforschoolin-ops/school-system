@@ -8,7 +8,8 @@ import { AlertTriangle, BadgeCheck, Camera, Eye, FileText, HeartPulse, Phone, Pl
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { BLOOD_TYPES, DOCUMENT_TYPES, GENDER, GUARDIAN_RELATION, ID_TYPE, NATIONALITIES, STUDENT_STATUS, TRANSPORT_MODES, ageAt, normalizeSaudiMobile } from "@/lib/students";
+import { idTypeOptions } from "@/lib/region";
+import { BLOOD_TYPES, DOCUMENT_TYPES, GENDER, GUARDIAN_RELATION, NATIONALITIES, STUDENT_STATUS, TRANSPORT_MODES, ageAt, normalizeMobile } from "@/lib/students";
 import { ACTION_LABELS } from "@/server/db/audit-utils";
 import { formatDate, formatRelative } from "@/lib/dates";
 import { formatNumber } from "@/lib/numbers";
@@ -27,7 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tag } from "@/components/ui/tag";
 import { toast } from "@/components/ui/toast";
 import { Tooltip } from "@/components/ui/tooltip";
-import { useApp } from "@/components/shell/app-context";
+import { useApp, useRegion } from "@/components/shell/app-context";
 import { PageTopbar } from "@/components/shell/page-topbar";
 import { useTabMeta } from "@/components/shell/tabs-bar";
 import { BlockEditor } from "@/components/editor/block-editor";
@@ -263,6 +264,7 @@ function OverviewTab({ s, onTab }: { s: Profile; onTab: (t: string) => void }) {
 }
 
 function PersonalTab({ s }: { s: Profile }) {
+  const region = useRegion();
   const utils = trpc.useUtils();
   const [form, setForm] = useState({
     ...s.names,
@@ -325,7 +327,7 @@ function PersonalTab({ s }: { s: Profile }) {
             <Select value={form.nationality} onChange={(v) => set({ nationality: v })} options={NATIONALITIES.map((n) => ({ value: n.id, label: n.name }))} disabled={!editable} />
           </Field>
           <Field label="نوع الهوية">
-            <Select value={form.idType} onChange={(v) => set({ idType: v as typeof form.idType })} options={Object.entries(ID_TYPE).map(([value, o]) => ({ value, label: o.label }))} disabled={!editable} />
+            <Select value={form.idType} onChange={(v) => set({ idType: v as typeof form.idType })} options={idTypeOptions(region)} disabled={!editable} />
           </Field>
           <Field label="رقم الهوية" hint={revealed ? undefined : "مخزّن مشفّراً"}>
             <div className="flex items-center gap-1">
@@ -453,6 +455,7 @@ function GuardiansTab({ s }: { s: Profile }) {
 }
 
 function AddGuardianDialog({ studentId, onClose, onDone }: { studentId: string; onClose: () => void; onDone: () => void }) {
+  const region = useRegion();
   const [mode, setMode] = useState<"existing" | "new">("existing");
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
@@ -471,7 +474,7 @@ function AddGuardianDialog({ studentId, onClose, onDone }: { studentId: string; 
       if (!picked) return toast.error("اختر ولي أمر من النتائج");
       add.mutate({ studentId, guardianId: picked, relation: form.relation, isPrimary: form.isPrimary });
     } else {
-      if (!normalizeSaudiMobile(form.phone)) return toast.error("رقم الجوال غير صالح");
+      if (!normalizeMobile(form.phone, region)) return toast.error("رقم الجوال غير صالح");
       add.mutate({ studentId, relation: form.relation, isPrimary: form.isPrimary, name: form.name, phone: form.phone, email: form.email || null, nationalId: form.nationalId || null });
     }
   };

@@ -1,7 +1,7 @@
 /**
  * حسابات الموارد البشرية والرواتب (دون قاعدة بيانات) بأعداد صحيحة بأصغر وحدة وتقريب نصف للأعلى:
- * مكافأة نهاية الخدمة (المادتان ٨٤ و٨٥ من نظام العمل)، التأمينات الاجتماعية، الغياب والتأخر،
- * العمل الإضافي (المادة ١٠٧)، سقف الاستقطاعات (المادة ٩٢)، واستحقاق المخصص الشهري.
+ * مكافأة نهاية الخدمة، التأمينات الاجتماعية، الغياب والتأخر، العمل الإضافي، سقف الاستقطاعات،
+ * واستحقاق المخصص الشهري. كل النسب من إعدادات المدرسة؛ القيم الافتراضية لنظام العمل السعودي.
  */
 import { applyBp } from "@/lib/finance/calc";
 
@@ -11,33 +11,82 @@ export const divRound = (num: number, den: number) => {
   return Math.floor((num * 2 + den) / (den * 2));
 };
 
+export interface InsuranceScheme {
+  name: string;
+  /** على من يُطبق: المواطن (جنسية دولة المدرسة)، غير المواطن، أو الجميع */
+  appliesTo: "CITIZEN" | "NON_CITIZEN" | "ALL";
+  employeeBp: number;
+  employerBp: number;
+}
+
+export type WageBasis = "FULL" | "BASIC" | "BASIC_HOUSING";
+export const WAGE_BASIS_LABEL: Record<WageBasis, string> = { FULL: "الأجر الفعلي: أساسي + كل البدلات الثابتة", BASIC: "الأساسي فقط", BASIC_HOUSING: "الأساسي + السكن" };
+
+/** قواعد الرواتب — كلها من «إعدادات الرواتب» ولا شيء مثبّت لدولة بعينها */
 export interface HrRules {
-  gosiSaudiEmployeeBp: number;
-  gosiSaudiEmployerBp: number;
-  gosiNonSaudiEmployerBp: number;
-  gosiCapMinor: number;
+  insuranceSchemes: InsuranceScheme[];
+  /** الأجر الخاضع للتأمينات */
+  insuranceBase: WageBasis;
+  /** سقف الأجر الخاضع (0 = بلا سقف) */
+  insuranceCapMinor: number;
   deductAbsence: boolean;
   deductLate: boolean;
   lateMonthlyGraceMinutes: number;
+  /** PREMIUM_ON_BASIC: أجر الساعة الفعلي + (المعامل−١) × أجر الساعة الأساسي؛ FULL_WAGE: أجر الساعة الفعلي × المعامل */
+  overtimeMode: "PREMIUM_ON_BASIC" | "FULL_WAGE";
   overtimeRateBp: number;
   monthDays: number;
+  /** سقف السلف والجزاءات والاستقطاعات التقديرية من الأجر (نقاط أساس؛ 10000 = بلا سقف) */
+  deductionCapBp: number;
+  eosEnabled: boolean;
+  /** عدد السنوات الأولى ذات المعدل الأول */
+  eosFirstYears: number;
   eosFirstYearsMonthsBp: number;
   eosLaterYearsMonthsBp: number;
+  eosWageBasis: WageBasis;
+  /** نسبة الاستحقاق عند الاستقالة حسب سنوات الخدمة (أقل من أول حد = لا شيء) */
+  eosResignation: Array<{ minYears: number; factorBp: number }>;
+  /** أيام السنة في احتساب الخدمة */
+  eosYearDays: number;
 }
 
 export const DEFAULT_HR_RULES: HrRules = {
-  gosiSaudiEmployeeBp: 975,
-  gosiSaudiEmployerBp: 1175,
-  gosiNonSaudiEmployerBp: 200,
-  gosiCapMinor: 4_500_000,
+  insuranceSchemes: [
+    { name: "تأمينات المواطنين", appliesTo: "CITIZEN", employeeBp: 975, employerBp: 1175 },
+    { name: "الأخطار المهنية لغير المواطنين", appliesTo: "NON_CITIZEN", employeeBp: 0, employerBp: 200 },
+  ],
+  insuranceBase: "BASIC_HOUSING",
+  insuranceCapMinor: 4_500_000,
   deductAbsence: true,
   deductLate: true,
   lateMonthlyGraceMinutes: 60,
+  overtimeMode: "PREMIUM_ON_BASIC",
   overtimeRateBp: 15000,
   monthDays: 30,
+  deductionCapBp: 5000,
+  eosEnabled: true,
+  eosFirstYears: 5,
   eosFirstYearsMonthsBp: 5000,
   eosLaterYearsMonthsBp: 10000,
+  eosWageBasis: "FULL",
+  eosResignation: [
+    { minYears: 2, factorBp: 3333 },
+    { minYears: 5, factorBp: 6667 },
+    { minYears: 10, factorBp: 10000 },
+  ],
+  eosYearDays: 365,
 };
+
+/** الأجر حسب الأساس المختار */
+export function wageBy(basis: WageBasis, c: { basicMinor: number; housingMinor: number; transportMinor: number; otherAllowancesMinor: number }) {
+  return basis === "BASIC" ? c.basicMinor : basis === "BASIC_HOUSING" ? c.basicMinor + c.housingMinor : c.basicMinor + c.housingMinor + c.transportMinor + c.otherAllowancesMinor;
+}
+
+/** نسب التأمين المطبقة على موظف (مجموع كل الأنظمة المنطبقة) */
+export function insuranceRates(rules: Pick<HrRules, "insuranceSchemes">, citizen: boolean) {
+  const applies = rules.insuranceSchemes.filter((x) => x.appliesTo === "ALL" || (x.appliesTo === "CITIZEN") === citizen);
+  return { employeeBp: applies.reduce((t, x) => t + x.employeeBp, 0), employerBp: applies.reduce((t, x) => t + x.employerBp, 0) };
+}
 
 /** أيام الخدمة بين تاريخين (شاملة يوم البداية) */
 export function serviceDays(hireIso: string, endIso: string): number {
@@ -58,25 +107,35 @@ export interface EosResult {
   steps: string[];
 }
 
+type EosRules = Pick<HrRules, "eosFirstYears" | "eosFirstYearsMonthsBp" | "eosLaterYearsMonthsBp" | "eosResignation" | "eosYearDays" | "eosEnabled">;
+
+const pct = (bp: number) => `${(bp / 100).toString()}٪`;
+
 /**
- * مكافأة نهاية الخدمة: نصف أجر شهر عن كل سنة من السنوات الخمس الأولى وأجر شهر عن كل سنة بعدها،
- * وتُحتسب كسور السنة بنسبتها (السنة = ٣٦٥ يوماً). الاستقالة (م٨٥): أقل من سنتين لا شيء، ٢–٥ ثلث، ٥–١٠ ثلثان، ١٠+ كاملة.
- * الفصل وفق المادة ٨٠: لا مكافأة.
+ * مكافأة نهاية الخدمة من الإعدادات: معدل (أشهر لكل سنة) للسنوات الأولى ومعدل لما بعدها، وكسور السنة بنسبتها.
+ * الاستقالة: نسبة حسب جدول سنوات الخدمة. الفصل التأديبي: لا مكافأة. باقي الأسباب: كاملة.
+ * الافتراضي نظام العمل السعودي (م٨٤ و٨٥)، ويُعدَّل لأي دولة من «إعدادات الرواتب».
  */
-export function eosAward(wageMinor: number, days: number, reason: EosReason, rules: Pick<HrRules, "eosFirstYearsMonthsBp" | "eosLaterYearsMonthsBp"> = DEFAULT_HR_RULES): EosResult {
-  const firstDays = Math.min(days, 5 * 365);
-  const laterDays = Math.max(0, days - 5 * 365);
-  const fullMinor = divRound(wageMinor * (firstDays * rules.eosFirstYearsMonthsBp + laterDays * rules.eosLaterYearsMonthsBp), 365 * 10000);
-  const years = days / 365;
+export function eosAward(wageMinor: number, days: number, reason: EosReason, rules: EosRules = DEFAULT_HR_RULES): EosResult {
+  if (!rules.eosEnabled) return { fullMinor: 0, factorBp: 0, awardMinor: 0, years: days / rules.eosYearDays, steps: ["مكافأة نهاية الخدمة غير مفعّلة في إعدادات الرواتب"] };
+  const yd = rules.eosYearDays;
+  const firstDays = Math.min(days, rules.eosFirstYears * yd);
+  const laterDays = Math.max(0, days - rules.eosFirstYears * yd);
+  const fullMinor = divRound(wageMinor * (firstDays * rules.eosFirstYearsMonthsBp + laterDays * rules.eosLaterYearsMonthsBp), yd * 10000);
+  const years = days / yd;
   let factorBp = 10000;
   if (reason === "ARTICLE_80") factorBp = 0;
-  else if (reason === "RESIGNATION") factorBp = days < 2 * 365 ? 0 : days < 5 * 365 ? 3333 : days < 10 * 365 ? 6667 : 10000;
-  const awardMinor = factorBp === 10000 ? fullMinor : factorBp === 0 ? 0 : factorBp === 3333 ? divRound(fullMinor, 3) : divRound(fullMinor * 2, 3);
+  else if (reason === "RESIGNATION") {
+    const tiers = [...rules.eosResignation].sort((x, y) => x.minYears - y.minYears);
+    factorBp = tiers.filter((t) => days >= t.minYears * yd).pop()?.factorBp ?? 0;
+  }
+  const awardMinor = factorBp === 10000 ? fullMinor : factorBp === 0 ? 0 : factorBp === 3333 ? divRound(fullMinor, 3) : factorBp === 6667 ? divRound(fullMinor * 2, 3) : divRound(fullMinor * factorBp, 10000);
+  const months = (bp: number) => (bp === 5000 ? "نصف أجر شهر" : bp === 10000 ? "أجر شهر" : `${(bp / 10000).toString()} من أجر الشهر`);
   const steps = [
     `مدة الخدمة ${days} يوماً (${(Math.floor(years * 100) / 100).toString()} سنة)`,
-    `السنوات الخمس الأولى: ${firstDays} يوماً × نصف أجر شهر لكل سنة`,
-    ...(laterDays ? [`ما بعد الخمس: ${laterDays} يوماً × أجر شهر لكل سنة`] : []),
-    reason === "RESIGNATION" ? `استقالة: يُستحق ${factorBp === 0 ? "لا شيء (أقل من سنتين)" : factorBp === 3333 ? "الثلث (٢–٥ سنوات)" : factorBp === 6667 ? "الثلثان (٥–١٠ سنوات)" : "كامل المكافأة (١٠ سنوات فأكثر)"}` : reason === "ARTICLE_80" ? "فصل وفق المادة ٨٠: لا مكافأة" : "انتهاء بغير استقالة: كامل المكافأة",
+    `السنوات ${rules.eosFirstYears} الأولى: ${firstDays} يوماً × ${months(rules.eosFirstYearsMonthsBp)} لكل سنة`,
+    ...(laterDays ? [`ما بعدها: ${laterDays} يوماً × ${months(rules.eosLaterYearsMonthsBp)} لكل سنة`] : []),
+    reason === "RESIGNATION" ? `استقالة: يُستحق ${factorBp === 0 ? "لا شيء (دون الحد الأدنى للخدمة)" : factorBp === 10000 ? "كامل المكافأة" : pct(factorBp) + " من المكافأة"}` : reason === "ARTICLE_80" ? "فصل تأديبي: لا مكافأة" : "انتهاء بغير استقالة: كامل المكافأة",
   ];
   return { fullMinor, factorBp, awardMinor, years, steps };
 }
@@ -87,8 +146,9 @@ export function leaveEncashment(monthlyWageMinor: number, days: number, monthDay
 }
 
 /** استحقاق المخصص الشهري لمكافأة نهاية الخدمة حسب سنة الخدمة الحالية */
-export function monthlyEosAccrual(wageMinor: number, daysServedAtMonthEnd: number, rules: Pick<HrRules, "eosFirstYearsMonthsBp" | "eosLaterYearsMonthsBp"> = DEFAULT_HR_RULES) {
-  const rate = daysServedAtMonthEnd <= 5 * 365 ? rules.eosFirstYearsMonthsBp : rules.eosLaterYearsMonthsBp;
+export function monthlyEosAccrual(wageMinor: number, daysServedAtMonthEnd: number, rules: EosRules = DEFAULT_HR_RULES) {
+  if (!rules.eosEnabled) return 0;
+  const rate = daysServedAtMonthEnd <= rules.eosFirstYears * rules.eosYearDays ? rules.eosFirstYearsMonthsBp : rules.eosLaterYearsMonthsBp;
   return divRound(wageMinor * rate, 12 * 10000);
 }
 
@@ -98,7 +158,8 @@ export interface SalaryInput {
   transportMinor: number;
   otherAllowancesMinor: number;
   hoursPerDay: number;
-  saudi: boolean;
+  /** مواطن دولة المدرسة (لتحديد أنظمة التأمين المنطبقة) */
+  citizen: boolean;
   gosiRegistered: boolean;
   /** أيام الاستحقاق في الشهر (للمعيّن أو المنتهي خلال الشهر)؛ الافتراضي الشهر كاملاً */
   paidDays?: number;
@@ -153,13 +214,16 @@ export function salaryLine(i: SalaryInput, rules: HrRules = DEFAULT_HR_RULES): S
   const other = prorate(i.otherAllowancesMinor);
   const fixedMonthly = i.basicMinor + i.housingMinor + i.transportMinor + i.otherAllowancesMinor;
   const dailyWage = divRound(fixedMonthly, md);
-  // م١٠٧: أجر الساعة الإضافية = أجر الساعة الفعلي + ٥٠٪ من أجر الساعة الأساسي
-  const overtime = i.overtimeMinutes > 0 ? divRound(i.overtimeMinutes * (fixedMonthly * 10000 + i.basicMinor * (rules.overtimeRateBp - 10000)), md * i.hoursPerDay * 60 * 10000) : 0;
+  // PREMIUM_ON_BASIC (م١٠٧ السعودية): أجر الساعة الفعلي + (المعامل−١) × أجر الساعة الأساسي؛ FULL_WAGE: الفعلي × المعامل
+  const otNumerator = rules.overtimeMode === "FULL_WAGE" ? fixedMonthly * rules.overtimeRateBp : fixedMonthly * 10000 + i.basicMinor * (rules.overtimeRateBp - 10000);
+  const overtime = i.overtimeMinutes > 0 ? divRound(i.overtimeMinutes * otNumerator, md * i.hoursPerDay * 60 * 10000) : 0;
   const gross = basic + housing + transport + other + overtime + i.bonusMinor + i.allowanceAdjMinor;
 
-  const gosiBase = Math.min(i.basicMinor + i.housingMinor, rules.gosiCapMinor);
-  const gosiEmployee = i.gosiRegistered && i.saudi ? applyBp(prorate(gosiBase), rules.gosiSaudiEmployeeBp) : 0;
-  const gosiEmployer = i.gosiRegistered ? applyBp(prorate(gosiBase), i.saudi ? rules.gosiSaudiEmployerBp : rules.gosiNonSaudiEmployerBp) : 0;
+  const insurable = wageBy(rules.insuranceBase, i);
+  const gosiBase = rules.insuranceCapMinor > 0 ? Math.min(insurable, rules.insuranceCapMinor) : insurable;
+  const rates = insuranceRates(rules, i.citizen);
+  const gosiEmployee = i.gosiRegistered ? applyBp(prorate(gosiBase), rates.employeeBp) : 0;
+  const gosiEmployer = i.gosiRegistered ? applyBp(prorate(gosiBase), rates.employerBp) : 0;
   const absence = rules.deductAbsence ? dailyWage * i.absentDays : 0;
   const unpaid = dailyWage * i.unpaidLeaveDays;
   const lateBillable = Math.max(0, i.lateMinutes - rules.lateMonthlyGraceMinutes);
@@ -168,8 +232,8 @@ export function salaryLine(i: SalaryInput, rules: HrRules = DEFAULT_HR_RULES): S
 
   // الاستقطاعات النظامية لا تتجاوز الإجمالي
   const statutory = Math.min(gross, gosiEmployee + absence + unpaid + late);
-  // الاستقطاعات التقديرية بحد نصف الأجر المستحق (م٩٢)
-  const room = Math.max(0, Math.min(Math.floor(gross / 2), gross - statutory));
+  // الاستقطاعات التقديرية بحد نسبة من الأجر المستحق (الافتراضي النصف — م٩٢ السعودية)
+  const room = Math.max(0, Math.min(Math.floor((gross * Math.min(10000, rules.deductionCapBp)) / 10000), gross - statutory));
   let left = room;
   const take = (v: number) => {
     const t = Math.min(v, left);
@@ -180,7 +244,7 @@ export function salaryLine(i: SalaryInput, rules: HrRules = DEFAULT_HR_RULES): S
   const penalty = take(i.penaltyMinor);
   const otherDed = take(i.otherDeductionMinor);
   const cappedMinor = i.loanDueMinor + i.penaltyMinor + i.otherDeductionMinor - (loan + penalty + otherDed);
-  if (cappedMinor) notes.push("خُفّضت الاستقطاعات التقديرية لسقف نصف الأجر (المادة ٩٢)");
+  if (cappedMinor) notes.push(`خُفّضت الاستقطاعات التقديرية لسقف ${pct(rules.deductionCapBp)} من الأجر`);
   // توزيع النظامية بعد قصّها (إن تجاوزت الإجمالي تُقتطع بالترتيب)
   let s = statutory;
   const cut = (v: number) => {
@@ -236,13 +300,4 @@ export function lateMinutes(checkInHHMM: string, shiftStart: string, grace: numb
   return diff > grace ? diff : 0;
 }
 
-/** رقم آيبان سعودي صالح (فحص MOD-97) */
-export function validIban(iban: string) {
-  const s = iban.replace(/\s/g, "").toUpperCase();
-  if (!/^SA\d{22}$/.test(s)) return false;
-  const moved = s.slice(4) + s.slice(0, 4);
-  const digits = moved.replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55));
-  let rem = 0;
-  for (const ch of digits) rem = (rem * 10 + Number(ch)) % 97;
-  return rem === 1;
-}
+export { validIban } from "@/lib/region";

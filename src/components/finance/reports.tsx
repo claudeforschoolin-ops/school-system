@@ -9,7 +9,6 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { PAYMENT_METHOD, type PaymentMethodKey } from "@/lib/finance/labels";
 import { formatNumber, formatPercent } from "@/lib/numbers";
-import { minorToDecimalString } from "@/lib/money";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -148,7 +147,6 @@ function Loading({ error }: { error?: { message: string } | null }) {
   );
 }
 
-const dec = (minor: number) => minorToDecimalString(minor, "SAR");
 
 export function ReportsIndex() {
   const { can } = useApp();
@@ -210,12 +208,12 @@ export function TrialBalanceReport() {
                 ...d.rows.map((r) => [
                   r.code,
                   r.name,
-                  dec(r.openingDebit),
-                  dec(r.openingCredit),
-                  dec(r.debit),
-                  dec(r.credit),
-                  dec(r.closingDebit),
-                  dec(r.closingCredit),
+                  money.dec(r.openingDebit),
+                  money.dec(r.openingCredit),
+                  money.dec(r.debit),
+                  money.dec(r.credit),
+                  money.dec(r.closingDebit),
+                  money.dec(r.closingCredit),
                 ]),
               ])
           : undefined
@@ -358,11 +356,11 @@ export function IncomeStatementReport() {
                     s.label,
                     r.code,
                     r.name,
-                    dec(r.amount),
-                    r.compare !== undefined ? dec(r.compare) : "",
+                    money.dec(r.amount),
+                    r.compare !== undefined ? money.dec(r.compare) : "",
                   ]),
                 ),
-                ["net", "", "", dec(d.net), d.compareNet !== undefined ? dec(d.compareNet) : ""],
+                ["net", "", "", money.dec(d.net), d.compareNet !== undefined ? money.dec(d.compareNet) : ""],
               ])
           : undefined
       }
@@ -758,8 +756,8 @@ export function AgingReport() {
                   r.guardian,
                   r.phone ?? "",
                   r.students.join(" / "),
-                  ...keys.map((k) => dec(r.buckets[k])),
-                  dec(r.total),
+                  ...keys.map((k) => money.dec(r.buckets[k])),
+                  money.dec(r.total),
                   r.oldestDays,
                 ]),
               ])

@@ -104,3 +104,22 @@ export function allocateMinor(total: number, weights: readonly number[]): number
   }
   return floored;
 }
+
+/** رمز العملة بالعربية (ر.س.، د.إ.، د.ك.، $…) */
+export function currencySymbol(currency: string): string {
+  try {
+    const part = new Intl.NumberFormat("ar", { style: "currency", currency }).formatToParts(0).find((p) => p.type === "currency");
+    return part?.value.replace(/\u200f/g, "") ?? currency;
+  } catch {
+    return currency;
+  }
+}
+
+/** اسم العملة بالعربية (ريال سعودي، درهم إماراتي…) */
+export function currencyName(currency: string): string {
+  try {
+    return new Intl.DisplayNames("ar", { type: "currency" }).of(currency) ?? currency;
+  } catch {
+    return currency;
+  }
+}

@@ -3,7 +3,8 @@
  * رقم الهوية مشفّر ولا يُكشف إلا بصلاحية التعديل مع قيد تدقيق.
  */
 import type { Prisma } from "@/generated/prisma/client";
-import { DOCUMENT_TYPES, composeFullName, normalizeSaudiMobile, validateIdNumber } from "@/lib/students";
+import { guessIdType, normalizeMobile, readRegion, validateIdNumber } from "@/lib/region";
+import { DOCUMENT_TYPES, composeFullName } from "@/lib/students";
 import { can } from "@/lib/rbac/access";
 import type { SessionData } from "@/server/auth/session";
 import { writeAudit, type TenantDb } from "@/server/db/tenant";
@@ -164,7 +165,7 @@ export async function updateStudentProfile(db: TenantDb, session: SessionData, i
   }
   if (patch.nationalId !== undefined) {
     const type = patch.idType ?? student.idType;
-    const err = validateIdNumber(type, patch.nationalId);
+    const err = validateIdNumber(type, patch.nationalId, readRegion(session.tenant.settings));
     if (err) throw badRequest(err);
     const hash = idFingerprint(session.tenant.id, patch.nationalId);
     const dup = await db.student.findFirst({ where: { nationalIdHash: hash, id: { not: id }, deletedAt: null }, select: { fullName: true } });
@@ -178,7 +179,7 @@ export async function updateStudentProfile(db: TenantDb, session: SessionData, i
   if (patch.emergencyContacts) {
     data.emergencyContacts = json(
       patch.emergencyContacts.slice(0, 5).map((c) => {
-        const phone = normalizeSaudiMobile(c.phone) ?? c.phone.trim();
+        const phone = normalizeMobile(c.phone, readRegion(session.tenant.settings)) ?? c.phone.trim();
         return { name: c.name.trim().slice(0, 100), relation: c.relation.trim().slice(0, 40), phone };
       }),
     );
@@ -218,9 +219,9 @@ export async function createStudent(db: TenantDb, session: SessionData, input: N
   if (!can(session.access, "students", "create")) throw forbidden("لا تملك صلاحية إضافة طلاب");
   const scope = await requireStudentWhere(db, session, "students", "create");
   void scope;
-  const idErr = validateIdNumber(input.idType, input.nationalId);
+  const idErr = validateIdNumber(input.idType, input.nationalId, readRegion(session.tenant.settings));
   if (idErr) throw badRequest(idErr);
-  const phone = normalizeSaudiMobile(input.guardianPhone);
+  const phone = normalizeMobile(input.guardianPhone, readRegion(session.tenant.settings));
   if (!phone) throw badRequest("رقم جوال ولي الأمر غير صالح");
   const hash = idFingerprint(session.tenant.id, input.nationalId);
   const dup = await db.student.findFirst({ where: { nationalIdHash: hash, deletedAt: null }, select: { fullName: true } });
@@ -286,10 +287,10 @@ export async function addGuardian(
   let guardianId = input.guardianId ?? null;
   if (!guardianId) {
     if (!input.name?.trim() || !input.phone) throw badRequest("اسم ولي الأمر وجواله مطلوبان");
-    const phone = normalizeSaudiMobile(input.phone);
+    const phone = normalizeMobile(input.phone, readRegion(session.tenant.settings));
     if (!phone) throw badRequest("رقم الجوال غير صالح");
     if (input.nationalId) {
-      const err = validateIdNumber(/^2/.test(input.nationalId) ? "IQAMA" : "NATIONAL_ID", input.nationalId);
+      const err = validateIdNumber(guessIdType(input.nationalId, readRegion(session.tenant.settings)), input.nationalId, readRegion(session.tenant.settings));
       if (err) throw badRequest(err);
     }
     const g = await findOrCreateGuardian(db, session, {
@@ -347,7 +348,7 @@ export async function updateGuardian(
     data.name = patch.name.trim();
   }
   if (patch.phone !== undefined) {
-    const p = normalizeSaudiMobile(patch.phone);
+    const p = normalizeMobile(patch.phone, readRegion(session.tenant.settings));
     if (!p) throw badRequest("رقم الجوال غير صالح");
     data.phone = p;
   }
@@ -361,7 +362,7 @@ export async function searchGuardians(db: TenantDb, session: SessionData, query:
   if (!can(session.access, "students", "update")) throw forbidden();
   const q = query.trim();
   if (q.length < 2) return [];
-  const phone = normalizeSaudiMobile(q);
+  const phone = normalizeMobile(q, readRegion(session.tenant.settings));
   const guardians = await db.guardian.findMany({
     where: { deletedAt: null, OR: [{ name: { contains: q, mode: "insensitive" } }, ...(phone ? [{ phone }] : [])] },
     take: 10,

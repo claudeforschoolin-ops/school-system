@@ -3,6 +3,7 @@
  * الألوان من لوحة الوسوم الهادئة فقط (OPTION_COLORS).
  */
 import type { OptionColor, SelectOption } from "@/lib/database/types";
+import { NATIONALITIES as REGION_NATIONALITIES } from "./region";
 
 type Labeled<K extends string> = Record<K, { label: string; color: OptionColor }>;
 
@@ -196,17 +197,7 @@ export const TRANSPORT_MODES: SelectOption[] = [
   { id: "WALK", name: "مشياً", color: "green" },
 ];
 
-export const NATIONALITIES: SelectOption[] = [
-  { id: "SA", name: "سعودي", color: "green" },
-  { id: "EG", name: "مصري", color: "gold" },
-  { id: "JO", name: "أردني", color: "navy" },
-  { id: "SY", name: "سوري", color: "teal" },
-  { id: "YE", name: "يمني", color: "brown" },
-  { id: "SD", name: "سوداني", color: "orange" },
-  { id: "PK", name: "باكستاني", color: "slate" },
-  { id: "IN", name: "هندي", color: "purple" },
-  { id: "OTHER", name: "أخرى", color: "gray" },
-];
+export const NATIONALITIES: SelectOption[] = REGION_NATIONALITIES;
 
 export const WEEK_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"] as const;
 
@@ -241,44 +232,7 @@ export function splitFullName(name: string): { firstName: string; fatherName: st
   return { firstName, fatherName, grandfatherName, familyName };
 }
 
-/**
- * التحقق من رقم الهوية الوطنية/الإقامة السعودية: ١٠ أرقام تبدأ بـ ١ (مواطن) أو ٢ (مقيم)
- * مع خانة تحقق (خوارزمية لون على الأرقام العشرة).
- */
-export function isValidSaudiId(raw: string): boolean {
-  const id = normalizeDigits(raw);
-  if (!/^[12]\d{9}$/.test(id)) return false;
-  let sum = 0;
-  for (let i = 0; i < 10; i++) {
-    const d = Number(id[i]);
-    if (i % 2 === 0) {
-      const doubled = d * 2;
-      sum += Math.floor(doubled / 10) + (doubled % 10);
-    } else sum += d;
-  }
-  return sum % 10 === 0;
-}
-
-export function normalizeDigits(raw: string): string {
-  return raw.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).replace(/\s|-/g, "");
-}
-
-/** التحقق من رقم الهوية حسب نوعها */
-export function validateIdNumber(type: "NATIONAL_ID" | "IQAMA" | "PASSPORT", raw: string): string | null {
-  const id = normalizeDigits(raw);
-  if (type === "PASSPORT") return /^[A-Z0-9]{6,12}$/i.test(id) ? null : "رقم الجواز غير صالح";
-  if (!isValidSaudiId(id)) return "رقم الهوية غير صالح";
-  if (type === "NATIONAL_ID" && !id.startsWith("1")) return "رقم الهوية الوطنية يبدأ بالرقم ١";
-  if (type === "IQAMA" && !id.startsWith("2")) return "رقم الإقامة يبدأ بالرقم ٢";
-  return null;
-}
-
-/** جوال سعودي بصيغة 05XXXXXXXX أو +9665XXXXXXXX */
-export function normalizeSaudiMobile(raw: string): string | null {
-  const d = normalizeDigits(raw).replace(/[()+]/g, "");
-  const m = d.match(/^(?:966|0)?(5\d{8})$/);
-  return m ? `05${m[1]!.slice(1)}` : null;
-}
+export { normalizeDigits, validateIdNumber, normalizeMobile, guessIdType } from "./region";
 
 /** العمر بالسنوات عند تاريخ مرجعي */
 export function ageAt(birthDate: Date | string, at = new Date()): number {

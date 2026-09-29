@@ -3,6 +3,7 @@
  * البنوك والنقدية: الحسابات بأرصدتها، استيراد كشف CSV، المطابقة (مقترحة تلقائياً بالمبلغ والتاريخ والمرجع)،
  * ترحيل حركات الكشف غير المسجلة، والتحويل بين الحسابات. وسندات الصرف بموافقاتها.
  */
+import { ibanHint, validIban } from "@/lib/region";
 import {
   ArrowLeftRight,
   Ban,
@@ -35,7 +36,7 @@ import { Select } from "@/components/ui/select";
 import { Skeleton, SkeletonLines } from "@/components/ui/skeleton";
 import { Tag } from "@/components/ui/tag";
 import { toast } from "@/components/ui/toast";
-import { useApp, usePrefs } from "@/components/shell/app-context";
+import { useApp, usePrefs, useRegion } from "@/components/shell/app-context";
 import { DatabaseView } from "@/components/database/database-view";
 import { ModuleShell } from "@/components/modules/module-shell";
 import {
@@ -197,7 +198,8 @@ function BankDialog({ bank, onClose }: { bank: Banks["banks"][number] | null; on
     ),
     onError: (e) => toast.error(e.message),
   });
-  const ibanOk = /^SA\d{22}$/.test(v.iban.replace(/\s/g, ""));
+  const region = useRegion();
+  const ibanOk = validIban(v.iban, region);
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent
@@ -215,7 +217,7 @@ function BankDialog({ bank, onClose }: { bank: Banks["banks"][number] | null; on
           <Field label="البنك">
             <Input value={v.bankName} onChange={(e) => setV({ ...v, bankName: e.target.value })} />
           </Field>
-          <Field label="الآيبان" error={v.iban.length > 4 && !ibanOk ? "آيبان سعودي: SA و٢٢ رقماً" : null}>
+          <Field label="الآيبان" error={v.iban.length > 4 && !ibanOk ? ibanHint(region) : null}>
             <Input
               dir="ltr"
               value={v.iban}

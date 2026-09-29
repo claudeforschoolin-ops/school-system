@@ -3,6 +3,7 @@
  * والخصومات المعتمدة، الضريبة حسب البند وجنسية الطالب)، إصدار الفاتورة بقيدها الآلي ورقم غير منقطع،
  * الفوترة الجماعية بمعاينة، الإلغاء والإشعارات الدائنة/المدينة، غرامات التأخير، والربط مع القبول والأنشطة والانسحاب.
  */
+import { isCitizen, readRegion } from "@/lib/region";
 import type { FeeKind, Prisma } from "@/generated/prisma/client";
 import { allocateMinor, formatMoney } from "@/lib/money";
 import {
@@ -498,7 +499,9 @@ export async function buildDraft(
       unitMinor: l.amountMinor,
     }));
   }
-  const citizen = student.nationality === "SA";
+  // «المواطن» = جنسية دولة المدرسة (إعدادات الإقليم)
+  const tenantRow = await db.tenant.findFirst({ where: { id: student.tenantId }, select: { settings: true } });
+  const citizen = isCitizen(student.nationality, readRegion(tenantRow?.settings));
   const lineInputs: Array<LineInput & { item: (typeof items)[number] | null; taxCodeId: string | null }> =
     raw.map((l) => {
       const item = l.feeItemId ? (items.find((i) => i.id === l.feeItemId) ?? null) : null;

@@ -16,7 +16,7 @@ import { Select } from "@/components/ui/select";
 import { SkeletonLines } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
-import { usePrefs } from "@/components/shell/app-context";
+import { usePrefs, useRegion } from "@/components/shell/app-context";
 import type { CreateDialogProps } from "@/components/students/create-dialogs";
 import { StudentPicker, type PickedStudent } from "@/components/students/student-picker";
 import { MoneyInput, useMoney, useToday } from "./common";
@@ -26,6 +26,7 @@ import { MoneyInput, useMoney, useToday } from "./common";
 // ---------------------------------------------------------------------
 
 export function NewInvoiceDialog({ prefill, onClose, onCreated }: CreateDialogProps) {
+  const region = useRegion();
   const money = useMoney();
   const prefs = usePrefs();
   const today = useToday();
@@ -248,9 +249,7 @@ export function NewInvoiceDialog({ prefill, onClose, onCreated }: CreateDialogPr
                   <span className="tabular">{money.fmt(d.totalMinor)}</span>
                 </div>
                 <p className="mt-1 text-[12px] text-fg-3">
-                  {d.student.nationality === "SA"
-                    ? "طالب مواطن: الرسوم الدراسية بنسبة صفر."
-                    : "طالب مقيم: ضريبة ١٥٪ على الرسوم الدراسية."}{" "}
+                  {d.student.nationality === region.country ? "طالب مواطن: تُطبق ضريبة «المواطن» لبنود الرسوم." : "طالب غير مواطن: تُطبق الضريبة الأساسية لكل بند."}{" "}
                   ولي الأمر: {d.guardian?.name ?? "غير مرتبط"}
                 </p>
               </>
