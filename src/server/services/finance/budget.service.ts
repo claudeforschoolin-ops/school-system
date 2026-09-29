@@ -4,6 +4,7 @@
  */
 import { Prisma } from "@/generated/prisma/client";
 import { budgetState, upliftBudget } from "@/lib/ops/calc";
+import { formatNumber } from "@/lib/numbers";
 import type { SessionData } from "@/server/auth/session";
 import type { TenantDb } from "@/server/db/tenant";
 import { badRequest, notFound } from "@/server/errors";
@@ -227,7 +228,7 @@ export async function checkBudget(db: TenantDb, session: SessionData, input: { a
   const after = act + input.amountMinor;
   const st = budgetState(budgetMinor, after, settingsOf(session, "finance").budgetWarnBp);
   const acc = await db.account.findFirst({ where: { id: input.accountId }, select: { name: true } });
-  const message = st.state === "OVER" ? `يتجاوز موازنة «${acc?.name ?? ""}»: المعتمد ${money(session, budgetMinor)} والمصروف بعد العملية ${money(session, after)}` : st.state === "WARNING" ? `استُهلك ${Math.floor(st.usedBp / 100)}٪ من موازنة «${acc?.name ?? ""}»` : null;
+  const message = st.state === "OVER" ? `يتجاوز موازنة «${acc?.name ?? ""}»: المعتمد ${money(session, budgetMinor)} والمصروف بعد العملية ${money(session, after)}` : st.state === "WARNING" ? `استُهلك ${formatNumber(Math.floor(st.usedBp / 100), "arab")}٪ من موازنة «${acc?.name ?? ""}»` : null;
   if (st.state === "OVER" && control === "BLOCK") throw badRequest(`${message}. سياسة الموازنة تمنع التجاوز؛ عدّل الموازنة أو اطلب اعتماد تعديلها.`);
   return message ? { state: st.state, message, budgetMinor, afterMinor: after } : null;
 }

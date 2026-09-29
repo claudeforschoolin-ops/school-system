@@ -97,7 +97,7 @@ export async function ensureFeeItem(db: Db, tenantId: string, code: "LIBRARY_FIN
   if (found) return found;
   await ensureOpsAccounts(db, tenantId);
   const acc = async (key: string) => (await db.account.findFirstOrThrow({ where: { systemKey: key, deletedAt: null } })).id;
-  const vat = await db.taxCode.findFirst({ where: { code: "VAT" } });
+  const vat = await db.taxCode.findFirst({ where: { kind: "STANDARD", isActive: true }, orderBy: { rateBp: "desc" } });
   return db.feeItem.create({
     data:
       code === "LIBRARY_FINE"
