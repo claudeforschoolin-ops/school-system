@@ -20,21 +20,39 @@ import { Tag } from "@/components/ui/tag";
 import { toast } from "@/components/ui/toast";
 import { usePrefs } from "@/components/shell/app-context";
 import { ModuleShell } from "@/components/modules/module-shell";
-import { Figure, FinTable, financeNav, INVOICE_TABS, num, useMoney, useToday } from "./common";
+import { Figure, FinTable, financeNav, num, useMoney, useToday, useInvoiceTabs } from "./common";
 
-type Criteria = { academicYearId: string; branchId: string | null; gradeIds: string[]; feeItemIds: string[]; planId: string | null; issueDate: string; applyDiscounts: boolean };
+type Criteria = {
+  academicYearId: string;
+  branchId: string | null;
+  gradeIds: string[];
+  feeItemIds: string[];
+  planId: string | null;
+  issueDate: string;
+  applyDiscounts: boolean;
+};
 
 export function BulkBilling() {
+  const invoiceTabs = useInvoiceTabs();
   const setup = trpc.finance.setup.get.useQuery();
   const today = useToday();
   const [criteria, setCriteria] = useState<Criteria | null>(null);
   const [step, setStep] = useState<"criteria" | "preview" | "done">("criteria");
-  const [result, setResult] = useState<{ number: number; count: number; total: number; failures: Array<{ name: string; error: string }> } | null>(null);
+  const [result, setResult] = useState<{
+    number: number;
+    count: number;
+    total: number;
+    failures: Array<{ name: string; error: string }>;
+  } | null>(null);
   const nav = financeNav("invoices");
   if (setup.error) {
     return (
-      <ModuleShell nav={nav} tabs={INVOICE_TABS}>
-        <EmptyState illustration="lock" title="لا يمكن فتح الفوترة الجماعية" description={setup.error.message} />
+      <ModuleShell nav={nav} tabs={invoiceTabs}>
+        <EmptyState
+          illustration="lock"
+          title="لا يمكن فتح الفوترة الجماعية"
+          description={setup.error.message}
+        />
       </ModuleShell>
     );
   }
@@ -52,7 +70,7 @@ export function BulkBilling() {
     : null;
   const c = criteria ?? initial;
   return (
-    <ModuleShell nav={nav} tabs={INVOICE_TABS} wide>
+    <ModuleShell nav={nav} tabs={invoiceTabs} wide>
       <ol className="mb-6 flex flex-wrap items-center gap-2 text-[13px]" aria-label="خطوات الفوترة">
         {[
           { k: "criteria", l: "١. المعايير" },
@@ -61,12 +79,26 @@ export function BulkBilling() {
         ].map((x, i) => (
           <li key={x.k} className="flex items-center gap-2">
             {i ? <span className="h-px w-6 bg-line" /> : null}
-            <span className={cn("rounded-full px-2.5 py-1", step === x.k ? "bg-navy-700 text-on-primary" : "bg-hover text-fg-3")}>{x.l}</span>
+            <span
+              className={cn(
+                "rounded-full px-2.5 py-1",
+                step === x.k ? "bg-navy-700 text-on-primary" : "bg-hover text-fg-3",
+              )}
+            >
+              {x.l}
+            </span>
           </li>
         ))}
       </ol>
       {!s || !c ? <SkeletonLines lines={10} /> : null}
-      {s && c && step === "criteria" ? <CriteriaForm setup={s} value={c} onChange={setCriteria} onNext={() => (setCriteria(c), setStep("preview"))} /> : null}
+      {s && c && step === "criteria" ? (
+        <CriteriaForm
+          setup={s}
+          value={c}
+          onChange={setCriteria}
+          onNext={() => (setCriteria(c), setStep("preview"))}
+        />
+      ) : null}
       {s && c && step === "preview" ? (
         <PreviewStep
           criteria={c}
@@ -77,33 +109,60 @@ export function BulkBilling() {
           }}
         />
       ) : null}
-      {step === "done" && result ? <DoneStep result={result} onAgain={() => (setResult(null), setStep("criteria"))} /> : null}
+      {step === "done" && result ? (
+        <DoneStep result={result} onAgain={() => (setResult(null), setStep("criteria"))} />
+      ) : null}
     </ModuleShell>
   );
 }
 
 type Setup = RouterOutputs["finance"]["setup"]["get"];
 
-function CriteriaForm({ setup, value, onChange, onNext }: { setup: Setup; value: Criteria; onChange: (c: Criteria) => void; onNext: () => void }) {
+function CriteriaForm({
+  setup,
+  value,
+  onChange,
+  onNext,
+}: {
+  setup: Setup;
+  value: Criteria;
+  onChange: (c: Criteria) => void;
+  onNext: () => void;
+}) {
   const set = (patch: Partial<Criteria>) => onChange({ ...value, ...patch });
   const items = setup.items.filter((i) => i.isActive && i.kind !== "LATE_FEE");
-  const toggle = (list: string[], id: string, on: boolean) => (on ? [...list, id] : list.filter((x) => x !== id));
+  const toggle = (list: string[], id: string, on: boolean) =>
+    on ? [...list, id] : list.filter((x) => x !== id);
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <section className="space-y-3 rounded-lg bg-card p-5 shadow-card">
         <h2 className="text-[15px] font-semibold">النطاق</h2>
         <div className="grid grid-cols-2 gap-3">
           <Field label="العام الدراسي">
-            <Select value={value.academicYearId} onChange={(v) => set({ academicYearId: v })} options={setup.years.map((y) => ({ value: y.id, label: y.name }))} />
+            <Select
+              value={value.academicYearId}
+              onChange={(v) => set({ academicYearId: v })}
+              options={setup.years.map((y) => ({ value: y.id, label: y.name }))}
+            />
           </Field>
           <Field label="الفرع">
-            <Select value={value.branchId ?? "all"} onChange={(v) => set({ branchId: v === "all" ? null : v })} options={[{ value: "all", label: "كل الفروع" }, ...setup.branches.map((b) => ({ value: b.id, label: b.name }))]} />
+            <Select
+              value={value.branchId ?? "all"}
+              onChange={(v) => set({ branchId: v === "all" ? null : v })}
+              options={[
+                { value: "all", label: "كل الفروع" },
+                ...setup.branches.map((b) => ({ value: b.id, label: b.name })),
+              ]}
+            />
           </Field>
         </div>
         <div>
           <div className="mb-1.5 flex items-center justify-between">
             <span className="text-[13px] font-medium text-fg-2">الصفوف</span>
-            <button className="text-[12px] text-fg-3 hover:text-fg" onClick={() => set({ gradeIds: value.gradeIds.length ? [] : setup.grades.map((g) => g.id) })}>
+            <button
+              className="text-[12px] text-fg-3 hover:text-fg"
+              onClick={() => set({ gradeIds: value.gradeIds.length ? [] : setup.grades.map((g) => g.id) })}
+            >
               {value.gradeIds.length ? "إلغاء التحديد" : "تحديد الكل"}
             </button>
           </div>
@@ -115,7 +174,10 @@ function CriteriaForm({ setup, value, onChange, onNext }: { setup: Setup; value:
                   .filter((g) => g.stageId === st.id)
                   .map((g) => (
                     <label key={g.id} className="flex items-center gap-1.5 text-[14px]">
-                      <Checkbox checked={value.gradeIds.includes(g.id)} onChange={(on) => set({ gradeIds: toggle(value.gradeIds, g.id, on) })} />
+                      <Checkbox
+                        checked={value.gradeIds.includes(g.id)}
+                        onChange={(on) => set({ gradeIds: toggle(value.gradeIds, g.id, on) })}
+                      />
                       {g.name}
                     </label>
                   ))}
@@ -129,20 +191,39 @@ function CriteriaForm({ setup, value, onChange, onNext }: { setup: Setup; value:
         <h2 className="text-[15px] font-semibold">البنود والسداد</h2>
         <div className="grid gap-1">
           {items.map((i) => (
-            <label key={i.id} className="flex items-center gap-2 rounded-md px-1 py-1 text-[14px] hover:bg-hover">
-              <Checkbox checked={value.feeItemIds.includes(i.id)} onChange={(on) => set({ feeItemIds: toggle(value.feeItemIds, i.id, on) })} />
+            <label
+              key={i.id}
+              className="flex items-center gap-2 rounded-md px-1 py-1 text-[14px] hover:bg-hover"
+            >
+              <Checkbox
+                checked={value.feeItemIds.includes(i.id)}
+                onChange={(on) => set({ feeItemIds: toggle(value.feeItemIds, i.id, on) })}
+              />
               {i.name}
               {i.deferred ? <span className="text-[12px] text-fg-3">· مؤجل</span> : null}
             </label>
           ))}
         </div>
-        <p className="text-[12px] text-fg-3">المبالغ من جدول الرسوم المطابق لكل صف؛ الطالب بلا جدول مطابق يظهر في المعاينة مع السبب.</p>
+        <p className="text-[12px] text-fg-3">
+          المبالغ من جدول الرسوم المطابق لكل صف؛ الطالب بلا جدول مطابق يظهر في المعاينة مع السبب.
+        </p>
         <div className="grid grid-cols-2 gap-3">
           <Field label="خطة الأقساط">
-            <Select value={value.planId ?? "none"} onChange={(v) => set({ planId: v === "none" ? null : v })} options={[{ value: "none", label: "دفعة واحدة" }, ...setup.plans.filter((p) => p.isActive).map((p) => ({ value: p.id, label: p.name }))]} />
+            <Select
+              value={value.planId ?? "none"}
+              onChange={(v) => set({ planId: v === "none" ? null : v })}
+              options={[
+                { value: "none", label: "دفعة واحدة" },
+                ...setup.plans.filter((p) => p.isActive).map((p) => ({ value: p.id, label: p.name })),
+              ]}
+            />
           </Field>
           <Field label="تاريخ الإصدار">
-            <Input type="date" value={value.issueDate} onChange={(e) => e.target.value && set({ issueDate: e.target.value })} />
+            <Input
+              type="date"
+              value={value.issueDate}
+              onChange={(e) => e.target.value && set({ issueDate: e.target.value })}
+            />
           </Field>
         </div>
         <label className="flex items-center justify-between text-[14px]">
@@ -150,7 +231,11 @@ function CriteriaForm({ setup, value, onChange, onNext }: { setup: Setup; value:
           <Switch checked={value.applyDiscounts} onChange={(on) => set({ applyDiscounts: on })} />
         </label>
         <div className="flex justify-end pt-2">
-          <Button variant="primary" disabled={!value.feeItemIds.length || !value.academicYearId} onClick={onNext}>
+          <Button
+            variant="primary"
+            disabled={!value.feeItemIds.length || !value.academicYearId}
+            onClick={onNext}
+          >
             معاينة
           </Button>
         </div>
@@ -159,7 +244,20 @@ function CriteriaForm({ setup, value, onChange, onNext }: { setup: Setup; value:
   );
 }
 
-function PreviewStep({ criteria, onBack, onDone }: { criteria: Criteria; onBack: () => void; onDone: (r: { number: number; count: number; total: number; failures: Array<{ name: string; error: string }> }) => void }) {
+function PreviewStep({
+  criteria,
+  onBack,
+  onDone,
+}: {
+  criteria: Criteria;
+  onBack: () => void;
+  onDone: (r: {
+    number: number;
+    count: number;
+    total: number;
+    failures: Array<{ name: string; error: string }>;
+  }) => void;
+}) {
   const prefs = usePrefs();
   const money = useMoney();
   const input = { ...criteria, gradeIds: criteria.gradeIds.length ? criteria.gradeIds : undefined };
@@ -176,13 +274,24 @@ function PreviewStep({ criteria, onBack, onDone }: { criteria: Criteria; onBack:
     },
     onError: (e) => toast.error(e.message),
   });
-  if (q.error) return <EmptyState title="تعذرت المعاينة" description={q.error.message} action={<Button onClick={onBack}>رجوع</Button>} />;
+  if (q.error)
+    return (
+      <EmptyState
+        title="تعذرت المعاينة"
+        description={q.error.message}
+        action={<Button onClick={onBack}>رجوع</Button>}
+      />
+    );
   if (!q.data) return <SkeletonLines lines={10} />;
   const p = q.data;
   return (
     <div className="space-y-4">
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Figure label="فواتير ستصدر" value={formatNumber(p.count, prefs.digits)} hint={p.skipped ? `${formatNumber(p.skipped, prefs.digits)} طالب متخطى` : "لا متخطين"} />
+        <Figure
+          label="فواتير ستصدر"
+          value={formatNumber(p.count, prefs.digits)}
+          hint={p.skipped ? `${formatNumber(p.skipped, prefs.digits)} طالب متخطى` : "لا متخطين"}
+        />
         <Figure label="قبل الخصم" value={money.fmt(p.subtotal)} />
         <Figure label="الخصومات" value={money.fmt(p.discount)} tone={p.discount ? "success" : undefined} />
         <Figure label="الضريبة" value={money.fmt(p.tax)} />
@@ -247,7 +356,13 @@ function PreviewStep({ criteria, onBack, onDone }: { criteria: Criteria; onBack:
         <Button variant="ghost" icon={<ArrowRight className="size-3.5" />} onClick={onBack}>
           تعديل المعايير
         </Button>
-        <Button variant="primary" icon={<FileStack className="size-3.5" />} loading={issue.isPending} disabled={!p.count || description.trim().length < 3} onClick={() => issue.mutate({ ...input, description, notify })}>
+        <Button
+          variant="primary"
+          icon={<FileStack className="size-3.5" />}
+          loading={issue.isPending}
+          disabled={!p.count || description.trim().length < 3}
+          onClick={() => issue.mutate({ ...input, description, notify })}
+        >
           إصدار {formatNumber(p.count, prefs.digits)} فاتورة
         </Button>
       </section>
@@ -255,7 +370,13 @@ function PreviewStep({ criteria, onBack, onDone }: { criteria: Criteria; onBack:
   );
 }
 
-function DoneStep({ result, onAgain }: { result: { number: number; count: number; total: number; failures: Array<{ name: string; error: string }> }; onAgain: () => void }) {
+function DoneStep({
+  result,
+  onAgain,
+}: {
+  result: { number: number; count: number; total: number; failures: Array<{ name: string; error: string }> };
+  onAgain: () => void;
+}) {
   const prefs = usePrefs();
   const money = useMoney();
   return (
@@ -265,7 +386,8 @@ function DoneStep({ result, onAgain }: { result: { number: number; count: number
         صدرت الدفعة رقم {formatNumber(result.number, prefs.digits, { useGrouping: false })}
       </h2>
       <p className="mt-1 text-[15px] text-fg-2">
-        {formatNumber(result.count, prefs.digits)} فاتورة بإجمالي {money.fmt(result.total)}، ولكل فاتورة قيدها الآلي.
+        {formatNumber(result.count, prefs.digits)} فاتورة بإجمالي {money.fmt(result.total)}، ولكل فاتورة قيدها
+        الآلي.
       </p>
       {result.failures.length ? (
         <div className="mx-auto mt-4 max-w-lg rounded-md bg-danger-50 p-3 text-start text-[13px] text-danger-700">

@@ -51,6 +51,8 @@ const setupRouter = router({
       return billing.saveDiscountType(ctx.db, ctx.session, did ?? null, rest);
     }),
   studentDiscounts: authedProcedure.input(z.object({ studentId: id })).query(async ({ ctx, input }) => {
+    const { requireStaff } = await import("@/server/services/finance/common");
+    requireStaff(ctx.session, "invoices", "view");
     const rows = await ctx.db.studentDiscount.findMany({ where: { studentId: input.studentId }, orderBy: { createdAt: "desc" } });
     const types = await ctx.db.discountType.findMany({ where: { id: { in: rows.map((r) => r.discountTypeId) } } });
     return rows.map((r) => ({ ...r, type: types.find((t) => t.id === r.discountTypeId) ?? null }));
@@ -71,6 +73,12 @@ const invoicesRouter = router({
   cancel: authedProcedure.input(z.object({ id, reason: z.string().trim().min(3).max(300) })).mutation(({ ctx, input }) => billing.cancelInvoice(ctx.db, ctx.session, input.id, input.reason)),
   creditNote: authedProcedure.input(z.object({ invoiceId: id, totalMinor: minor.min(1), reason: z.string().trim().min(3).max(300), kind: z.enum(["ADJUSTMENT", "DISCOUNT"]) })).mutation(({ ctx, input }) => billing.creditNote(ctx.db, ctx.session, input)),
   debitNote: authedProcedure.input(z.object({ invoiceId: id, lines: z.array(draftLine).min(1).max(10), reason: z.string().trim().min(3).max(300) })).mutation(({ ctx, input }) => billing.debitNote(ctx.db, ctx.session, input)),
+  sendReminders: authedProcedure.mutation(async ({ ctx }) => {
+    const { requirePerm, todayIso } = await import("@/server/services/finance/common");
+    const { runPaymentReminders } = await import("@/server/services/finance/reminders.service");
+    requirePerm(ctx.session, "invoices", "update", "تذكيرات السداد من صلاحية المحاسبة");
+    return runPaymentReminders(ctx.db, ctx.session.tenant, ctx.session.user.id, todayIso(ctx.session));
+  }),
   applyLateFees: authedProcedure.input(z.object({ asOf: isoDate.optional() })).mutation(({ ctx, input }) => billing.applyLateFees(ctx.db, ctx.session, input.asOf)),
   pauseReminders: authedProcedure.input(z.object({ id, paused: z.boolean() })).mutation(async ({ ctx, input }) => {
     const { requirePerm } = await import("@/server/services/finance/common");
@@ -101,7 +109,7 @@ const receiptsRouter = router({
   applyCredit: authedProcedure.input(z.object({ guardianId: id, amountMinor: minor.nullish() })).mutation(({ ctx, input }) => collections.applyCredit(ctx.db, ctx.session, input)),
   requestRefund: authedProcedure.input(z.object({ guardianId: id, amountMinor: minor.min(1), method, bankAccountId: id.nullish(), reason: z.string().trim().min(3).max(300) })).mutation(({ ctx, input }) => collections.requestRefund(ctx.db, ctx.session, input)),
   payRefund: authedProcedure.input(z.object({ id, date: isoDate })).mutation(({ ctx, input }) => collections.payRefund(ctx.db, ctx.session, input.id, input.date)),
-  refunds: authedProcedure.input(z.object({ guardianId: id })).query(({ ctx, input }) => ctx.db.refund.findMany({ where: { guardianId: input.guardianId }, orderBy: { createdAt: "desc" } })),
+  refunds: authedProcedure.input(z.object({ guardianId: id })).query(({ ctx, input }) => collections.listRefunds(ctx.db, ctx.session, input.guardianId)),
   cashSession: authedProcedure.query(({ ctx }) => collections.currentCashSession(ctx.db, ctx.session)),
   openSession: authedProcedure.input(z.object({ openingFloatMinor: minor, branchId: id.nullish() })).mutation(({ ctx, input }) => collections.openCashSession(ctx.db, ctx.session, input)),
   closeSession: authedProcedure.input(z.object({ countedMinor: minor, note: z.string().max(300).nullish() })).mutation(({ ctx, input }) => collections.closeCashSession(ctx.db, ctx.session, input)),

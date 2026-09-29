@@ -25,46 +25,113 @@ export function NewVoucherDialog({ onClose, onCreated }: CreateDialogProps) {
   const chart = trpc.finance.accounting.chart.useQuery({}, { enabled: can("accounting", "view") });
   const setup = trpc.finance.setup.get.useQuery();
   const banks = trpc.finance.banking.accounts.useQuery(undefined, { enabled: can("banking", "view") });
-  const centers = trpc.finance.accounting.costCenters.useQuery(undefined, { enabled: can("accounting", "view") });
-  const [v, setV] = useState({ date: today, payee: "", expenseAccountId: undefined as string | undefined, costCenterId: null as string | null, method: "BANK_TRANSFER" as PaymentMethodKey, bankAccountId: null as string | null, amountMinor: null as number | null, taxCodeId: null as string | null, description: "" });
+  const centers = trpc.finance.accounting.costCenters.useQuery(undefined, {
+    enabled: can("accounting", "view"),
+  });
+  const [v, setV] = useState({
+    date: today,
+    payee: "",
+    expenseAccountId: undefined as string | undefined,
+    costCenterId: null as string | null,
+    method: "BANK_TRANSFER" as PaymentMethodKey,
+    bankAccountId: null as string | null,
+    amountMinor: null as number | null,
+    taxCodeId: null as string | null,
+    description: "",
+  });
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const m = trpc.finance.banking.createVoucher.useMutation({
     onSuccess: (r) => {
-      toast.success(r.status === "PENDING" ? "أُنشئ السند وأُرسل لاعتماد المدير" : "أُنشئ السند وهو جاهز للصرف");
+      toast.success(
+        r.status === "PENDING" ? "أُنشئ السند وأُرسل لاعتماد المدير" : "أُنشئ السند وهو جاهز للصرف",
+      );
       onCreated(r.id);
     },
     onError: (e) => toast.error(e.message),
   });
-  const expenseAccounts = (chart.data?.accounts ?? setup.data?.accounts ?? []).filter((a) => a.type === "EXPENSE" && !("isGroup" in a && a.isGroup));
+  const expenseAccounts = (chart.data?.accounts ?? setup.data?.accounts ?? []).filter(
+    (a) => a.type === "EXPENSE" && !("isGroup" in a && a.isGroup),
+  );
   const taxCodes = (setup.data?.taxCodes ?? []).filter((t) => t.isActive && t.inputAccountId);
   const tax = taxCodes.find((t) => t.id === v.taxCodeId);
   const taxMinor = v.amountMinor && tax ? applyBp(v.amountMinor, tax.rateBp) : 0;
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title="سند صرف جديد" description="فوق حد الصلاحية يُرسل لاعتماد المدير قبل الصرف؛ القيد يُرحّل عند الصرف." width={620}>
+      <DialogContent
+        title="سند صرف جديد"
+        description="فوق حد الصلاحية يُرسل لاعتماد المدير قبل الصرف؛ القيد يُرحّل عند الصرف."
+        width={620}
+      >
         <div className="grid grid-cols-2 gap-3 px-5 pb-4">
           <Field label="المستفيد" className="col-span-2">
-            <Input value={v.payee} onChange={(e) => setV({ ...v, payee: e.target.value })} placeholder="مثال: شركة الكهرباء السعودية" autoFocus />
+            <Input
+              value={v.payee}
+              onChange={(e) => setV({ ...v, payee: e.target.value })}
+              placeholder="مثال: شركة الكهرباء السعودية"
+              autoFocus
+            />
           </Field>
           <Field label="حساب المصروف">
-            <Select value={v.expenseAccountId} onChange={(id) => setV({ ...v, expenseAccountId: id })} options={expenseAccounts.map((a) => ({ value: a.id, label: `${a.code} — ${a.name}` }))} placeholder="اختر" />
+            <Select
+              value={v.expenseAccountId}
+              onChange={(id) => setV({ ...v, expenseAccountId: id })}
+              options={expenseAccounts.map((a) => ({ value: a.id, label: `${a.code} — ${a.name}` }))}
+              placeholder="اختر"
+            />
           </Field>
           <Field label="مركز التكلفة">
-            <Select value={v.costCenterId ?? "none"} onChange={(c) => setV({ ...v, costCenterId: c === "none" ? null : c })} options={[{ value: "none", label: "—" }, ...(centers.data?.rows ?? []).filter((c) => c.isActive).map((c) => ({ value: c.id, label: c.name }))]} />
+            <Select
+              value={v.costCenterId ?? "none"}
+              onChange={(c) => setV({ ...v, costCenterId: c === "none" ? null : c })}
+              options={[
+                { value: "none", label: "—" },
+                ...(centers.data?.rows ?? [])
+                  .filter((c) => c.isActive)
+                  .map((c) => ({ value: c.id, label: c.name })),
+              ]}
+            />
           </Field>
           <Field label="المبلغ قبل الضريبة">
             <MoneyInput value={v.amountMinor} onChange={(a) => setV({ ...v, amountMinor: a })} />
           </Field>
-          <Field label="ضريبة المدخلات" hint={taxMinor ? `الضريبة ${money.fmt(taxMinor)} · الإجمالي ${money.fmt((v.amountMinor ?? 0) + taxMinor)}` : undefined}>
-            <Select value={v.taxCodeId ?? "none"} onChange={(t) => setV({ ...v, taxCodeId: t === "none" ? null : t })} options={[{ value: "none", label: "بدون ضريبة" }, ...taxCodes.map((t) => ({ value: t.id, label: t.name }))]} />
+          <Field
+            label="ضريبة المدخلات"
+            hint={
+              taxMinor
+                ? `الضريبة ${money.fmt(taxMinor)} · الإجمالي ${money.fmt((v.amountMinor ?? 0) + taxMinor)}`
+                : undefined
+            }
+          >
+            <Select
+              value={v.taxCodeId ?? "none"}
+              onChange={(t) => setV({ ...v, taxCodeId: t === "none" ? null : t })}
+              options={[
+                { value: "none", label: "بدون ضريبة" },
+                ...taxCodes.map((t) => ({ value: t.id, label: t.name })),
+              ]}
+            />
           </Field>
           <Field label="طريقة الدفع">
-            <Select value={v.method} onChange={(mth) => setV({ ...v, method: mth as PaymentMethodKey })} options={(["BANK_TRANSFER", "CASH", "CHEQUE", "CARD"] as const).map((k) => ({ value: k, label: PAYMENT_METHOD[k].label }))} />
+            <Select
+              value={v.method}
+              onChange={(mth) => setV({ ...v, method: mth as PaymentMethodKey })}
+              options={(["BANK_TRANSFER", "CASH", "CHEQUE", "CARD"] as const).map((k) => ({
+                value: k,
+                label: PAYMENT_METHOD[k].label,
+              }))}
+            />
           </Field>
           {v.method !== "CASH" && banks.data?.banks.length ? (
             <Field label="من حساب">
-              <Select value={v.bankAccountId ?? "default"} onChange={(b) => setV({ ...v, bankAccountId: b === "default" ? null : b })} options={[{ value: "default", label: "الحساب الافتراضي" }, ...banks.data.banks.filter((b) => b.isActive).map((b) => ({ value: b.id, label: b.name }))]} />
+              <Select
+                value={v.bankAccountId ?? "default"}
+                onChange={(b) => setV({ ...v, bankAccountId: b === "default" ? null : b })}
+                options={[
+                  { value: "default", label: "الحساب الافتراضي" },
+                  ...banks.data.banks.filter((b) => b.isActive).map((b) => ({ value: b.id, label: b.name })),
+                ]}
+              />
             </Field>
           ) : (
             <Field label="التاريخ">
@@ -72,7 +139,11 @@ export function NewVoucherDialog({ onClose, onCreated }: CreateDialogProps) {
             </Field>
           )}
           <Field label="البيان" className="col-span-2">
-            <Textarea value={v.description} onChange={(e) => setV({ ...v, description: e.target.value })} placeholder="مثال: فاتورة كهرباء المبنى الرئيسي لشهر أغسطس" />
+            <Textarea
+              value={v.description}
+              onChange={(e) => setV({ ...v, description: e.target.value })}
+              placeholder="مثال: فاتورة كهرباء المبنى الرئيسي لشهر أغسطس"
+            />
           </Field>
           <div className="col-span-2 flex flex-wrap items-center gap-2">
             <Button
@@ -113,8 +184,26 @@ export function NewVoucherDialog({ onClose, onCreated }: CreateDialogProps) {
           <Button
             variant="primary"
             loading={m.isPending}
-            disabled={v.payee.trim().length < 2 || !v.expenseAccountId || !v.amountMinor || v.description.trim().length < 3}
-            onClick={() => m.mutate({ date: v.date, payee: v.payee, expenseAccountId: v.expenseAccountId!, costCenterId: v.costCenterId, method: v.method, bankAccountId: v.bankAccountId, amountMinor: v.amountMinor!, taxCodeId: v.taxCodeId, description: v.description, attachments: files })}
+            disabled={
+              v.payee.trim().length < 2 ||
+              !v.expenseAccountId ||
+              !v.amountMinor ||
+              v.description.trim().length < 3
+            }
+            onClick={() =>
+              m.mutate({
+                date: v.date,
+                payee: v.payee,
+                expenseAccountId: v.expenseAccountId!,
+                costCenterId: v.costCenterId,
+                method: v.method,
+                bankAccountId: v.bankAccountId,
+                amountMinor: v.amountMinor!,
+                taxCodeId: v.taxCodeId,
+                description: v.description,
+                attachments: files,
+              })
+            }
           >
             إنشاء السند
           </Button>

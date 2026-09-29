@@ -23,24 +23,90 @@ import { useApp, usePrefs } from "@/components/shell/app-context";
 import { ChartCard, HBars } from "@/components/charts/bars";
 import { Columns } from "@/components/charts/columns";
 import { ModuleShell } from "@/components/modules/module-shell";
-import { downloadCsv, Figure, FinTable, financeNav, monthStart, num, RangePicker, useFmtDate, useMoney, useToday, yearStart, docNo } from "./common";
+import {
+  downloadCsv,
+  Figure,
+  FinTable,
+  financeNav,
+  monthStart,
+  num,
+  RangePicker,
+  useFmtDate,
+  useMoney,
+  useToday,
+  yearStart,
+  docNo,
+} from "./common";
 
 export const REPORTS = [
-  { href: "/finance/reports/trial-balance", label: "ميزان المراجعة", description: "أرصدة أول المدة والحركة والختامية لكل حساب، مع التحقق من التوازن." },
-  { href: "/finance/reports/income", label: "قائمة الدخل", description: "الإيرادات بعد الخصومات والمصروفات، بمقارنة فترة سابقة وحسب الفرع ومركز التكلفة." },
-  { href: "/finance/reports/balance-sheet", label: "الميزانية العمومية", description: "الأصول والخصوم وحقوق الملكية في تاريخ محدد." },
-  { href: "/finance/reports/cash-flow", label: "التدفقات النقدية", description: "حركة النقد والبنوك بالطريقة المباشرة: تشغيلية واستثمارية وتمويلية." },
-  { href: "/finance/reports/aging", label: "تقادم الذمم", description: "المستحق على الأسر بشرائح التأخير، مع أرقام التواصل." },
-  { href: "/finance/reports/vat", label: "إقرار ضريبة القيمة المضافة", description: "المبيعات حسب رمز الضريبة، والمدخلات، وصافي المستحق للفترة." },
-  { href: "/finance/reports/deferred", label: "الإيراد المؤجل والمحقق", description: "ما فُوتر من رسوم دراسية وما اعتُرف به شهرياً وما بقي مؤجلاً." },
-  { href: "/finance/reports/collections", label: "التحصيل مقابل المستهدف", description: "المحصّل حسب الطريقة واليوم وأمين الصندوق، ونسبة المستهدف." },
-  { href: "/finance/reports/discounts", label: "الخصومات والمنح", description: "إجمالي الخصومات حسب النوع والصف وعدد المستفيدين." },
-  { href: "/finance/reports/daily-cash", label: "حركة الصندوق اليومية", description: "سندات اليوم وورديات أمناء الصندوق وفروقاتها." },
+  {
+    href: "/finance/reports/trial-balance",
+    label: "ميزان المراجعة",
+    description: "أرصدة أول المدة والحركة والختامية لكل حساب، مع التحقق من التوازن.",
+  },
+  {
+    href: "/finance/reports/income",
+    label: "قائمة الدخل",
+    description: "الإيرادات بعد الخصومات والمصروفات، بمقارنة فترة سابقة وحسب الفرع ومركز التكلفة.",
+  },
+  {
+    href: "/finance/reports/balance-sheet",
+    label: "الميزانية العمومية",
+    description: "الأصول والخصوم وحقوق الملكية في تاريخ محدد.",
+  },
+  {
+    href: "/finance/reports/cash-flow",
+    label: "التدفقات النقدية",
+    description: "حركة النقد والبنوك بالطريقة المباشرة: تشغيلية واستثمارية وتمويلية.",
+  },
+  {
+    href: "/finance/reports/aging",
+    label: "تقادم الذمم",
+    description: "المستحق على الأسر بشرائح التأخير، مع أرقام التواصل.",
+  },
+  {
+    href: "/finance/reports/vat",
+    label: "إقرار ضريبة القيمة المضافة",
+    description: "المبيعات حسب رمز الضريبة، والمدخلات، وصافي المستحق للفترة.",
+  },
+  {
+    href: "/finance/reports/deferred",
+    label: "الإيراد المؤجل والمحقق",
+    description: "ما فُوتر من رسوم دراسية وما اعتُرف به شهرياً وما بقي مؤجلاً.",
+  },
+  {
+    href: "/finance/reports/collections",
+    label: "التحصيل مقابل المستهدف",
+    description: "المحصّل حسب الطريقة واليوم وأمين الصندوق، ونسبة المستهدف.",
+  },
+  {
+    href: "/finance/reports/discounts",
+    label: "الخصومات والمنح",
+    description: "إجمالي الخصومات حسب النوع والصف وعدد المستفيدين.",
+  },
+  {
+    href: "/finance/reports/daily-cash",
+    label: "حركة الصندوق اليومية",
+    description: "سندات اليوم وورديات أمناء الصندوق وفروقاتها.",
+  },
 ] as const;
 
-const REPORT_TABS = [{ href: "/finance/reports", label: "كل التقارير", exact: true }, ...REPORTS.map((r) => ({ href: r.href, label: r.label }))];
+const REPORT_TABS = [
+  { href: "/finance/reports", label: "كل التقارير", exact: true },
+  ...REPORTS.map((r) => ({ href: r.href, label: r.label })),
+];
 
-function ReportShell({ title, controls, children, onCsv }: { title: string; controls?: ReactNode; children: ReactNode; onCsv?: () => void }) {
+function ReportShell({
+  title,
+  controls,
+  children,
+  onCsv,
+}: {
+  title: string;
+  controls?: ReactNode;
+  children: ReactNode;
+  onCsv?: () => void;
+}) {
   const { tenant } = useApp();
   return (
     <ModuleShell
@@ -75,7 +141,11 @@ function ReportShell({ title, controls, children, onCsv }: { title: string; cont
 }
 
 function Loading({ error }: { error?: { message: string } | null }) {
-  return error ? <EmptyState illustration="lock" title="تعذر عرض التقرير" description={error.message} /> : <SkeletonLines lines={12} />;
+  return error ? (
+    <EmptyState illustration="lock" title="تعذر عرض التقرير" description={error.message} />
+  ) : (
+    <SkeletonLines lines={12} />
+  );
 }
 
 const dec = (minor: number) => minorToDecimalString(minor, "SAR");
@@ -84,9 +154,13 @@ export function ReportsIndex() {
   const { can } = useApp();
   return (
     <ModuleShell nav={financeNav("finance-reports")} tabs={REPORT_TABS} wide>
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         {REPORTS.filter((r) => r.href !== "/finance/reports/vat" || can("taxes", "view")).map((r) => (
-          <Link key={r.href} href={r.href} className="rounded-lg bg-card p-4 shadow-card transition-[transform,box-shadow] duration-[140ms] hover:-translate-y-px hover:shadow-card-hover">
+          <Link
+            key={r.href}
+            href={r.href}
+            className="rounded-lg bg-card p-4 shadow-card transition-[transform,box-shadow] duration-[140ms] hover:-translate-y-px hover:shadow-card-hover"
+          >
             <FileBarChart className="size-5 text-fg-3" />
             <p className="mt-2 text-[15px] font-semibold">{r.label}</p>
             <p className="mt-1 text-[13px] leading-6 text-fg-3">{r.description}</p>
@@ -108,18 +182,59 @@ export function TrialBalanceReport() {
   const [cc, setCc] = useState<string>("all");
   const [zero, setZero] = useState(false);
   const centers = trpc.finance.accounting.costCenters.useQuery(undefined, { retry: false });
-  const q = trpc.finance.reports.trialBalance.useQuery({ ...range, costCenterId: cc === "all" ? null : cc, includeZero: zero });
+  const q = trpc.finance.reports.trialBalance.useQuery({
+    ...range,
+    costCenterId: cc === "all" ? null : cc,
+    includeZero: zero,
+  });
   const d = q.data;
   const c = money.cell;
   const hasOpening = Boolean(d && (d.totals.openingDebit || d.totals.openingCredit));
   return (
     <ReportShell
       title="ميزان المراجعة"
-      onCsv={d ? () => downloadCsv(`trial-balance-${range.to}.csv`, [["code", "account", "opening_debit", "opening_credit", "debit", "credit", "closing_debit", "closing_credit"], ...d.rows.map((r) => [r.code, r.name, dec(r.openingDebit), dec(r.openingCredit), dec(r.debit), dec(r.credit), dec(r.closingDebit), dec(r.closingCredit)])]) : undefined}
+      onCsv={
+        d
+          ? () =>
+              downloadCsv(`trial-balance-${range.to}.csv`, [
+                [
+                  "code",
+                  "account",
+                  "opening_debit",
+                  "opening_credit",
+                  "debit",
+                  "credit",
+                  "closing_debit",
+                  "closing_credit",
+                ],
+                ...d.rows.map((r) => [
+                  r.code,
+                  r.name,
+                  dec(r.openingDebit),
+                  dec(r.openingCredit),
+                  dec(r.debit),
+                  dec(r.credit),
+                  dec(r.closingDebit),
+                  dec(r.closingCredit),
+                ]),
+              ])
+          : undefined
+      }
       controls={
         <>
           <RangePicker from={range.from} to={range.to} onChange={setRange} />
-          {centers.data?.rows.length ? <Select size="sm" className="w-44" value={cc} onChange={setCc} options={[{ value: "all", label: "كل مراكز التكلفة" }, ...centers.data.rows.map((x) => ({ value: x.id, label: x.name }))]} /> : null}
+          {centers.data?.rows.length ? (
+            <Select
+              size="sm"
+              className="w-44"
+              value={cc}
+              onChange={setCc}
+              options={[
+                { value: "all", label: "كل مراكز التكلفة" },
+                ...centers.data.rows.map((x) => ({ value: x.id, label: x.name })),
+              ]}
+            />
+          ) : null}
           <label className="flex items-center gap-1.5 text-[13px] text-fg-2">
             <Checkbox checked={zero} onChange={setZero} /> الصفرية
           </label>
@@ -130,19 +245,36 @@ export function TrialBalanceReport() {
         <Loading error={q.error} />
       ) : (
         <>
-          <p className="mb-2">{d.balanced ? <Tag color="green">متوازن: مجموع المدين = مجموع الدائن</Tag> : <Tag color="red">غير متوازن</Tag>}</p>
+          <p className="mb-2">
+            {d.balanced ? (
+              <Tag color="green">متوازن: مجموع المدين = مجموع الدائن</Tag>
+            ) : (
+              <Tag color="red">غير متوازن</Tag>
+            )}
+          </p>
           <FinTable
             dense
             head={
               <>
                 <tr>
                   <th rowSpan={2}>الحساب</th>
-                  {hasOpening ? <th colSpan={2} className="!text-center">أول المدة</th> : null}
-                  <th colSpan={2} className="!text-center">الحركة</th>
-                  <th colSpan={2} className="!text-center">الختامي</th>
+                  {hasOpening ? (
+                    <th colSpan={2} className="!text-center">
+                      أول المدة
+                    </th>
+                  ) : null}
+                  <th colSpan={2} className="!text-center">
+                    الحركة
+                  </th>
+                  <th colSpan={2} className="!text-center">
+                    الختامي
+                  </th>
                 </tr>
                 <tr>
-                  {(hasOpening ? ["مدين", "دائن", "مدين", "دائن", "مدين", "دائن"] : ["مدين", "دائن", "مدين", "دائن"]).map((h, i) => (
+                  {(hasOpening
+                    ? ["مدين", "دائن", "مدين", "دائن", "مدين", "دائن"]
+                    : ["مدين", "دائن", "مدين", "دائن"]
+                  ).map((h, i) => (
                     <th key={i} className={num}>
                       {h}
                     </th>
@@ -203,7 +335,12 @@ export function IncomeStatementReport() {
   const [compare, setCompare] = useState(false);
   const [cc, setCc] = useState("all");
   const centers = trpc.finance.accounting.costCenters.useQuery(undefined, { retry: false });
-  const q = trpc.finance.reports.incomeStatement.useQuery({ ...range, compareFrom: compare ? shiftYear(range.from, -1) : null, compareTo: compare ? shiftYear(range.to, -1) : null, costCenterId: cc === "all" ? null : cc });
+  const q = trpc.finance.reports.incomeStatement.useQuery({
+    ...range,
+    compareFrom: compare ? shiftYear(range.from, -1) : null,
+    compareTo: compare ? shiftYear(range.to, -1) : null,
+    costCenterId: cc === "all" ? null : cc,
+  });
   const branches = trpc.finance.reports.incomeByBranch.useQuery(range);
   const d = q.data;
   const cmpLabel = `${formatNumber(Number(range.from.slice(0, 4)) - 1, prefs.digits, { useGrouping: false })}`;
@@ -211,11 +348,39 @@ export function IncomeStatementReport() {
   return (
     <ReportShell
       title="قائمة الدخل"
-      onCsv={d ? () => downloadCsv(`income-${range.to}.csv`, [["section", "code", "account", "amount", "compare"], ...d.sections.flatMap((s) => s.rows.map((r) => [s.label, r.code, r.name, dec(r.amount), r.compare !== undefined ? dec(r.compare) : ""])), ["net", "", "", dec(d.net), d.compareNet !== undefined ? dec(d.compareNet) : ""]]) : undefined}
+      onCsv={
+        d
+          ? () =>
+              downloadCsv(`income-${range.to}.csv`, [
+                ["section", "code", "account", "amount", "compare"],
+                ...d.sections.flatMap((s) =>
+                  s.rows.map((r) => [
+                    s.label,
+                    r.code,
+                    r.name,
+                    dec(r.amount),
+                    r.compare !== undefined ? dec(r.compare) : "",
+                  ]),
+                ),
+                ["net", "", "", dec(d.net), d.compareNet !== undefined ? dec(d.compareNet) : ""],
+              ])
+          : undefined
+      }
       controls={
         <>
           <RangePicker from={range.from} to={range.to} onChange={setRange} />
-          {centers.data?.rows.length ? <Select size="sm" className="w-44" value={cc} onChange={setCc} options={[{ value: "all", label: "كل مراكز التكلفة" }, ...centers.data.rows.map((x) => ({ value: x.id, label: x.name }))]} /> : null}
+          {centers.data?.rows.length ? (
+            <Select
+              size="sm"
+              className="w-44"
+              value={cc}
+              onChange={setCc}
+              options={[
+                { value: "all", label: "كل مراكز التكلفة" },
+                ...centers.data.rows.map((x) => ({ value: x.id, label: x.name })),
+              ]}
+            />
+          ) : null}
           <label className="flex items-center gap-1.5 text-[13px] text-fg-2">
             <Checkbox checked={compare} onChange={setCompare} /> مقارنة بالعام السابق
           </label>
@@ -230,7 +395,12 @@ export function IncomeStatementReport() {
             <Figure label="الإيرادات" value={money.fmt(d.sections[0]!.total)} />
             <Figure label="تكلفة الإيراد" value={money.fmt(d.sections[1]!.total)} />
             <Figure label="المصروفات التشغيلية" value={money.fmt(d.sections[2]!.total)} />
-            <Figure label="صافي الدخل" value={money.fmt(d.net)} tone={d.net < 0 ? "danger" : "success"} hint={compare ? `مقابل ${money.fmt(d.compareNet ?? 0)} في ${cmpLabel}` : undefined} />
+            <Figure
+              label="صافي الدخل"
+              value={money.fmt(d.net)}
+              tone={d.net < 0 ? "danger" : "success"}
+              hint={compare ? `مقابل ${money.fmt(d.compareNet ?? 0)} في ${cmpLabel}` : undefined}
+            />
           </section>
           <FinTable
             head={
@@ -243,7 +413,16 @@ export function IncomeStatementReport() {
             }
           >
             {d.sections.map((s, si) => (
-              <SectionRows key={s.key} label={s.label} rows={s.rows} total={s.total} compareTotal={s.compareTotal} compare={compare} change={change} after={si === 1 ? { label: "مجمل الربح", value: d.grossProfit } : undefined} />
+              <SectionRows
+                key={s.key}
+                label={s.label}
+                rows={s.rows}
+                total={s.total}
+                compareTotal={s.compareTotal}
+                compare={compare}
+                change={change}
+                after={si === 1 ? { label: "مجمل الربح", value: d.grossProfit } : undefined}
+              />
             ))}
             <tr className="bg-hover/60 text-[15px] font-bold">
               <td>صافي الدخل</td>
@@ -252,7 +431,10 @@ export function IncomeStatementReport() {
               {compare ? <td className={num}>{change(d.net, d.compareNet)}</td> : null}
             </tr>
           </FinTable>
-          <p className="mt-2 text-[12px] text-fg-3">الإيرادات صافية بعد حساب «خصومات وإعفاءات ومنح» المقابل، والرسوم الدراسية تظهر عند الاعتراف الشهري لا عند الفوترة.</p>
+          <p className="mt-2 text-[12px] text-fg-3">
+            الإيرادات صافية بعد حساب «خصومات وإعفاءات ومنح» المقابل، والرسوم الدراسية تظهر عند الاعتراف الشهري
+            لا عند الفوترة.
+          </p>
           {branches.data && branches.data.length > 1 ? (
             <section className="mt-6">
               <h2 className="mb-2 text-[15px] font-semibold">حسب الفرع</h2>
@@ -284,7 +466,23 @@ export function IncomeStatementReport() {
   );
 }
 
-function SectionRows({ label, rows, total, compareTotal, compare, change, after }: { label: string; rows: Array<{ id: string; code: string; name: string; amount: number; compare?: number }>; total: number; compareTotal?: number; compare: boolean; change: (a: number, b?: number) => string; after?: { label: string; value: number } }) {
+function SectionRows({
+  label,
+  rows,
+  total,
+  compareTotal,
+  compare,
+  change,
+  after,
+}: {
+  label: string;
+  rows: Array<{ id: string; code: string; name: string; amount: number; compare?: number }>;
+  total: number;
+  compareTotal?: number;
+  compare: boolean;
+  change: (a: number, b?: number) => string;
+  after?: { label: string; value: number };
+}) {
   const money = useMoney();
   return (
     <>
@@ -301,7 +499,11 @@ function SectionRows({ label, rows, total, compareTotal, compare, change, after 
             </Link>
           </td>
           <td className={num}>{money.fmt(r.amount, false)}</td>
-          {compare ? <td className={cn(num, "text-fg-3")}>{r.compare !== undefined ? money.fmt(r.compare, false) : "—"}</td> : null}
+          {compare ? (
+            <td className={cn(num, "text-fg-3")}>
+              {r.compare !== undefined ? money.fmt(r.compare, false) : "—"}
+            </td>
+          ) : null}
           {compare ? <td className={cn(num, "text-fg-3")}>{change(r.amount, r.compare)}</td> : null}
         </tr>
       ))}
@@ -341,18 +543,43 @@ export function BalanceSheetReport() {
   const q = trpc.finance.reports.balanceSheet.useQuery({ asOf });
   const d = q.data;
   return (
-    <ReportShell title="الميزانية العمومية" controls={<Input type="date" className="h-7 w-[150px] text-[13px]" value={asOf} onChange={(e) => e.target.value && setAsOf(e.target.value)} aria-label="في تاريخ" />}>
+    <ReportShell
+      title="الميزانية العمومية"
+      controls={
+        <Input
+          type="date"
+          className="h-7 w-[150px] text-[13px]"
+          value={asOf}
+          onChange={(e) => e.target.value && setAsOf(e.target.value)}
+          aria-label="في تاريخ"
+        />
+      }
+    >
       {!d ? (
         <Loading error={q.error} />
       ) : (
         <>
-          <p className="mb-3">{d.balanced ? <Tag color="green">الأصول = الخصوم + حقوق الملكية</Tag> : <Tag color="red">غير متوازنة</Tag>}</p>
-          <div className="grid gap-5 lg:grid-cols-2">
+          <p className="mb-3">
+            {d.balanced ? (
+              <Tag color="green">الأصول = الخصوم + حقوق الملكية</Tag>
+            ) : (
+              <Tag color="red">غير متوازنة</Tag>
+            )}
+          </p>
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <BsBlock title="الأصول" rows={d.assets} total={d.totalAssets} />
             <div className="space-y-5">
               <BsBlock title="الخصوم" rows={d.liabilities} total={d.totalLiabilities} />
-              <BsBlock title="حقوق الملكية" rows={d.equity} total={d.totalEquity} extra={{ label: "صافي دخل الفترة غير المقفل", amount: d.earnings }} />
-              <Figure label="إجمالي الخصوم وحقوق الملكية" value={money.fmt(d.totalLiabilities + d.totalEquity)} />
+              <BsBlock
+                title="حقوق الملكية"
+                rows={d.equity}
+                total={d.totalEquity}
+                extra={{ label: "صافي دخل الفترة غير المقفل", amount: d.earnings }}
+              />
+              <Figure
+                label="إجمالي الخصوم وحقوق الملكية"
+                value={money.fmt(d.totalLiabilities + d.totalEquity)}
+              />
             </div>
           </div>
         </>
@@ -361,7 +588,17 @@ export function BalanceSheetReport() {
   );
 }
 
-function BsBlock({ title, rows, total, extra }: { title: string; rows: Array<{ id: string; code: string; name: string; amount: number }>; total: number; extra?: { label: string; amount: number } }) {
+function BsBlock({
+  title,
+  rows,
+  total,
+  extra,
+}: {
+  title: string;
+  rows: Array<{ id: string; code: string; name: string; amount: number }>;
+  total: number;
+  extra?: { label: string; amount: number };
+}) {
   const money = useMoney();
   return (
     <section>
@@ -416,7 +653,10 @@ export function CashFlowReport() {
   const q = trpc.finance.reports.cashFlow.useQuery(range);
   const d = q.data;
   return (
-    <ReportShell title="قائمة التدفقات النقدية" controls={<RangePicker from={range.from} to={range.to} onChange={setRange} />}>
+    <ReportShell
+      title="قائمة التدفقات النقدية"
+      controls={<RangePicker from={range.from} to={range.to} onChange={setRange} />}
+    >
       {!d ? (
         <Loading error={q.error} />
       ) : (
@@ -445,14 +685,24 @@ export function CashFlowReport() {
               <td className={num}>{money.fmt(d.closing)}</td>
             </tr>
           </FinTable>
-          <p className="mt-2 text-[12px] text-fg-3">الطريقة المباشرة من قيود حسابات النقد والبنوك؛ التحويلات الداخلية بينها مستبعدة.</p>
+          <p className="mt-2 text-[12px] text-fg-3">
+            الطريقة المباشرة من قيود حسابات النقد والبنوك؛ التحويلات الداخلية بينها مستبعدة.
+          </p>
         </>
       )}
     </ReportShell>
   );
 }
 
-function SectionCash({ label, rows, total }: { label: string; rows: Array<{ label: string; amount: number }>; total: number }) {
+function SectionCash({
+  label,
+  rows,
+  total,
+}: {
+  label: string;
+  rows: Array<{ label: string; amount: number }>;
+  total: number;
+}) {
   const money = useMoney();
   return (
     <>
@@ -492,11 +742,50 @@ export function AgingReport() {
   return (
     <ReportShell
       title="تقادم ذمم أولياء الأمور"
-      onCsv={d ? () => downloadCsv(`aging-${asOf}.csv`, [["guardian", "phone", "students", ...(d.buckets.map((b) => b.label) ?? []), "total", "oldest_days"], ...d.rows.map((r) => [r.guardian, r.phone ?? "", r.students.join(" / "), ...keys.map((k) => dec(r.buckets[k])), dec(r.total), r.oldestDays])]) : undefined}
+      onCsv={
+        d
+          ? () =>
+              downloadCsv(`aging-${asOf}.csv`, [
+                [
+                  "guardian",
+                  "phone",
+                  "students",
+                  ...(d.buckets.map((b) => b.label) ?? []),
+                  "total",
+                  "oldest_days",
+                ],
+                ...d.rows.map((r) => [
+                  r.guardian,
+                  r.phone ?? "",
+                  r.students.join(" / "),
+                  ...keys.map((k) => dec(r.buckets[k])),
+                  dec(r.total),
+                  r.oldestDays,
+                ]),
+              ])
+          : undefined
+      }
       controls={
         <>
-          <Input type="date" className="h-7 w-[150px] text-[13px]" value={asOf} onChange={(e) => e.target.value && setAsOf(e.target.value)} aria-label="في تاريخ" />
-          {setup.data && setup.data.branches.length > 1 ? <Select size="sm" className="w-40" value={branch} onChange={setBranch} options={[{ value: "all", label: "كل الفروع" }, ...setup.data.branches.map((b) => ({ value: b.id, label: b.name }))]} /> : null}
+          <Input
+            type="date"
+            className="h-7 w-[150px] text-[13px]"
+            value={asOf}
+            onChange={(e) => e.target.value && setAsOf(e.target.value)}
+            aria-label="في تاريخ"
+          />
+          {setup.data && setup.data.branches.length > 1 ? (
+            <Select
+              size="sm"
+              className="w-40"
+              value={branch}
+              onChange={setBranch}
+              options={[
+                { value: "all", label: "كل الفروع" },
+                ...setup.data.branches.map((b) => ({ value: b.id, label: b.name })),
+              ]}
+            />
+          ) : null}
         </>
       }
     >
@@ -504,14 +793,29 @@ export function AgingReport() {
         <Loading error={q.error} />
       ) : (
         <>
-          <div className="mb-5 grid gap-4 lg:grid-cols-[1fr_280px]">
-            <ChartCard title="المستحق حسب شرائح التأخير" subtitle={`الإجمالي ${money.fmt(d.total)}`} table={{ columns: ["الشريحة", "المبلغ"], rows: d.buckets.map((b) => [b.label, money.fmt(b.amount)]) }}>
-              <HBars data={d.buckets.map((b) => ({ key: b.key, label: b.label, value: b.amount }))} format={(n) => money.fmt(n)} labelWidth={130} />
+          <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+            <ChartCard
+              title="المستحق حسب شرائح التأخير"
+              subtitle={`الإجمالي ${money.fmt(d.total)}`}
+              table={{
+                columns: ["الشريحة", "المبلغ"],
+                rows: d.buckets.map((b) => [b.label, money.fmt(b.amount)]),
+              }}
+            >
+              <HBars
+                data={d.buckets.map((b) => ({ key: b.key, label: b.label, value: b.amount }))}
+                format={(n) => money.fmt(n)}
+                labelWidth={130}
+              />
             </ChartCard>
             <div className="grid gap-3">
               <Figure label="إجمالي الذمم" value={money.fmt(d.total)} />
               <Figure label="أسر عليها مستحقات" value={formatNumber(d.rows.length, prefs.digits)} />
-              <Figure label="متأخر أكثر من ٩٠ يوماً" value={money.fmt(d.buckets.find((b) => b.key === "d90p")?.amount ?? 0)} tone={(d.buckets.find((b) => b.key === "d90p")?.amount ?? 0) > 0 ? "danger" : undefined} />
+              <Figure
+                label="متأخر أكثر من ٩٠ يوماً"
+                value={money.fmt(d.buckets.find((b) => b.key === "d90p")?.amount ?? 0)}
+                tone={(d.buckets.find((b) => b.key === "d90p")?.amount ?? 0) > 0 ? "danger" : undefined}
+              />
             </div>
           </div>
           {d.rows.length ? (
@@ -606,7 +910,11 @@ export function VatReport() {
           <section className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
             <Figure label="ضريبة المخرجات" value={money.fmt(d.output)} />
             <Figure label="ضريبة المدخلات" value={money.fmt(d.input)} />
-            <Figure label={d.net >= 0 ? "صافي المستحق للهيئة" : "صافي القابل للاسترداد"} value={money.fmt(Math.abs(d.net))} tone={d.net > 0 ? "warning" : "success"} />
+            <Figure
+              label={d.net >= 0 ? "صافي المستحق للهيئة" : "صافي القابل للاسترداد"}
+              value={money.fmt(Math.abs(d.net))}
+              tone={d.net > 0 ? "warning" : "success"}
+            />
           </section>
           <h2 className="mb-2 text-[15px] font-semibold">المبيعات</h2>
           <FinTable
@@ -658,7 +966,8 @@ export function VatReport() {
             </tr>
           </FinTable>
           <p className="mt-3 rounded-md bg-hover px-3 py-2 text-[12px] leading-6 text-fg-2">
-            للمراجعة قبل التقديم: الأرقام من الدفاتر (حسابي المخرجات والمدخلات) ومن الفواتير حسب رمز الضريبة. الربط الإلكتروني مع منصة «فاتورة» (المرحلة الثانية) غير مفعّل في هذا الإصدار.
+            للمراجعة قبل التقديم: الأرقام من الدفاتر (حسابي المخرجات والمدخلات) ومن الفواتير حسب رمز الضريبة.
+            الربط الإلكتروني مع منصة «فاتورة» (المرحلة الثانية) غير مفعّل في هذا الإصدار.
           </p>
         </>
       )}
@@ -678,7 +987,23 @@ export function DeferredReport() {
   const q = trpc.finance.reports.deferred.useQuery({ academicYearId: year === "all" ? null : year });
   const d = q.data;
   return (
-    <ReportShell title="الإيراد المؤجل مقابل المحقق" controls={setup.data ? <Select size="sm" className="w-48" value={year} onChange={setYear} options={[{ value: "all", label: "كل الأعوام" }, ...setup.data.years.map((y) => ({ value: y.id, label: y.name }))]} /> : null}>
+    <ReportShell
+      title="الإيراد المؤجل مقابل المحقق"
+      controls={
+        setup.data ? (
+          <Select
+            size="sm"
+            className="w-48"
+            value={year}
+            onChange={setYear}
+            options={[
+              { value: "all", label: "كل الأعوام" },
+              ...setup.data.years.map((y) => ({ value: y.id, label: y.name })),
+            ]}
+          />
+        ) : null
+      }
+    >
       {!d ? (
         <Loading error={q.error} />
       ) : (
@@ -687,7 +1012,18 @@ export function DeferredReport() {
             <Figure label="المفوتر (بعد الإشعارات)" value={money.fmt(d.totals.billed)} />
             <Figure label="المعترف به" value={money.fmt(d.totals.recognized)} tone="success" />
             <Figure label="المتبقي مؤجلاً" value={money.fmt(d.totals.deferred)} />
-            <Figure label="رصيد حساب الإيراد المؤجل" value={money.fmt(d.ledgerBalance)} tone={year === "all" && d.ledgerBalance !== d.totals.deferred ? "danger" : undefined} hint={year === "all" ? (d.ledgerBalance === d.totals.deferred ? "مطابق للتفاصيل" : "لا يطابق التفاصيل؛ راجع القيود اليدوية") : "لكل الأعوام"} />
+            <Figure
+              label="رصيد حساب الإيراد المؤجل"
+              value={money.fmt(d.ledgerBalance)}
+              tone={year === "all" && d.ledgerBalance !== d.totals.deferred ? "danger" : undefined}
+              hint={
+                year === "all"
+                  ? d.ledgerBalance === d.totals.deferred
+                    ? "مطابق للتفاصيل"
+                    : "لا يطابق التفاصيل؛ راجع القيود اليدوية"
+                  : "لكل الأعوام"
+              }
+            />
           </section>
           <FinTable
             dense
@@ -711,11 +1047,15 @@ export function DeferredReport() {
                 <td className={num}>{money.fmt(r.billed, false)}</td>
                 <td className={num}>{money.fmt(r.recognized, false)}</td>
                 <td className={num}>{money.fmt(r.deferred, false)}</td>
-                <td className={num}>{r.billed ? formatPercent(r.recognized / r.billed, prefs.digits) : "—"}</td>
+                <td className={num}>
+                  {r.billed ? formatPercent(r.recognized / r.billed, prefs.digits) : "—"}
+                </td>
               </tr>
             ))}
           </FinTable>
-          <p className="mt-2 text-[12px] text-fg-3">تُعترف الرسوم الدراسية شهرياً بالتناسب مع أيام العام الدراسي من قائمة إقفال الفترة.</p>
+          <p className="mt-2 text-[12px] text-fg-3">
+            تُعترف الرسوم الدراسية بالتساوي على أشهر العام الدراسي، من قائمة إقفال كل فترة.
+          </p>
         </>
       )}
     </ReportShell>
@@ -736,26 +1076,88 @@ export function CollectionsReport() {
   const d = q.data;
   const rate = d && d.due ? d.dueCollected / d.due : null;
   return (
-    <ReportShell title="التحصيل مقابل المستهدف" controls={<RangePicker from={range.from} to={range.to} onChange={setRange} />}>
+    <ReportShell
+      title="التحصيل مقابل المستهدف"
+      controls={<RangePicker from={range.from} to={range.to} onChange={setRange} />}
+    >
       {!d ? (
         <Loading error={q.error} />
       ) : (
         <>
           <section className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Figure label="المحصّل" value={money.fmt(d.collected)} hint={`${formatNumber(d.count, prefs.digits)} سند`} />
+            <Figure
+              label="المحصّل"
+              value={money.fmt(d.collected)}
+              hint={`${formatNumber(d.count, prefs.digits)} سند`}
+            />
             <Figure label="أقساط مستحقة في الفترة" value={money.fmt(d.due)} />
             <Figure label="المستهدف" value={money.fmt(d.target)} />
-            <Figure label="نسبة تحصيل المستحق" value={rate === null ? "—" : formatPercent(rate, prefs.digits)} tone={rate !== null && d.dueCollected >= d.target ? "success" : rate !== null ? "warning" : undefined} />
+            <Figure
+              label="نسبة تحصيل المستحق"
+              value={rate === null ? "—" : formatPercent(rate, prefs.digits)}
+              tone={
+                rate !== null && d.dueCollected >= d.target
+                  ? "success"
+                  : rate !== null
+                    ? "warning"
+                    : undefined
+              }
+            />
           </section>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <ChartCard className="lg:col-span-2" title="المحصّل يومياً" table={{ columns: ["اليوم", "المبلغ"], rows: d.byDay.map((x) => [fmtDate(x.date), money.fmt(x.amount)]) }}>
-              {d.byDay.length ? <Columns data={d.byDay.map((x) => ({ key: x.date, label: fmtDate(x.date).split(" ")[0]!, value: x.amount }))} format={(n) => money.fmt(n)} /> : <EmptyState compact title="لا تحصيل في الفترة" />}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <ChartCard
+              className="lg:col-span-2"
+              title="المحصّل يومياً"
+              table={{
+                columns: ["اليوم", "المبلغ"],
+                rows: d.byDay.map((x) => [fmtDate(x.date), money.fmt(x.amount)]),
+              }}
+            >
+              {d.byDay.length ? (
+                <Columns
+                  data={d.byDay.map((x) => ({
+                    key: x.date,
+                    label: fmtDate(x.date).split(" ")[0]!,
+                    value: x.amount,
+                  }))}
+                  format={(n) => money.fmt(n)}
+                />
+              ) : (
+                <EmptyState compact title="لا تحصيل في الفترة" />
+              )}
             </ChartCard>
-            <ChartCard title="حسب طريقة الدفع" table={{ columns: ["الطريقة", "المبلغ"], rows: d.byMethod.map((x) => [PAYMENT_METHOD[x.method as PaymentMethodKey].label, money.fmt(x.amount)]) }}>
-              <HBars data={d.byMethod.sort((a, b) => b.amount - a.amount).map((x) => ({ key: x.method, label: PAYMENT_METHOD[x.method as PaymentMethodKey].label, value: x.amount }))} format={(n) => money.fmt(n)} />
+            <ChartCard
+              title="حسب طريقة الدفع"
+              table={{
+                columns: ["الطريقة", "المبلغ"],
+                rows: d.byMethod.map((x) => [
+                  PAYMENT_METHOD[x.method as PaymentMethodKey].label,
+                  money.fmt(x.amount),
+                ]),
+              }}
+            >
+              <HBars
+                data={d.byMethod
+                  .sort((a, b) => b.amount - a.amount)
+                  .map((x) => ({
+                    key: x.method,
+                    label: PAYMENT_METHOD[x.method as PaymentMethodKey].label,
+                    value: x.amount,
+                  }))}
+                format={(n) => money.fmt(n)}
+              />
             </ChartCard>
-            <ChartCard title="حسب أمين الصندوق" table={{ columns: ["المستخدم", "المبلغ"], rows: d.byCashier.map((x) => [x.name, money.fmt(x.amount)]) }}>
-              <HBars data={d.byCashier.map((x) => ({ key: x.name, label: x.name, value: x.amount }))} format={(n) => money.fmt(n)} />
+            <ChartCard
+              title="حسب أمين الصندوق"
+              table={{
+                columns: ["المستخدم", "المبلغ"],
+                rows: d.byCashier.map((x) => [x.name, money.fmt(x.amount)]),
+              }}
+            >
+              <HBars
+                data={d.byCashier.map((x) => ({ key: x.name, label: x.name, value: x.amount }))}
+                format={(n) => money.fmt(n)}
+              />
             </ChartCard>
           </div>
         </>
@@ -776,22 +1178,83 @@ export function DiscountsReport() {
   const q = trpc.finance.reports.discounts.useQuery({ academicYearId: year === "all" ? null : year });
   const d = q.data;
   return (
-    <ReportShell title="الخصومات والمنح" controls={setup.data ? <Select size="sm" className="w-48" value={year} onChange={setYear} options={[{ value: "all", label: "كل الأعوام" }, ...setup.data.years.map((y) => ({ value: y.id, label: y.name }))]} /> : null}>
+    <ReportShell
+      title="الخصومات والمنح"
+      controls={
+        setup.data ? (
+          <Select
+            size="sm"
+            className="w-48"
+            value={year}
+            onChange={setYear}
+            options={[
+              { value: "all", label: "كل الأعوام" },
+              ...setup.data.years.map((y) => ({ value: y.id, label: y.name })),
+            ]}
+          />
+        ) : null
+      }
+    >
       {!d ? (
         <Loading error={q.error} />
       ) : (
         <>
           <section className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
             <Figure label="إجمالي الخصومات" value={money.fmt(d.total)} />
-            <Figure label="نسبتها من رسوم البنود المخصومة" value={d.grossOnDiscounted ? formatPercent(d.total / d.grossOnDiscounted, prefs.digits, 1) : "—"} />
-            <Figure label="طلاب مستفيدون" value={formatNumber(d.byType.reduce((s, t) => Math.max(s, t.students), 0), prefs.digits)} hint="أكبر عدد في نوع واحد" />
+            <Figure
+              label="نسبتها من رسوم البنود المخصومة"
+              value={
+                d.grossOnDiscounted ? formatPercent(d.total / d.grossOnDiscounted, prefs.digits, 1) : "—"
+              }
+            />
+            <Figure
+              label="طلاب مستفيدون"
+              value={formatNumber(
+                d.byType.reduce((s, t) => Math.max(s, t.students), 0),
+                prefs.digits,
+              )}
+              hint="أكبر عدد في نوع واحد"
+            />
           </section>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <ChartCard title="حسب نوع الخصم" table={{ columns: ["النوع", "المبلغ", "الطلاب"], rows: d.byType.map((t) => [t.name, money.fmt(t.amount), t.students]) }}>
-              {d.byType.length ? <HBars data={d.byType.map((t) => ({ key: t.name, label: t.name, value: t.amount, hint: `${formatNumber(t.students, prefs.digits)} طالباً` }))} format={(n) => money.fmt(n)} labelWidth={160} /> : <EmptyState compact title="لا خصومات" />}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <ChartCard
+              title="حسب نوع الخصم"
+              table={{
+                columns: ["النوع", "المبلغ", "الطلاب"],
+                rows: d.byType.map((t) => [t.name, money.fmt(t.amount), t.students]),
+              }}
+            >
+              {d.byType.length ? (
+                <HBars
+                  data={d.byType.map((t) => ({
+                    key: t.name,
+                    label: t.name,
+                    value: t.amount,
+                    hint: `${formatNumber(t.students, prefs.digits)} طالباً`,
+                  }))}
+                  format={(n) => money.fmt(n)}
+                  labelWidth={160}
+                />
+              ) : (
+                <EmptyState compact title="لا خصومات" />
+              )}
             </ChartCard>
-            <ChartCard title="حسب الصف" table={{ columns: ["الصف", "المبلغ"], rows: d.byGrade.map((g) => [g.grade, money.fmt(g.amount)]) }}>
-              {d.byGrade.length ? <HBars data={d.byGrade.map((g) => ({ key: g.grade, label: g.grade, value: g.amount }))} format={(n) => money.fmt(n)} labelWidth={160} /> : <EmptyState compact title="لا خصومات" />}
+            <ChartCard
+              title="حسب الصف"
+              table={{
+                columns: ["الصف", "المبلغ"],
+                rows: d.byGrade.map((g) => [g.grade, money.fmt(g.amount)]),
+              }}
+            >
+              {d.byGrade.length ? (
+                <HBars
+                  data={d.byGrade.map((g) => ({ key: g.grade, label: g.grade, value: g.amount }))}
+                  format={(n) => money.fmt(n)}
+                  labelWidth={160}
+                />
+              ) : (
+                <EmptyState compact title="لا خصومات" />
+              )}
             </ChartCard>
           </div>
         </>
@@ -813,7 +1276,18 @@ export function DailyCashReport() {
   const q = trpc.finance.reports.dailyCash.useQuery({ date });
   const d = q.data;
   return (
-    <ReportShell title="حركة الصندوق اليومية" controls={<Input type="date" className="h-7 w-[150px] text-[13px]" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} aria-label="اليوم" />}>
+    <ReportShell
+      title="حركة الصندوق اليومية"
+      controls={
+        <Input
+          type="date"
+          className="h-7 w-[150px] text-[13px]"
+          value={date}
+          onChange={(e) => e.target.value && setDate(e.target.value)}
+          aria-label="اليوم"
+        />
+      }
+    >
       {!d ? (
         <Loading error={q.error} />
       ) : (
@@ -842,11 +1316,27 @@ export function DailyCashReport() {
                 {d.sessions.map((s) => (
                   <tr key={s.id}>
                     <td>{s.cashier ?? "—"}</td>
-                    <td>{s.status === "OPEN" ? <Tag size="sm" color="green">مفتوحة</Tag> : <Tag size="sm" color="slate">مغلقة</Tag>}</td>
+                    <td>
+                      {s.status === "OPEN" ? (
+                        <Tag size="sm" color="green">
+                          مفتوحة
+                        </Tag>
+                      ) : (
+                        <Tag size="sm" color="slate">
+                          مغلقة
+                        </Tag>
+                      )}
+                    </td>
                     <td className={num}>{money.fmt(s.openingFloatMinor, false)}</td>
-                    <td className={num}>{s.expectedMinor !== null ? money.fmt(s.expectedMinor, false) : "—"}</td>
-                    <td className={num}>{s.countedMinor !== null ? money.fmt(s.countedMinor, false) : "—"}</td>
-                    <td className={cn(num, s.differenceMinor ? "text-warning-700" : "")}>{s.differenceMinor ? money.fmt(s.differenceMinor, false) : "—"}</td>
+                    <td className={num}>
+                      {s.expectedMinor !== null ? money.fmt(s.expectedMinor, false) : "—"}
+                    </td>
+                    <td className={num}>
+                      {s.countedMinor !== null ? money.fmt(s.countedMinor, false) : "—"}
+                    </td>
+                    <td className={cn(num, s.differenceMinor ? "text-warning-700" : "")}>
+                      {s.differenceMinor ? money.fmt(s.differenceMinor, false) : "—"}
+                    </td>
                   </tr>
                 ))}
               </FinTable>
@@ -888,4 +1378,3 @@ export function DailyCashReport() {
     </ReportShell>
   );
 }
-

@@ -6,7 +6,13 @@
 import type { AccountType, BalanceSide, FeeKind, DiscountKind, Prisma } from "@/generated/prisma/client";
 import { rootDb } from "@/server/db/client";
 
-type Acc = [code: string, name: string, type: AccountType, parent: string | null, opts?: { group?: boolean; key?: string; side?: BalanceSide; cf?: string }];
+type Acc = [
+  code: string,
+  name: string,
+  type: AccountType,
+  parent: string | null,
+  opts?: { group?: boolean; key?: string; side?: BalanceSide; cf?: string },
+];
 
 export const DEFAULT_COA: Acc[] = [
   ["1", "الأصول", "ASSET", null, { group: true }],
@@ -23,7 +29,13 @@ export const DEFAULT_COA: Acc[] = [
   ["1203", "ذمم أولياء الأمور — رسوم أخرى", "ASSET", "12", { key: "AR_OTHER", cf: "OPERATING" }],
   ["1210", "ذمم الموظفين والسلف", "ASSET", "12", { key: "AR_STAFF", cf: "OPERATING" }],
   ["1220", "شيكات تحت التحصيل", "ASSET", "12", { key: "CHEQUES_UNDER_COLLECTION", cf: "OPERATING" }],
-  ["1290", "مخصص الديون المشكوك في تحصيلها", "ASSET", "12", { key: "DOUBTFUL_DEBTS", side: "CREDIT", cf: "OPERATING" }],
+  [
+    "1290",
+    "مخصص الديون المشكوك في تحصيلها",
+    "ASSET",
+    "12",
+    { key: "DOUBTFUL_DEBTS", side: "CREDIT", cf: "OPERATING" },
+  ],
   ["13", "المخزون", "ASSET", "1", { group: true }],
   ["1301", "مخزون الكتب والزي", "ASSET", "13", { cf: "OPERATING" }],
   ["1302", "مخزون المستلزمات", "ASSET", "13", { cf: "OPERATING" }],
@@ -37,18 +49,36 @@ export const DEFAULT_COA: Acc[] = [
   ["1503", "أثاث وتجهيزات", "ASSET", "15", { cf: "INVESTING" }],
   ["1504", "أجهزة حاسب", "ASSET", "15", { cf: "INVESTING" }],
   ["1505", "حافلات", "ASSET", "15", { cf: "INVESTING" }],
-  ["1590", "مجمع الإهلاك", "ASSET", "15", { key: "ACCUMULATED_DEPRECIATION", side: "CREDIT", cf: "INVESTING" }],
+  [
+    "1590",
+    "مجمع الإهلاك",
+    "ASSET",
+    "15",
+    { key: "ACCUMULATED_DEPRECIATION", side: "CREDIT", cf: "INVESTING" },
+  ],
   ["2", "الخصوم", "LIABILITY", null, { group: true }],
   ["21", "الذمم الدائنة", "LIABILITY", "2", { group: true }],
   ["2101", "الموردون", "LIABILITY", "21", { key: "AP", cf: "OPERATING" }],
   ["22", "إيرادات مؤجلة", "LIABILITY", "2", { group: true }],
-  ["2201", "رسوم دراسية مقبوضة مقدماً (مؤجلة)", "LIABILITY", "22", { key: "DEFERRED_REVENUE", cf: "OPERATING" }],
+  [
+    "2201",
+    "رسوم دراسية مقبوضة مقدماً (مؤجلة)",
+    "LIABILITY",
+    "22",
+    { key: "DEFERRED_REVENUE", cf: "OPERATING" },
+  ],
   ["23", "أرصدة دائنة لأولياء الأمور", "LIABILITY", "2", { group: true }],
   ["2301", "دفعات زائدة وأرصدة دائنة", "LIABILITY", "23", { key: "GUARDIAN_CREDIT", cf: "OPERATING" }],
   ["2302", "أرصدة محافظ الطلاب", "LIABILITY", "23", { key: "STUDENT_WALLETS", cf: "OPERATING" }],
   ["24", "ضريبة القيمة المضافة", "LIABILITY", "2", { group: true }],
   ["2401", "ضريبة القيمة المضافة — مخرجات", "LIABILITY", "24", { key: "VAT_OUTPUT", cf: "OPERATING" }],
-  ["2402", "ضريبة القيمة المضافة — مدخلات", "LIABILITY", "24", { key: "VAT_INPUT", side: "DEBIT", cf: "OPERATING" }],
+  [
+    "2402",
+    "ضريبة القيمة المضافة — مدخلات",
+    "LIABILITY",
+    "24",
+    { key: "VAT_INPUT", side: "DEBIT", cf: "OPERATING" },
+  ],
   ["2501", "رواتب مستحقة", "LIABILITY", "2", { key: "SALARIES_PAYABLE", cf: "OPERATING" }],
   ["2601", "مخصص مكافأة نهاية الخدمة", "LIABILITY", "2", { key: "EOS_PROVISION", cf: "OPERATING" }],
   ["2701", "تأمينات اجتماعية مستحقة", "LIABILITY", "2", { key: "GOSI_PAYABLE", cf: "OPERATING" }],
@@ -104,20 +134,59 @@ export const DEFAULT_COA: Acc[] = [
   ["7502", "فروقات الصندوق", "EXPENSE", "6", { key: "CASH_OVER_SHORT" }],
 ];
 
-const normalSide = (type: AccountType): BalanceSide => (type === "ASSET" || type === "EXPENSE" ? "DEBIT" : "CREDIT");
+const normalSide = (type: AccountType): BalanceSide =>
+  type === "ASSET" || type === "EXPENSE" ? "DEBIT" : "CREDIT";
 
-type Tx = Pick<typeof rootDb, "account" | "taxCode" | "costCenter" | "feeItem" | "installmentPlan" | "discountType" | "fiscalYear" | "fiscalPeriod" | "branch" | "stage">;
+type Tx = Pick<
+  typeof rootDb,
+  | "account"
+  | "taxCode"
+  | "costCenter"
+  | "feeItem"
+  | "installmentPlan"
+  | "discountType"
+  | "fiscalYear"
+  | "fiscalPeriod"
+  | "branch"
+  | "stage"
+>;
 
-const MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+const MONTHS = [
+  "يناير",
+  "فبراير",
+  "مارس",
+  "أبريل",
+  "مايو",
+  "يونيو",
+  "يوليو",
+  "أغسطس",
+  "سبتمبر",
+  "أكتوبر",
+  "نوفمبر",
+  "ديسمبر",
+];
 
 /** ينشئ عاماً مالياً ميلادياً بفتراته الشهرية */
 type CreateOnly = { create: (args: { data: Record<string, unknown> }) => Promise<{ id: string }> };
 export async function createFiscalYear(dbAny: unknown, tenantId: string, year: number) {
   const db = dbAny as { fiscalYear: CreateOnly; fiscalPeriod: CreateOnly };
-  const fy = await db.fiscalYear.create({ data: { tenantId, name: `العام المالي ${year}`, startDate: new Date(Date.UTC(year, 0, 1)), endDate: new Date(Date.UTC(year, 11, 31)) } });
+  const fy = await db.fiscalYear.create({
+    data: {
+      tenantId,
+      name: `العام المالي ${year}`,
+      startDate: new Date(Date.UTC(year, 0, 1)),
+      endDate: new Date(Date.UTC(year, 11, 31)),
+    },
+  });
   for (let m = 0; m < 12; m++) {
     await db.fiscalPeriod.create({
-      data: { tenantId, fiscalYearId: fy.id, name: `${MONTHS[m]} ${year}`, startDate: new Date(Date.UTC(year, m, 1)), endDate: new Date(Date.UTC(year, m + 1, 0)) },
+      data: {
+        tenantId,
+        fiscalYearId: fy.id,
+        name: `${MONTHS[m]} ${year}`,
+        startDate: new Date(Date.UTC(year, m, 1)),
+        endDate: new Date(Date.UTC(year, m + 1, 0)),
+      },
     });
   }
   return fy;
@@ -129,27 +198,79 @@ export async function ensureFinanceSetup(tenantId: string, db: Tx = rootDb) {
   const ids = new Map<string, string>();
   for (const [code, name, type, parent, opts] of DEFAULT_COA) {
     const a = await db.account.create({
-      data: { tenantId, code, name, type, normalSide: opts?.side ?? normalSide(type), parentId: parent ? ids.get(parent)! : null, isGroup: opts?.group ?? false, systemKey: opts?.key ?? null, cashFlowGroup: opts?.cf ?? null },
+      data: {
+        tenantId,
+        code,
+        name,
+        type,
+        normalSide: opts?.side ?? normalSide(type),
+        parentId: parent ? ids.get(parent)! : null,
+        isGroup: opts?.group ?? false,
+        systemKey: opts?.key ?? null,
+        cashFlowGroup: opts?.cf ?? null,
+      },
     });
     ids.set(code, a.id);
   }
   const acc = (code: string) => ids.get(code)!;
 
   // رموز الضريبة (النسب قابلة للتعديل من الإعدادات)
-  const vat = await db.taxCode.create({ data: { tenantId, code: "VAT15", name: "ضريبة القيمة المضافة — أساسية", rateBp: 1500, kind: "STANDARD", outputAccountId: acc("2401"), inputAccountId: acc("2402") } });
-  const citizen = await db.taxCode.create({ data: { tenantId, code: "VAT-CITIZEN", name: "تعليم المواطنين — تتحمل الدولة الضريبة", rateBp: 0, kind: "ZERO", outputAccountId: acc("2401") } });
+  const vat = await db.taxCode.create({
+    data: {
+      tenantId,
+      code: "VAT15",
+      name: "ضريبة القيمة المضافة — أساسية",
+      rateBp: 1500,
+      kind: "STANDARD",
+      outputAccountId: acc("2401"),
+      inputAccountId: acc("2402"),
+    },
+  });
+  const citizen = await db.taxCode.create({
+    data: {
+      tenantId,
+      code: "VAT-CITIZEN",
+      name: "تعليم المواطنين — تتحمل الدولة الضريبة",
+      rateBp: 0,
+      kind: "ZERO",
+      outputAccountId: acc("2401"),
+    },
+  });
   await db.taxCode.create({ data: { tenantId, code: "EXEMPT", name: "معفى", rateBp: 0, kind: "EXEMPT" } });
 
   // مراكز التكلفة: الفروع والمراحل
-  const [branches, stages] = await Promise.all([db.branch.findMany({ where: { tenantId, deletedAt: null } }), db.stage.findMany({ where: { tenantId, deletedAt: null } })]);
-  for (const b of branches) await db.costCenter.create({ data: { tenantId, code: `BR-${b.code}`, name: b.name, kind: "BRANCH", branchId: b.id } });
-  for (const s of stages) await db.costCenter.create({ data: { tenantId, code: `ST-${s.code}`, name: s.name, kind: "STAGE", stageId: s.id } });
-  await db.costCenter.create({ data: { tenantId, code: "DEP-ADMIN", name: "الإدارة العامة", kind: "DEPARTMENT" } });
+  const [branches, stages] = await Promise.all([
+    db.branch.findMany({ where: { tenantId, deletedAt: null } }),
+    db.stage.findMany({ where: { tenantId, deletedAt: null } }),
+  ]);
+  for (const b of branches)
+    await db.costCenter.create({
+      data: { tenantId, code: `BR-${b.code}`, name: b.name, kind: "BRANCH", branchId: b.id },
+    });
+  for (const s of stages)
+    await db.costCenter.create({
+      data: { tenantId, code: `ST-${s.code}`, name: s.name, kind: "STAGE", stageId: s.id },
+    });
+  await db.costCenter.create({
+    data: { tenantId, code: "DEP-ADMIN", name: "الإدارة العامة", kind: "DEPARTMENT" },
+  });
 
   // بنود الرسوم
-  const items: Array<[string, string, FeeKind, string, string, boolean, string | null, string | null, boolean]> = [
+  const items: Array<
+    [string, string, FeeKind, string, string, boolean, string | null, string | null, boolean]
+  > = [
     ["TUITION", "الرسوم الدراسية", "TUITION", "4101", "1201", true, vat.id, citizen.id, true],
-    ["REGISTRATION", "رسوم التسجيل والقبول", "REGISTRATION", "4201", "1203", false, vat.id, citizen.id, false],
+    [
+      "REGISTRATION",
+      "رسوم التسجيل والقبول",
+      "REGISTRATION",
+      "4201",
+      "1203",
+      false,
+      vat.id,
+      citizen.id,
+      false,
+    ],
     ["BOOKS", "رسوم الكتب والمواد", "BOOKS", "4501", "1203", false, vat.id, null, false],
     ["UNIFORM", "الزي المدرسي", "UNIFORM", "4501", "1203", false, vat.id, null, false],
     ["TRANSPORT", "رسوم النقل المدرسي", "TRANSPORT", "4301", "1202", true, vat.id, citizen.id, true],
@@ -157,14 +278,36 @@ export async function ensureFinanceSetup(tenantId: string, db: Tx = rootDb) {
     ["LATE_FEE", "غرامة تأخير السداد", "LATE_FEE", "4701", "1203", false, null, null, false],
   ];
   for (const [i, [code, name, kind, rev, ar, deferred, tax, citizenTax, refundable]] of items.entries()) {
-    await db.feeItem.create({ data: { tenantId, code, name, kind, revenueAccountId: acc(rev), receivableAccountId: acc(ar), deferred, taxCodeId: tax, citizenTaxCodeId: citizenTax, refundable, position: i } });
+    await db.feeItem.create({
+      data: {
+        tenantId,
+        code,
+        name,
+        kind,
+        revenueAccountId: acc(rev),
+        receivableAccountId: acc(ar),
+        deferred,
+        taxCodeId: tax,
+        citizenTaxCodeId: citizenTax,
+        refundable,
+        position: i,
+      },
+    });
   }
 
   // خطط التقسيط (التواريخ تُضبط لكل عام من الإعدادات)
   const y = new Date().getUTCFullYear();
   const plans: Array<[string, string, Array<{ label: string; weight: number; dueDate: string }>, boolean]> = [
     ["دفعة واحدة", "SINGLE", [{ label: "كامل المبلغ", weight: 1, dueDate: `${y}-08-31` }], false],
-    ["فصلية (دفعتان)", "TERMLY", [{ label: "الفصل الأول", weight: 1, dueDate: `${y}-08-31` }, { label: "الفصل الثاني", weight: 1, dueDate: `${y + 1}-01-31` }], true],
+    [
+      "فصلية (دفعتان)",
+      "TERMLY",
+      [
+        { label: "الفصل الأول", weight: 1, dueDate: `${y}-08-31` },
+        { label: "الفصل الثاني", weight: 1, dueDate: `${y + 1}-01-31` },
+      ],
+      true,
+    ],
     [
       "ثلاث دفعات",
       "CUSTOM",
@@ -177,18 +320,59 @@ export async function ensureFinanceSetup(tenantId: string, db: Tx = rootDb) {
     ],
   ];
   for (const [name, kind, parts, isDefault] of plans) {
-    await db.installmentPlan.create({ data: { tenantId, name, kind, parts: parts as Prisma.InputJsonValue, isDefault, lateFeeKind: "FIXED", lateFeeValue: 10000, graceDays: 15 } });
+    await db.installmentPlan.create({
+      data: {
+        tenantId,
+        name,
+        kind,
+        parts: parts as Prisma.InputJsonValue,
+        isDefault,
+        lateFeeKind: "FIXED",
+        lateFeeValue: 10000,
+        graceDays: 15,
+      },
+    });
   }
   const monthly = Array.from({ length: 10 }, (_, i) => {
     const d = new Date(Date.UTC(y, 7 + i + 1, 0));
     return { label: `الشهر ${i + 1}`, weight: 1, dueDate: d.toISOString().slice(0, 10) };
   });
-  await db.installmentPlan.create({ data: { tenantId, name: "شهرية (١٠ دفعات)", kind: "MONTHLY", parts: monthly as Prisma.InputJsonValue, lateFeeKind: "NONE" } });
+  await db.installmentPlan.create({
+    data: {
+      tenantId,
+      name: "شهرية (١٠ دفعات)",
+      kind: "MONTHLY",
+      parts: monthly as Prisma.InputJsonValue,
+      lateFeeKind: "NONE",
+    },
+  });
 
   // أنواع الخصومات
   const tuition = await db.feeItem.findFirstOrThrow({ where: { tenantId, code: "TUITION" } });
-  const discounts: Array<[string, string, DiscountKind, "PERCENT" | "FIXED", number, Prisma.InputJsonValue | undefined, number | null]> = [
-    ["SIBLING", "خصم الأشقاء", "SIBLING", "PERCENT", 0, [{ order: 2, valueBp: 500 }, { order: 3, valueBp: 1000 }, { order: 4, valueBp: 1500 }], null],
+  const discounts: Array<
+    [
+      string,
+      string,
+      DiscountKind,
+      "PERCENT" | "FIXED",
+      number,
+      Prisma.InputJsonValue | undefined,
+      number | null,
+    ]
+  > = [
+    [
+      "SIBLING",
+      "خصم الأشقاء",
+      "SIBLING",
+      "PERCENT",
+      0,
+      [
+        { order: 2, valueBp: 500 },
+        { order: 3, valueBp: 1000 },
+        { order: 4, valueBp: 1500 },
+      ],
+      null,
+    ],
     ["STAFF", "خصم أبناء الموظفين", "STAFF", "PERCENT", 5000, undefined, null],
     ["MERIT", "خصم التفوق الدراسي", "MERIT", "PERCENT", 1000, undefined, null],
     ["SCHOLARSHIP", "منحة دراسية كاملة", "SCHOLARSHIP", "PERCENT", 10000, undefined, 0],
@@ -196,7 +380,19 @@ export async function ensureFinanceSetup(tenantId: string, db: Tx = rootDb) {
     ["MANUAL", "خصم استثنائي", "MANUAL", "FIXED", 0, undefined, 200000],
   ];
   for (const [code, name, kind, method, value, tiers, limit] of discounts) {
-    await db.discountType.create({ data: { tenantId, code, name, kind, method, value, siblingTiers: tiers, feeItemIds: [tuition.id], approvalLimitMinor: limit } });
+    await db.discountType.create({
+      data: {
+        tenantId,
+        code,
+        name,
+        kind,
+        method,
+        value,
+        siblingTiers: tiers,
+        feeItemIds: [tuition.id],
+        approvalLimitMinor: limit,
+      },
+    });
   }
   await createFiscalYear(db, tenantId, y);
 }

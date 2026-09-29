@@ -29,21 +29,40 @@ export function NewInvoiceDialog({ prefill, onClose, onCreated }: CreateDialogPr
   const money = useMoney();
   const prefs = usePrefs();
   const today = useToday();
-  const [student, setStudent] = useState<PickedStudent | null>((prefill.student as PickedStudent | undefined) ?? null);
+  const [student, setStudent] = useState<PickedStudent | null>(
+    (prefill.student as PickedStudent | undefined) ?? null,
+  );
   const [mode, setMode] = useState<"schedule" | "custom">("schedule");
   const [feeItemIds, setFeeItemIds] = useState<string[] | null>(null);
-  const [custom, setCustom] = useState<Array<{ feeItemId: string | null; description: string; unitMinor: number | null }>>([{ feeItemId: null, description: "", unitMinor: null }]);
+  const [custom, setCustom] = useState<
+    Array<{ feeItemId: string | null; description: string; unitMinor: number | null }>
+  >([{ feeItemId: null, description: "", unitMinor: null }]);
   const [planId, setPlanId] = useState<string>("none");
   const [issueDate, setIssueDate] = useState(today);
-  const [dueDate, setDueDate] = useState(typeof prefill.dueDate === "string" ? prefill.dueDate.slice(0, 10) : today);
+  const [dueDate, setDueDate] = useState(
+    typeof prefill.dueDate === "string" ? prefill.dueDate.slice(0, 10) : today,
+  );
   const [applyDiscounts, setApplyDiscounts] = useState(true);
   const [notify, setNotify] = useState(true);
   const [notes, setNotes] = useState("");
   const setup = trpc.finance.setup.get.useQuery();
   const items = (setup.data?.items ?? []).filter((i) => i.isActive);
-  const customLines = custom.filter((l) => l.feeItemId && l.unitMinor).map((l) => ({ feeItemId: l.feeItemId, description: l.description || items.find((i) => i.id === l.feeItemId)?.name || "", unitMinor: l.unitMinor! }));
-  const previewInput = student ? (mode === "schedule" ? { studentId: student.id, feeItemIds: feeItemIds ?? undefined, applyDiscounts } : { studentId: student.id, lines: customLines, applyDiscounts }) : null;
-  const preview = trpc.finance.invoices.preview.useQuery(previewInput!, { enabled: Boolean(previewInput) && (mode === "schedule" || customLines.length > 0), placeholderData: (p) => p });
+  const customLines = custom
+    .filter((l) => l.feeItemId && l.unitMinor)
+    .map((l) => ({
+      feeItemId: l.feeItemId,
+      description: l.description || items.find((i) => i.id === l.feeItemId)?.name || "",
+      unitMinor: l.unitMinor!,
+    }));
+  const previewInput = student
+    ? mode === "schedule"
+      ? { studentId: student.id, feeItemIds: feeItemIds ?? undefined, applyDiscounts }
+      : { studentId: student.id, lines: customLines, applyDiscounts }
+    : null;
+  const preview = trpc.finance.invoices.preview.useQuery(previewInput!, {
+    enabled: Boolean(previewInput) && (mode === "schedule" || customLines.length > 0),
+    placeholderData: (p) => p,
+  });
   const create = trpc.finance.invoices.create.useMutation({
     onSuccess: (inv) => {
       toast.success("صدرت الفاتورة وقيدها");
@@ -58,7 +77,9 @@ export function NewInvoiceDialog({ prefill, onClose, onCreated }: CreateDialogPr
     student &&
     create.mutate({
       studentId: student.id,
-      ...(mode === "schedule" ? { feeItemIds: feeItemIds ?? d?.lines.map((l) => l.feeItemId!).filter(Boolean) } : { lines: customLines }),
+      ...(mode === "schedule"
+        ? { feeItemIds: feeItemIds ?? d?.lines.map((l) => l.feeItemId!).filter(Boolean) }
+        : { lines: customLines }),
       planId: planId === "none" ? null : planId,
       issueDate,
       dueDate: planId === "none" ? dueDate : null,
@@ -68,16 +89,34 @@ export function NewInvoiceDialog({ prefill, onClose, onCreated }: CreateDialogPr
     });
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title="فاتورة جديدة" description="تُحسب البنود من جدول رسوم صف الطالب مع الخصومات والضريبة، ويُنشأ القيد تلقائياً عند الإصدار." width={760}>
-        <div className="grid gap-4 px-5 pb-4 md:grid-cols-[1fr_300px]">
+      <DialogContent
+        title="فاتورة جديدة"
+        description="تُحسب البنود من جدول رسوم صف الطالب مع الخصومات والضريبة، ويُنشأ القيد تلقائياً عند الإصدار."
+        width={760}
+      >
+        <div className="grid grid-cols-1 gap-4 px-5 pb-4 md:grid-cols-[minmax(0,1fr)_300px]">
           <div className="space-y-3">
             <Field label="الطالب">
               <StudentPicker value={student} onChange={(s) => (setStudent(s), setFeeItemIds(null))} />
             </Field>
-            <Segmented value={mode} onChange={setMode} options={[{ value: "schedule", label: "من جدول الرسوم" }, { value: "custom", label: "بنود مخصصة" }]} />
+            <Segmented
+              value={mode}
+              onChange={setMode}
+              options={[
+                { value: "schedule", label: "من جدول الرسوم" },
+                { value: "custom", label: "بنود مخصصة" },
+              ]}
+            />
             {mode === "schedule" ? (
               student ? (
-                <ScheduleItems student={student.id} selected={feeItemIds ?? (d?.student.id === student.id ? d.lines.map((l) => l.feeItemId!).filter(Boolean) : null)} onChange={setFeeItemIds} />
+                <ScheduleItems
+                  student={student.id}
+                  selected={
+                    feeItemIds ??
+                    (d?.student.id === student.id ? d.lines.map((l) => l.feeItemId!).filter(Boolean) : null)
+                  }
+                  onChange={setFeeItemIds}
+                />
               ) : (
                 <p className="text-[13px] text-fg-3">اختر الطالب لعرض بنود جدول الرسوم لصفه.</p>
               )
@@ -85,15 +124,47 @@ export function NewInvoiceDialog({ prefill, onClose, onCreated }: CreateDialogPr
               <div className="space-y-2">
                 {custom.map((l, i) => (
                   <div key={i} className="grid grid-cols-[1fr_1fr_110px_28px] gap-2">
-                    <Select value={l.feeItemId ?? undefined} onChange={(v) => setCustom(custom.map((x, j) => (j === i ? { ...x, feeItemId: v } : x)))} options={items.map((it) => ({ value: it.id, label: it.name }))} placeholder="البند" />
-                    <Input value={l.description} onChange={(e) => setCustom(custom.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)))} placeholder="البيان (اختياري)" />
-                    <MoneyInput value={l.unitMinor} onChange={(v) => setCustom(custom.map((x, j) => (j === i ? { ...x, unitMinor: v } : x)))} aria-label="المبلغ" />
-                    <Button size="icon" variant="ghost" aria-label="حذف السطر" disabled={custom.length === 1} onClick={() => setCustom(custom.filter((_, j) => j !== i))}>
+                    <Select
+                      value={l.feeItemId ?? undefined}
+                      onChange={(v) =>
+                        setCustom(custom.map((x, j) => (j === i ? { ...x, feeItemId: v } : x)))
+                      }
+                      options={items.map((it) => ({ value: it.id, label: it.name }))}
+                      placeholder="البند"
+                    />
+                    <Input
+                      value={l.description}
+                      onChange={(e) =>
+                        setCustom(custom.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)))
+                      }
+                      placeholder="البيان (اختياري)"
+                    />
+                    <MoneyInput
+                      value={l.unitMinor}
+                      onChange={(v) =>
+                        setCustom(custom.map((x, j) => (j === i ? { ...x, unitMinor: v } : x)))
+                      }
+                      aria-label="المبلغ"
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="حذف السطر"
+                      disabled={custom.length === 1}
+                      onClick={() => setCustom(custom.filter((_, j) => j !== i))}
+                    >
                       <Trash2 className="size-3.5" />
                     </Button>
                   </div>
                 ))}
-                <Button size="xs" variant="ghost" icon={<Plus className="size-3" />} onClick={() => setCustom([...custom, { feeItemId: null, description: "", unitMinor: null }])}>
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  icon={<Plus className="size-3" />}
+                  onClick={() =>
+                    setCustom([...custom, { feeItemId: null, description: "", unitMinor: null }])
+                  }
+                >
                   سطر
                 </Button>
               </div>
@@ -103,11 +174,23 @@ export function NewInvoiceDialog({ prefill, onClose, onCreated }: CreateDialogPr
                 <Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
               </Field>
               <Field label="خطة السداد">
-                <Select value={planId} onChange={setPlanId} options={[{ value: "none", label: "دفعة واحدة" }, ...plans.map((p) => ({ value: p.id, label: p.name }))]} />
+                <Select
+                  value={planId}
+                  onChange={setPlanId}
+                  options={[
+                    { value: "none", label: "دفعة واحدة" },
+                    ...plans.map((p) => ({ value: p.id, label: p.name })),
+                  ]}
+                />
               </Field>
               {planId === "none" ? (
                 <Field label="تاريخ الاستحقاق">
-                  <Input type="date" value={dueDate} min={issueDate} onChange={(e) => setDueDate(e.target.value)} />
+                  <Input
+                    type="date"
+                    value={dueDate}
+                    min={issueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                  />
                 </Field>
               ) : null}
             </div>
@@ -165,7 +248,10 @@ export function NewInvoiceDialog({ prefill, onClose, onCreated }: CreateDialogPr
                   <span className="tabular">{money.fmt(d.totalMinor)}</span>
                 </div>
                 <p className="mt-1 text-[12px] text-fg-3">
-                  {d.student.nationality === "SA" ? "طالب مواطن: الرسوم الدراسية بنسبة صفر." : "طالب مقيم: ضريبة ١٥٪ على الرسوم الدراسية."} ولي الأمر: {d.guardian?.name ?? "غير مرتبط"}
+                  {d.student.nationality === "SA"
+                    ? "طالب مواطن: الرسوم الدراسية بنسبة صفر."
+                    : "طالب مقيم: ضريبة ١٥٪ على الرسوم الدراسية."}{" "}
+                  ولي الأمر: {d.guardian?.name ?? "غير مرتبط"}
                 </p>
               </>
             )}
@@ -175,7 +261,13 @@ export function NewInvoiceDialog({ prefill, onClose, onCreated }: CreateDialogPr
           <Button variant="ghost" onClick={onClose}>
             إلغاء
           </Button>
-          <Button variant="primary" icon={<FileText className="size-3.5" />} loading={create.isPending} disabled={!can} onClick={submit}>
+          <Button
+            variant="primary"
+            icon={<FileText className="size-3.5" />}
+            loading={create.isPending}
+            disabled={!can}
+            onClick={submit}
+          >
             إصدار الفاتورة
           </Button>
         </DialogFooter>
@@ -185,19 +277,40 @@ export function NewInvoiceDialog({ prefill, onClose, onCreated }: CreateDialogPr
 }
 
 /** بنود جدول الرسوم لصف الطالب مع اختيار ما يُفوتر (الاختيارية غير محددة افتراضياً) */
-function ScheduleItems({ student, selected, onChange }: { student: string; selected: string[] | null; onChange: (ids: string[]) => void }) {
+function ScheduleItems({
+  student,
+  selected,
+  onChange,
+}: {
+  student: string;
+  selected: string[] | null;
+  onChange: (ids: string[]) => void;
+}) {
   const money = useMoney();
   const setup = trpc.finance.setup.get.useQuery();
-  const all = trpc.finance.invoices.preview.useQuery({ studentId: student, feeItemIds: (setup.data?.items ?? []).map((i) => i.id), applyDiscounts: false }, { enabled: Boolean(setup.data) });
+  const all = trpc.finance.invoices.preview.useQuery(
+    { studentId: student, feeItemIds: (setup.data?.items ?? []).map((i) => i.id), applyDiscounts: false },
+    { enabled: Boolean(setup.data) },
+  );
   if (!all.data || !selected) return <SkeletonLines lines={3} />;
-  if (!all.data.lines.length) return <p className="text-[13px] text-warning-700">لا يوجد جدول رسوم لصف الطالب. أضفه من «إعداد الرسوم» أو استخدم البنود المخصصة.</p>;
+  if (!all.data.lines.length)
+    return (
+      <p className="text-[13px] text-warning-700">
+        لا يوجد جدول رسوم لصف الطالب. أضفه من «إعداد الرسوم» أو استخدم البنود المخصصة.
+      </p>
+    );
   const current = selected;
   return (
     <ul className="space-y-1">
       {all.data.lines.map((l) => (
         <li key={l.feeItemId}>
           <label className="flex items-center gap-2 rounded-md px-1 py-1 text-[14px] hover:bg-hover">
-            <Checkbox checked={current.includes(l.feeItemId!)} onChange={(on) => onChange(on ? [...current, l.feeItemId!] : current.filter((x) => x !== l.feeItemId))} />
+            <Checkbox
+              checked={current.includes(l.feeItemId!)}
+              onChange={(on) =>
+                onChange(on ? [...current, l.feeItemId!] : current.filter((x) => x !== l.feeItemId))
+              }
+            />
             <span className="flex-1">{l.description}</span>
             <span className="text-[13px] tabular text-fg-2">{money.fmt(l.amountMinor)}</span>
           </label>
@@ -206,4 +319,3 @@ function ScheduleItems({ student, selected, onChange }: { student: string; selec
     </ul>
   );
 }
-

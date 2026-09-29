@@ -3,6 +3,9 @@ import { rootDb } from "../../src/server/db/client";
 import { findConflicts } from "../../src/lib/timetable/generator";
 import { toISODate } from "../../src/lib/dates";
 import { DEMO_PASSWORD } from "../../prisma/seed/data/people";
+import { createTenantDb } from "../../src/server/db/tenant";
+import { createSession, validateSessionToken } from "../../src/server/auth/session";
+import { cancelInvoice } from "../../src/server/services/finance/billing.service";
 
 /**
  * المرحلة ٢ طرف-لطرف على البيانات التجريبية. كل اختبار يعيد ما غيّره إلى حالته الأصلية.
@@ -13,6 +16,14 @@ async function login(page: Page, email: string) {
   await page.fill('input[type="password"]', DEMO_PASSWORD);
   await page.click('button[type="submit"]');
   await page.waitForURL(/\/home/);
+}
+
+async function accountantSession() {
+  const user = await rootDb.user.findFirstOrThrow({ where: { email: "accountant@demo.manassa.sa" } });
+  const tenantId = (await rootDb.userRole.findFirstOrThrow({ where: { userId: user.id } })).tenantId;
+  const { token, sessionId } = await createSession({ tenantId, userId: user.id, twoFactorVerified: true, userAgent: "e2e" });
+  const session = (await validateSessionToken(token))!;
+  return { session, sessionId, db: createTenantDb({ tenantId, actor: { id: user.id, name: user.name } }) };
 }
 
 async function userId(email: string) {
@@ -92,7 +103,14 @@ test("القبول: قبول طلب في مرحلة المقابلة ينشئ م
   } finally {
     const updated = await rootDb.admission.findUniqueOrThrow({ where: { id: a.id } });
     await rootDb.admission.update({ where: { id: a.id }, data: { stage: a.stage, studentId: null, decisionAt: a.decisionAt, decisionReason: a.decisionReason, updatedById: a.updatedById } });
-    if (updated.studentId) {
+    const invoices = updated.studentId ? await rootDb.invoice.findMany({ where: { studentId: updated.studentId } }) : [];
+    if (updated.studentId && invoices.length) {
+      // المرحلة ٣: القبول يصدر فاتورة رسوم التسجيل؛ تُلغى بقيد عكسي، والملف يُحذف حذفاً ناعماً لأن المستندات المالية لا تُحذف
+      const acc = await accountantSession();
+      for (const inv of invoices.filter((i) => i.status !== "CANCELLED")) await cancelInvoice(acc.db, acc.session, inv.id, "اختبار آلي — إلغاء قبول");
+      await rootDb.session.delete({ where: { id: acc.sessionId } });
+      await rootDb.student.update({ where: { id: updated.studentId }, data: { deletedAt: new Date(), sectionId: null, nationalIdHash: null } });
+    } else if (updated.studentId) {
       const links = await rootDb.studentGuardian.findMany({ where: { studentId: updated.studentId } });
       await rootDb.student.delete({ where: { id: updated.studentId } });
       for (const l of links) {

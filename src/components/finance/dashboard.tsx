@@ -3,7 +3,16 @@
  * لوحة المالية: المؤشرات الرئيسية، التحصيل مقابل المستهدف شهرياً، وما ينتظر الإجراء
  * (فواتير متأخرة، سندات صرف، استردادات، خصومات بانتظار الاعتماد، شيكات تحت التحصيل).
  */
-import { AlertTriangle, Banknote, CircleDollarSign, FilePlus2, HandCoins, Landmark, Receipt, Wallet } from "lucide-react";
+import {
+  AlertTriangle,
+  Banknote,
+  CircleDollarSign,
+  FilePlus2,
+  HandCoins,
+  Landmark,
+  Receipt,
+  Wallet,
+} from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { REFUND_STATUS, VOUCHER_STATUS } from "@/lib/finance/labels";
@@ -60,24 +69,67 @@ export function FinanceHome() {
   return (
     <ModuleShell nav={financeNav("finance")} wide actions={actions}>
       <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatCard label="المحصّل هذا الشهر" value={d?.kpis.collectedMonth} format={whole} compact icon={<CircleDollarSign className="size-4" />} tone="success" href="/finance/collect/receipts" />
-        <StatCard label="الذمم المفتوحة" value={d?.kpis.receivable} format={whole} compact icon={<Receipt className="size-4" />} href="/finance/reports/aging" />
-        <StatCard label="المتأخر" value={d?.kpis.overdue} format={whole} compact icon={<AlertTriangle className="size-4" />} tone={d?.kpis.overdue ? "danger" : undefined} hint={d ? `${formatNumber(d.kpis.overdueCount, prefs.digits)} فاتورة متأخرة` : undefined} href="/finance/reports/aging" />
-        <StatCard label="مصروفات الشهر" value={d?.kpis.expensesMonth} format={whole} compact icon={<HandCoins className="size-4" />} href="/finance/reports/income" />
-        <StatCard label="النقد والبنوك" value={d?.kpis.cashAndBank} format={whole} compact icon={<Landmark className="size-4" />} href="/finance/banking" />
+        <StatCard
+          label="المحصّل هذا الشهر"
+          value={d?.kpis.collectedMonth}
+          format={whole}
+          compact
+          icon={<CircleDollarSign className="size-4" />}
+          tone="success"
+          href="/finance/collect/receipts"
+        />
+        <StatCard
+          label="الذمم المفتوحة"
+          value={d?.kpis.receivable}
+          format={whole}
+          compact
+          icon={<Receipt className="size-4" />}
+          href="/finance/reports/aging"
+        />
+        <StatCard
+          label="المتأخر"
+          value={d?.kpis.overdue}
+          format={whole}
+          compact
+          icon={<AlertTriangle className="size-4" />}
+          tone={d?.kpis.overdue ? "danger" : undefined}
+          hint={d ? `${formatNumber(d.kpis.overdueCount, prefs.digits)} فاتورة متأخرة` : undefined}
+          href="/finance/reports/aging"
+        />
+        <StatCard
+          label="مصروفات الشهر"
+          value={d?.kpis.expensesMonth}
+          format={whole}
+          compact
+          icon={<HandCoins className="size-4" />}
+          href="/finance/reports/income"
+        />
+        <StatCard
+          label="النقد والبنوك"
+          value={d?.kpis.cashAndBank}
+          format={whole}
+          compact
+          icon={<Landmark className="size-4" />}
+          href="/finance/banking"
+        />
       </section>
 
       {!d ? (
         <SkeletonLines lines={12} />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <ChartCard
             className="lg:col-span-2"
             title="التحصيل مقابل المستهدف"
             subtitle="المحصّل شهرياً في العام الدراسي، والمستهدف نسبة من الأقساط المستحقة في الشهر"
             table={{
               columns: ["الشهر", "المستحق", "المستهدف", "المحصّل"],
-              rows: months.map((m) => [monthTitle(Number(m.key.slice(0, 4)), Number(m.key.slice(5, 7)) - 1, "gregory", prefs.digits), money.fmt(m.due), money.fmt(m.target), money.fmt(m.collected)]),
+              rows: months.map((m) => [
+                monthTitle(Number(m.key.slice(0, 4)), Number(m.key.slice(5, 7)) - 1, "gregory", prefs.digits),
+                money.fmt(m.due),
+                money.fmt(m.target),
+                money.fmt(m.collected),
+              ]),
             }}
           >
             {months.length ? (
@@ -85,14 +137,24 @@ export function FinanceHome() {
                 format={fmt}
                 data={months.map((m) => ({
                   key: m.key,
-                  label: monthTitle(Number(m.key.slice(0, 4)), Number(m.key.slice(5, 7)) - 1, "gregory", prefs.digits).split(" ")[0]!,
+                  label: monthTitle(
+                    Number(m.key.slice(0, 4)),
+                    Number(m.key.slice(5, 7)) - 1,
+                    "gregory",
+                    prefs.digits,
+                  ).split(" ")[0]!,
                   value: m.collected,
                   target: m.target,
                   future: m.key > thisMonth,
                 }))}
               />
             ) : (
-              <EmptyState compact illustration="calendar" title="لا يوجد عام دراسي حالي" description="حدّد العام الدراسي الحالي من إعدادات الصفوف لعرض التحصيل الشهري." />
+              <EmptyState
+                compact
+                illustration="calendar"
+                title="لا يوجد عام دراسي حالي"
+                description="حدّد العام الدراسي الحالي من إعدادات الصفوف لعرض التحصيل الشهري."
+              />
             )}
           </ChartCard>
 
@@ -101,16 +163,22 @@ export function FinanceHome() {
               <ul className="divide-y divide-line/70">
                 {d.actions.overdue.map((i) => (
                   <li key={i.id}>
-                    <Link href={`/finance/invoices/${i.id}`} className="flex items-center gap-3 px-1 py-2 hover:bg-hover">
+                    <Link
+                      href={`/finance/invoices/${i.id}`}
+                      className="flex items-center gap-3 px-1 py-2 hover:bg-hover"
+                    >
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[14px]">{i.student}</span>
                         <span className="block truncate text-[12px] text-fg-3">
-                          فاتورة {formatNumber(i.number ?? 0, prefs.digits, { useGrouping: false })} · {i.guardian ?? "—"}
+                          فاتورة {formatNumber(i.number ?? 0, prefs.digits, { useGrouping: false })} ·{" "}
+                          {i.guardian ?? "—"}
                         </span>
                       </span>
                       <span className="text-end">
                         <span className="block text-[13px] font-medium tabular">{money.fmt(i.balance)}</span>
-                        <span className="block text-[11px] text-danger-700">متأخرة {formatNumber(i.days, prefs.digits)} يوماً</span>
+                        <span className="block text-[11px] text-danger-700">
+                          متأخرة {formatNumber(i.days, prefs.digits)} يوماً
+                        </span>
                       </span>
                     </Link>
                   </li>
@@ -126,7 +194,10 @@ export function FinanceHome() {
               <ul className="divide-y divide-line/70">
                 {d.actions.vouchers.map((v) => (
                   <li key={v.id}>
-                    <Link href={`/finance/vouchers/${v.id}`} className="flex items-center gap-3 px-1 py-2 hover:bg-hover">
+                    <Link
+                      href={`/finance/vouchers/${v.id}`}
+                      className="flex items-center gap-3 px-1 py-2 hover:bg-hover"
+                    >
                       <span className="min-w-0 flex-1 truncate text-[14px]">{v.payee}</span>
                       <Tag size="sm" color={labelOf(VOUCHER_STATUS, v.status).color}>
                         {labelOf(VOUCHER_STATUS, v.status).label}
@@ -146,7 +217,10 @@ export function FinanceHome() {
               <ul className="divide-y divide-line/70">
                 {d.actions.cheques.map((c) => (
                   <li key={c.id}>
-                    <Link href={`/finance/receipts/${c.id}`} className="flex items-center gap-3 px-1 py-2 hover:bg-hover">
+                    <Link
+                      href={`/finance/receipts/${c.id}`}
+                      className="flex items-center gap-3 px-1 py-2 hover:bg-hover"
+                    >
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[14px]">{c.payer ?? "—"}</span>
                         <span className="block truncate text-[12px] text-fg-3">
@@ -163,13 +237,22 @@ export function FinanceHome() {
             )}
           </Panel>
 
-          <Panel title="استردادات وخصومات بانتظار القرار" href="/inbox" count={d.actions.refunds.length + d.actions.pendingDiscounts}>
+          <Panel
+            title="استردادات وخصومات بانتظار القرار"
+            href="/inbox"
+            count={d.actions.refunds.length + d.actions.pendingDiscounts}
+          >
             <ul className="divide-y divide-line/70">
               {d.actions.refunds.map((r) => (
                 <li key={r.id}>
-                  <Link href={`/finance/families/${r.guardianId}`} className="flex items-center gap-3 px-1 py-2 hover:bg-hover">
+                  <Link
+                    href={`/finance/families/${r.guardianId}`}
+                    className="flex items-center gap-3 px-1 py-2 hover:bg-hover"
+                  >
                     <Wallet className="size-4 text-fg-3" />
-                    <span className="min-w-0 flex-1 truncate text-[14px]">استرداد رقم {formatNumber(r.number, prefs.digits, { useGrouping: false })}</span>
+                    <span className="min-w-0 flex-1 truncate text-[14px]">
+                      استرداد رقم {formatNumber(r.number, prefs.digits, { useGrouping: false })}
+                    </span>
                     <Tag size="sm" color={labelOf(REFUND_STATUS, r.status).color}>
                       {labelOf(REFUND_STATUS, r.status).label}
                     </Tag>
@@ -182,12 +265,16 @@ export function FinanceHome() {
                   <Link href="/inbox" className="flex items-center gap-3 px-1 py-2 hover:bg-hover">
                     <Receipt className="size-4 text-fg-3" />
                     <span className="flex-1 text-[14px]">خصومات طلاب بانتظار الاعتماد</span>
-                    <span className="text-[13px] tabular">{formatNumber(d.actions.pendingDiscounts, prefs.digits)}</span>
+                    <span className="text-[13px] tabular">
+                      {formatNumber(d.actions.pendingDiscounts, prefs.digits)}
+                    </span>
                   </Link>
                 </li>
               ) : null}
             </ul>
-            {!d.actions.refunds.length && !d.actions.pendingDiscounts ? <Quiet>لا طلبات معلّقة.</Quiet> : null}
+            {!d.actions.refunds.length && !d.actions.pendingDiscounts ? (
+              <Quiet>لا طلبات معلّقة.</Quiet>
+            ) : null}
           </Panel>
         </div>
       )}
@@ -195,14 +282,28 @@ export function FinanceHome() {
   );
 }
 
-function Panel({ title, href, count, children }: { title: string; href: string; count: number; children: ReactNode }) {
+function Panel({
+  title,
+  href,
+  count,
+  children,
+}: {
+  title: string;
+  href: string;
+  count: number;
+  children: ReactNode;
+}) {
   const prefs = usePrefs();
   return (
     <section className="rounded-lg bg-card p-4 shadow-card">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-[14px] font-semibold">
           {title}
-          {count ? <span className="ms-1.5 text-[12px] font-normal text-fg-3 tabular">{formatNumber(count, prefs.digits)}</span> : null}
+          {count ? (
+            <span className="ms-1.5 text-[12px] font-normal text-fg-3 tabular">
+              {formatNumber(count, prefs.digits)}
+            </span>
+          ) : null}
         </h3>
         <Link href={href} className="text-[12px] text-fg-3 hover:text-fg">
           عرض الكل

@@ -22,9 +22,24 @@ import { useApp, usePrefs } from "@/components/shell/app-context";
 import { Figure, FinTable, MoneyInput, num, PercentInput, useFmtDate, useMoney, docNo } from "./common";
 import { NewInvoiceDialog } from "./new-invoice-dialog";
 
-const SD_STATUS = { ACTIVE: { label: "سارٍ", color: "green" }, PENDING: { label: "بانتظار الاعتماد", color: "gold" }, REJECTED: { label: "مرفوض", color: "red" }, REVOKED: { label: "ملغى", color: "slate" } } as const;
+const SD_STATUS = {
+  ACTIVE: { label: "سارٍ", color: "green" },
+  PENDING: { label: "بانتظار الاعتماد", color: "gold" },
+  REJECTED: { label: "مرفوض", color: "red" },
+  REVOKED: { label: "ملغى", color: "slate" },
+} as const;
 
-export function StudentFinanceTab({ student }: { student: { id: string; fullName: string; academicNumber: string; grade?: { name: string } | null; section?: { name: string } | null } }) {
+export function StudentFinanceTab({
+  student,
+}: {
+  student: {
+    id: string;
+    fullName: string;
+    academicNumber: string;
+    grade?: { name: string } | null;
+    section?: { name: string } | null;
+  };
+}) {
   const { can } = useApp();
   const prefs = usePrefs();
   const money = useMoney();
@@ -32,12 +47,26 @@ export function StudentFinanceTab({ student }: { student: { id: string; fullName
   const router = useRouter();
   const invoices = trpc.finance.invoices.forStudent.useQuery({ studentId: student.id });
   const family = trpc.finance.receipts.family.useQuery({ studentId: student.id }, { retry: false });
-  const discounts = trpc.finance.setup.studentDiscounts.useQuery({ studentId: student.id });
+  const discounts = trpc.finance.setup.studentDiscounts.useQuery({ studentId: student.id }, { retry: false });
   const utils = trpc.useUtils();
   const [newInvoice, setNewInvoice] = useState(false);
   const [granting, setGranting] = useState(false);
-  const revoke = trpc.finance.setup.revokeDiscount.useMutation({ onSuccess: () => (toast.success("أُلغي الخصم للفواتير القادمة"), void utils.finance.setup.studentDiscounts.invalidate()), onError: (e) => toast.error(e.message) });
-  if (invoices.error) return <EmptyState compact illustration="lock" title="لا يمكن عرض البيانات المالية" description={invoices.error.message} />;
+  const revoke = trpc.finance.setup.revokeDiscount.useMutation({
+    onSuccess: () => (
+      toast.success("أُلغي الخصم للفواتير القادمة"),
+      void utils.finance.setup.studentDiscounts.invalidate()
+    ),
+    onError: (e) => toast.error(e.message),
+  });
+  if (invoices.error)
+    return (
+      <EmptyState
+        compact
+        illustration="lock"
+        title="لا يمكن عرض البيانات المالية"
+        description={invoices.error.message}
+      />
+    );
   if (!invoices.data) return <SkeletonLines lines={8} />;
   const rows = invoices.data;
   const due = rows.reduce((s, r) => s + r.balanceMinor, 0);
@@ -65,7 +94,10 @@ export function StudentFinanceTab({ student }: { student: { id: string; fullName
         ) : null}
         <span className="flex-1" />
         {family.data ? (
-          <Link href={`/finance/families/${family.data.guardian.id}`} className="text-[13px] text-fg-2 underline decoration-line underline-offset-4">
+          <Link
+            href={`/finance/families/${family.data.guardian.id}`}
+            className="text-[13px] text-fg-2 underline decoration-line underline-offset-4"
+          >
             كشف حساب الأسرة ({family.data.guardian.name})
           </Link>
         ) : null}
@@ -74,7 +106,11 @@ export function StudentFinanceTab({ student }: { student: { id: string; fullName
         <Figure label="إجمالي الفواتير" value={money.fmt(total)} />
         <Figure label="المستحق" value={money.fmt(due)} />
         <Figure label="المتأخر" value={money.fmt(overdue)} tone={overdue ? "danger" : undefined} />
-        <Figure label="رصيد دائن للأسرة" value={money.fmt(family.data?.creditBalance ?? 0)} tone={family.data?.creditBalance ? "success" : undefined} />
+        <Figure
+          label="رصيد دائن للأسرة"
+          value={money.fmt(family.data?.creditBalance ?? 0)}
+          tone={family.data?.creditBalance ? "success" : undefined}
+        />
       </section>
       {rows.length ? (
         <FinTable
@@ -112,40 +148,49 @@ export function StudentFinanceTab({ student }: { student: { id: string; fullName
       ) : (
         <EmptyState compact illustration="table" title="لا فواتير للطالب" />
       )}
-      <section>
-        <h3 className="mb-2 text-[14px] font-semibold">الخصومات والمنح</h3>
-        {discounts.data?.length ? (
-          <ul className="divide-y divide-line/70 rounded-lg bg-card shadow-card">
-            {discounts.data.map((d) => {
-              const st = SD_STATUS[d.status as keyof typeof SD_STATUS] ?? SD_STATUS.ACTIVE;
-              const val = d.valueOverride ?? d.type?.value ?? 0;
-              return (
-                <li key={d.id} className="flex items-center gap-3 px-4 py-2.5 text-[14px]">
-                  <span className="min-w-0 flex-1">
-                    {d.type?.name ?? "—"}{" "}
-                    {d.type ? (
-                      <Tag size="sm" color={DISCOUNT_KIND[d.type.kind].color}>
-                        {d.type.method === "PERCENT" ? formatPercent(val / 10000, prefs.digits) : money.fmt(val)}
-                      </Tag>
+      {discounts.error ? null : (
+        <section>
+          <h3 className="mb-2 text-[14px] font-semibold">الخصومات والمنح</h3>
+          {discounts.data?.length ? (
+            <ul className="divide-y divide-line/70 rounded-lg bg-card shadow-card">
+              {discounts.data.map((d) => {
+                const st = SD_STATUS[d.status as keyof typeof SD_STATUS] ?? SD_STATUS.ACTIVE;
+                const val = d.valueOverride ?? d.type?.value ?? 0;
+                return (
+                  <li key={d.id} className="flex items-center gap-3 px-4 py-2.5 text-[14px]">
+                    <span className="min-w-0 flex-1">
+                      {d.type?.name ?? "—"}{" "}
+                      {d.type ? (
+                        <Tag size="sm" color={DISCOUNT_KIND[d.type.kind].color}>
+                          {d.type.method === "PERCENT"
+                            ? formatPercent(val / 10000, prefs.digits)
+                            : money.fmt(val)}
+                        </Tag>
+                      ) : null}
+                      {d.note ? <span className="block text-[12px] text-fg-3">{d.note}</span> : null}
+                    </span>
+                    <Tag size="sm" color={st.color}>
+                      {st.label}
+                    </Tag>
+                    {can("invoices", "update") && (d.status === "ACTIVE" || d.status === "PENDING") ? (
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        aria-label="إلغاء الخصم"
+                        onClick={() => revoke.mutate({ id: d.id })}
+                      >
+                        <X className="size-3.5" />
+                      </Button>
                     ) : null}
-                    {d.note ? <span className="block text-[12px] text-fg-3">{d.note}</span> : null}
-                  </span>
-                  <Tag size="sm" color={st.color}>
-                    {st.label}
-                  </Tag>
-                  {can("invoices", "update") && (d.status === "ACTIVE" || d.status === "PENDING") ? (
-                    <Button size="icon-sm" variant="ghost" aria-label="إلغاء الخصم" onClick={() => revoke.mutate({ id: d.id })}>
-                      <X className="size-3.5" />
-                    </Button>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <p className="text-[13px] text-fg-3">لا خصومات ممنوحة. خصم الأشقاء يُطبق تلقائياً عند الفوترة.</p>
-        )}
-      </section>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-[13px] text-fg-3">لا خصومات ممنوحة. خصم الأشقاء يُطبق تلقائياً عند الفوترة.</p>
+          )}
+        </section>
+      )}
       {newInvoice ? (
         <NewInvoiceDialog
           prefill={{ student }}
@@ -169,7 +214,9 @@ function GrantDialog({ studentId, onClose }: { studentId: string; onClose: () =>
   const [note, setNote] = useState("");
   const m = trpc.finance.setup.grantDiscount.useMutation({
     onSuccess: (r) => {
-      toast.success(r.status === "PENDING" ? "أُرسل الخصم لاعتماد المدير" : "مُنح الخصم ويُطبق على الفواتير القادمة");
+      toast.success(
+        r.status === "PENDING" ? "أُرسل الخصم لاعتماد المدير" : "مُنح الخصم ويُطبق على الفواتير القادمة",
+      );
       void utils.finance.setup.studentDiscounts.invalidate();
       onClose();
     },
@@ -179,25 +226,53 @@ function GrantDialog({ studentId, onClose }: { studentId: string; onClose: () =>
   const type = types.find((t) => t.id === typeId);
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title="منح خصم" description="يُطبق على الفواتير التي تصدر بعد المنح. ما تجاوز حد الاعتماد يُرسل لمدير المدرسة.">
+      <DialogContent
+        title="منح خصم"
+        description="يُطبق على الفواتير التي تصدر بعد المنح. ما تجاوز حد الاعتماد يُرسل لمدير المدرسة."
+      >
         <div className="space-y-3 px-5 pb-4">
           <Field label="نوع الخصم">
-            <Select value={typeId} onChange={(v) => (setTypeId(v), setOverride(null))} options={types.map((t) => ({ value: t.id, label: t.name }))} />
+            <Select
+              value={typeId}
+              onChange={(v) => (setTypeId(v), setOverride(null))}
+              options={types.map((t) => ({ value: t.id, label: t.name }))}
+            />
           </Field>
           {type ? (
-            <Field label={type.method === "PERCENT" ? "النسبة ٪ (اتركها للقيمة الافتراضية)" : "المبلغ (اتركه للقيمة الافتراضية)"}>
-              {type.method === "PERCENT" ? <PercentInput bp={override ?? type.value} onChange={setOverride} /> : <MoneyInput value={override ?? type.value} onChange={setOverride} />}
+            <Field
+              label={
+                type.method === "PERCENT"
+                  ? "النسبة ٪ (اتركها للقيمة الافتراضية)"
+                  : "المبلغ (اتركه للقيمة الافتراضية)"
+              }
+            >
+              {type.method === "PERCENT" ? (
+                <PercentInput bp={override ?? type.value} onChange={setOverride} />
+              ) : (
+                <MoneyInput value={override ?? type.value} onChange={setOverride} />
+              )}
             </Field>
           ) : null}
           <Field label="ملاحظة / المسوّغ">
-            <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="مثال: منحة تفوق للعام الحالي" />
+            <Input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="مثال: منحة تفوق للعام الحالي"
+            />
           </Field>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>
             إلغاء
           </Button>
-          <Button variant="primary" loading={m.isPending} disabled={!typeId} onClick={() => m.mutate({ studentId, discountTypeId: typeId!, valueOverride: override, note: note || null })}>
+          <Button
+            variant="primary"
+            loading={m.isPending}
+            disabled={!typeId}
+            onClick={() =>
+              m.mutate({ studentId, discountTypeId: typeId!, valueOverride: override, note: note || null })
+            }
+          >
             منح
           </Button>
         </DialogFooter>

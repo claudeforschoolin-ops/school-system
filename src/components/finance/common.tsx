@@ -21,6 +21,18 @@ export const INVOICE_TABS = [
   { href: "/finance/invoices/bulk", label: "الفوترة الجماعية" },
   { href: "/finance/families", label: "كشوف حساب الأسر" },
 ];
+/** تبويبات الفواتير حسب الصلاحية (ولي الأمر يرى فواتير أبنائه فقط) */
+export function useInvoiceTabs() {
+  const { can } = useApp();
+  return INVOICE_TABS.filter((t) =>
+    t.href.endsWith("/bulk")
+      ? can("invoices", "create")
+      : t.href.endsWith("/families")
+        ? can("collections", "create") || can("invoices", "update")
+        : true,
+  );
+}
+
 export const COLLECT_TABS = [
   { href: "/finance/collect", label: "سند قبض سريع", exact: true },
   { href: "/finance/collect/receipts", label: "سجل السندات" },
@@ -43,7 +55,8 @@ export const SETUP_TABS = [
 ];
 
 /** رقم مستند بلا فواصل آلاف وبتفضيل الأرقام */
-export const docNo = (n: number | null | undefined, digits: "arab" | "latn") => (n === null || n === undefined ? "—" : formatNumber(n, digits, { useGrouping: false }));
+export const docNo = (n: number | null | undefined, digits: "arab" | "latn") =>
+  n === null || n === undefined ? "—" : formatNumber(n, digits, { useGrouping: false });
 
 /** منسّق المبالغ بعملة المدرسة وتفضيل الأرقام */
 export function useMoney() {
@@ -54,7 +67,8 @@ export function useMoney() {
     currency,
     fmt: (minor: number, symbol = true) => formatMoney(minor, { currency, digits: prefs.digits, symbol }),
     /** مبلغ بلا رمز مع إخفاء الصفر (للجداول المحاسبية) */
-    cell: (minor: number) => (minor ? formatMoney(minor, { currency, digits: prefs.digits, symbol: false }) : ""),
+    cell: (minor: number) =>
+      minor ? formatMoney(minor, { currency, digits: prefs.digits, symbol: false }) : "",
     /** مبلغ بالريال الصحيح (للمؤشرات الكبيرة)؛ يُقتطع النص العشري دون عمليات عشرية */
     whole: (minor: number) => {
       const [int] = minorToDecimalString(minor, currency).split(".");
@@ -70,7 +84,8 @@ export function useToday() {
 
 export function useFmtDate() {
   const prefs = usePrefs();
-  return (d: Date | string | null | undefined, style: "short" | "long" = "short") => (d ? formatDate(d, { digits: prefs.digits, calendar: prefs.calendar, style }) : "—");
+  return (d: Date | string | null | undefined, style: "short" | "long" = "short") =>
+    d ? formatDate(d, { digits: prefs.digits, calendar: prefs.calendar, style }) : "—";
 }
 
 /** حقل مبلغ: يُحوَّل النص إلى أصغر وحدة بلا عمليات عشرية، ويعرض الخطأ فوراً */
@@ -155,7 +170,15 @@ export function MoneyInput({
 }
 
 /** نسبة بنقاط الأساس ↔ نص مئوي (١٥٪ = 1500) دون float في التخزين */
-export function PercentInput({ bp, onChange, disabled }: { bp: number; onChange: (bp: number) => void; disabled?: boolean }) {
+export function PercentInput({
+  bp,
+  onChange,
+  disabled,
+}: {
+  bp: number;
+  onChange: (bp: number) => void;
+  disabled?: boolean;
+}) {
   const [text, setText] = useState(bp ? String(bp / 100) : "");
   return (
     <Input
@@ -175,21 +198,52 @@ export function PercentInput({ bp, onChange, disabled }: { bp: number; onChange:
 }
 
 /** جدول مالي مضغوط: رأس ثابت، أرقام محاذاة للطرف، وصف الإجمالي */
-export function FinTable({ head, children, foot, className, dense }: { head: ReactNode; children: ReactNode; foot?: ReactNode; className?: string; dense?: boolean }) {
+export function FinTable({
+  head,
+  children,
+  foot,
+  className,
+  dense,
+}: {
+  head: ReactNode;
+  children: ReactNode;
+  foot?: ReactNode;
+  className?: string;
+  dense?: boolean;
+}) {
   return (
     <div className={cn("overflow-x-auto rounded-lg bg-card shadow-card thin-scroll", className)}>
-      <table className={cn("w-full border-collapse text-[13px]", dense ? "[&_td]:py-1.5 [&_th]:py-1.5" : "[&_td]:py-2 [&_th]:py-2")}>
-        <thead className="text-fg-3 [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-line [&_th]:px-3 [&_th]:font-medium [&_th:not(.text-end)]:text-start">{head}</thead>
-        <tbody className="[&_td]:border-b [&_td]:border-line/60 [&_td]:px-3 [&_tr:hover]:bg-hover/60">{children}</tbody>
-        {foot ? <tfoot className="font-semibold [&_td]:border-t-2 [&_td]:border-line [&_td]:px-3">{foot}</tfoot> : null}
+      <table
+        className={cn(
+          "w-full border-collapse text-[13px]",
+          dense ? "[&_td]:py-1.5 [&_th]:py-1.5" : "[&_td]:py-2 [&_th]:py-2",
+        )}
+      >
+        <thead className="text-fg-3 [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-line [&_th]:px-3 [&_th]:font-medium [&_th:not(.text-end)]:text-start">
+          {head}
+        </thead>
+        <tbody className="[&_td]:border-b [&_td]:border-line/60 [&_td]:px-3 [&_tr:hover]:bg-hover/60">
+          {children}
+        </tbody>
+        {foot ? (
+          <tfoot className="font-semibold [&_td]:border-t-2 [&_td]:border-line [&_td]:px-3">{foot}</tfoot>
+        ) : null}
       </table>
     </div>
   );
 }
 
 /** وسم من خريطة وسوم بمفتاح نصي (الحقول النصية في قاعدة البيانات) */
-export function labelOf<M extends Record<string, { label: string; color: string }>>(map: M, key: string | null | undefined): { label: string; color: string } {
-  return (key && (map as Record<string, { label: string; color: string }>)[key]) || { label: key ?? "—", color: "gray" };
+export function labelOf<M extends Record<string, { label: string; color: string }>>(
+  map: M,
+  key: string | null | undefined,
+): { label: string; color: string } {
+  return (
+    (key && (map as Record<string, { label: string; color: string }>)[key]) || {
+      label: key ?? "—",
+      color: "gray",
+    }
+  );
 }
 
 export const num = "text-end tabular whitespace-nowrap";
@@ -198,20 +252,43 @@ export const num = "text-end tabular whitespace-nowrap";
 export function DocLink({ href, children }: { href: string | null | undefined; children: ReactNode }) {
   if (!href) return <span className="tabular">{children}</span>;
   return (
-    <Link href={href} className="tabular text-fg underline decoration-line underline-offset-4 hover:decoration-fg-3">
+    <Link
+      href={href}
+      className="tabular text-fg underline decoration-line underline-offset-4 hover:decoration-fg-3"
+    >
       {children}
     </Link>
   );
 }
 
 /** نطاق تاريخين بسيط */
-export function RangePicker({ from, to, onChange }: { from: string; to: string; onChange: (r: { from: string; to: string }) => void }) {
+export function RangePicker({
+  from,
+  to,
+  onChange,
+}: {
+  from: string;
+  to: string;
+  onChange: (r: { from: string; to: string }) => void;
+}) {
   return (
     <div className="flex flex-wrap items-center gap-2 text-[13px] text-fg-3">
       <span>من</span>
-      <Input type="date" className="h-7 w-[150px] text-[13px]" value={from} max={to} onChange={(e) => e.target.value && onChange({ from: e.target.value, to })} />
+      <Input
+        type="date"
+        className="h-7 w-[150px] text-[13px]"
+        value={from}
+        max={to}
+        onChange={(e) => e.target.value && onChange({ from: e.target.value, to })}
+      />
       <span>إلى</span>
-      <Input type="date" className="h-7 w-[150px] text-[13px]" value={to} min={from} onChange={(e) => e.target.value && onChange({ from, to: e.target.value })} />
+      <Input
+        type="date"
+        className="h-7 w-[150px] text-[13px]"
+        value={to}
+        min={from}
+        onChange={(e) => e.target.value && onChange({ from, to: e.target.value })}
+      />
     </div>
   );
 }
@@ -221,11 +298,30 @@ export const monthStart = (iso: string) => `${iso.slice(0, 7)}-01`;
 export const yearStart = (iso: string) => `${iso.slice(0, 4)}-01-01`;
 
 /** صندوق ملخص رقمي صغير */
-export function Figure({ label, value, tone, hint }: { label: string; value: ReactNode; tone?: "danger" | "success" | "warning"; hint?: ReactNode }) {
+export function Figure({
+  label,
+  value,
+  tone,
+  hint,
+}: {
+  label: string;
+  value: ReactNode;
+  tone?: "danger" | "success" | "warning";
+  hint?: ReactNode;
+}) {
   return (
     <div className="rounded-lg bg-card px-4 py-3 shadow-card">
       <p className="text-[12px] font-medium text-fg-3">{label}</p>
-      <p className={cn("mt-1 text-[20px] font-bold tabular", tone === "danger" && "text-danger-700", tone === "success" && "text-success-800", tone === "warning" && "text-warning-700")}>{value}</p>
+      <p
+        className={cn(
+          "mt-1 text-[20px] font-bold tabular",
+          tone === "danger" && "text-danger-700",
+          tone === "success" && "text-success-800",
+          tone === "warning" && "text-warning-700",
+        )}
+      >
+        {value}
+      </p>
       {hint ? <p className="mt-0.5 text-[12px] text-fg-3">{hint}</p> : null}
     </div>
   );
@@ -242,7 +338,9 @@ export function downloadCsv(filename: string, rows: Array<Array<string | number>
     const t = String(v);
     return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
   };
-  const blob = new Blob(["﻿" + rows.map((r) => r.map(esc).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
+  const blob = new Blob(["﻿" + rows.map((r) => r.map(esc).join(",")).join("\n")], {
+    type: "text/csv;charset=utf-8",
+  });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = filename;

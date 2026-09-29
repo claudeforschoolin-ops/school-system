@@ -13,7 +13,15 @@ import { toast } from "@/components/ui/toast";
 import { useApp, usePrefs } from "@/components/shell/app-context";
 import { docNo, useMoney } from "./common";
 
-export function SettlementCard({ studentId, effectiveDate, transferId }: { studentId: string; effectiveDate: string; transferId: string }) {
+export function SettlementCard({
+  studentId,
+  effectiveDate,
+  transferId,
+}: {
+  studentId: string;
+  effectiveDate: string;
+  transferId: string;
+}) {
   const { can } = useApp();
   const prefs = usePrefs();
   const money = useMoney();
@@ -39,7 +47,13 @@ export function SettlementCard({ studentId, effectiveDate, transferId }: { stude
         <>
           <dl className="grid grid-cols-2 gap-y-1.5 text-[13px]">
             <dt className="text-fg-3">المستحق حالياً</dt>
-            <dd className={q.data.outstanding ? "text-end font-semibold tabular text-danger-700" : "text-end tabular"}>{money.fmt(q.data.outstanding)}</dd>
+            <dd
+              className={
+                q.data.outstanding ? "text-end font-semibold tabular text-danger-700" : "text-end tabular"
+              }
+            >
+              {money.fmt(q.data.outstanding)}
+            </dd>
             <dt className="text-fg-3">رسوم غير مستهلكة</dt>
             <dd className="text-end tabular">{money.fmt(q.data.totalCredit)}</dd>
           </dl>
@@ -62,7 +76,9 @@ export function SettlementCard({ studentId, effectiveDate, transferId }: { stude
               إصدار إشعار دائن تناسبي
             </Button>
           ) : null}
-          <p className="mt-2 text-[12px] text-fg-3">خلو الطرف المالي يتطلب سداد المستحق (أو تسويته) قبل تنفيذ التحويل وإصدار الشهادة.</p>
+          <p className="mt-2 text-[12px] text-fg-3">
+            خلو الطرف المالي يتطلب سداد المستحق (أو تسويته) قبل تنفيذ التحويل وإصدار الشهادة.
+          </p>
           <ConfirmDialog
             open={confirm}
             onOpenChange={setConfirm}

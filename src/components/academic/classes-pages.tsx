@@ -472,7 +472,7 @@ export function YearEndPage() {
           <GraduationCap className="mx-auto size-10 text-teal-700" />
           <h2 className="mt-3 text-[20px] font-bold">بدأ العام الدراسي {result.name}</h2>
           <p className="mt-2 text-[14px] text-fg-2">
-            رُفّع {formatNumber(result.promoted, prefs.digits)} طالباً، وبقي {formatNumber(result.retained, prefs.digits)} للإعادة، وتخرّج {formatNumber(result.graduated, prefs.digits)}. نُسخ {formatNumber(result.sections, prefs.digits)} فصلاً و{formatNumber(result.teacherLoads, prefs.digits)} نصاب معلم.
+            رُفّع {formatNumber(result.promoted, prefs.digits)} طالباً، وبقي {formatNumber(result.retained, prefs.digits)} للإعادة، وتخرّج {formatNumber(result.graduated, prefs.digits)}{result.deferred ? `، وأُجّل قيد ${formatNumber(result.deferred, prefs.digits)} لوجود مستحقات` : ""}. نُسخ {formatNumber(result.sections, prefs.digits)} فصلاً و{formatNumber(result.teacherLoads, prefs.digits)} نصاب معلم.
           </p>
           <p className="mt-1 text-[13px] text-fg-3">الخطوة التالية: مراجعة الإسناد وتوليد الجداول للعام الجديد.</p>
           <div className="mt-4 flex justify-center gap-2">
@@ -500,6 +500,12 @@ export function YearEndPage() {
               {p.endsInFuture ? <p className="mt-3 rounded-md bg-warning-50 px-3 py-2 text-[13px] text-warning-700">لم ينتهِ العام الدراسي بعد حسب تاريخه. يُنصح بتنفيذ الإغلاق بعد اعتماد النتائج النهائية.</p> : null}
               {p.openTransfers ? <p className="mt-2 rounded-md bg-warning-50 px-3 py-2 text-[13px] text-warning-700">{formatNumber(p.openTransfers, prefs.digits)} طلب تحويل لم يُنفّذ بعد</p> : null}
               {p.pendingLeaves ? <p className="mt-2 rounded-md bg-warning-50 px-3 py-2 text-[13px] text-warning-700">{formatNumber(p.pendingLeaves, prefs.digits)} طلب إجازة بانتظار الاعتماد</p> : null}
+              {p.debtors.count ? (
+                <p className="mt-2 rounded-md bg-warning-50 px-3 py-2 text-[13px] text-warning-700">
+                  {formatNumber(p.debtors.count, prefs.digits)} طالباً عليهم مستحقات قائمة.{" "}
+                  {p.debtors.blockReenrollment ? "حسب سياسة المديونية في إعدادات المالية يُنقلون للعام الجديد بحالة «مؤجل» دون فصل حتى السداد." : "يُرفَّعون وتبقى المستحقات على حساباتهم (سياسة منع إعادة القيد غير مفعّلة)."}
+                </p>
+              ) : null}
               <table className="mt-4 w-full text-[13px]">
                 <thead className="text-fg-3">
                   <tr className="border-b border-line">

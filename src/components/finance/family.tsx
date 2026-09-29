@@ -20,9 +20,22 @@ import { Tag } from "@/components/ui/tag";
 import { toast } from "@/components/ui/toast";
 import { useApp, usePrefs } from "@/components/shell/app-context";
 import { ModuleShell } from "@/components/modules/module-shell";
-import { Figure, FinTable, financeNav, INVOICE_TABS, labelOf, MoneyInput, num, useFmtDate, useMoney, useToday, docNo } from "./common";
+import {
+  Figure,
+  FinTable,
+  financeNav,
+  labelOf,
+  MoneyInput,
+  num,
+  useFmtDate,
+  useMoney,
+  useToday,
+  docNo,
+  useInvoiceTabs,
+} from "./common";
 
 export function FamiliesIndex() {
+  const invoiceTabs = useInvoiceTabs();
   const money = useMoney();
   const [query, setQuery] = useState("");
   const [q, setQ] = useState("");
@@ -31,29 +44,60 @@ export function FamiliesIndex() {
     return () => clearTimeout(t);
   }, [query]);
   const res = trpc.finance.receipts.search.useQuery({ q }, { enabled: q.trim().length >= 2 });
-  const families = new Map<string, { id: string; name: string; phone: string | null; due: number; students: string[] }>();
+  const families = new Map<
+    string,
+    { id: string; name: string; phone: string | null; due: number; students: string[] }
+  >();
   for (const r of res.data ?? []) {
     if (!r.guardian) continue;
-    const f = families.get(r.guardian.id) ?? { id: r.guardian.id, name: r.guardian.name, phone: r.guardian.phone, due: r.familyDue, students: [] };
+    const f = families.get(r.guardian.id) ?? {
+      id: r.guardian.id,
+      name: r.guardian.name,
+      phone: r.guardian.phone,
+      due: r.familyDue,
+      students: [],
+    };
     f.students.push(r.fullName);
     families.set(r.guardian.id, f);
   }
   return (
-    <ModuleShell nav={financeNav("invoices")} tabs={INVOICE_TABS}>
+    <ModuleShell nav={financeNav("invoices")} tabs={invoiceTabs}>
       <div className="relative mx-auto max-w-2xl">
         <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-fg-3" />
-        <Input autoFocus className="h-10 ps-9" placeholder="ابحث باسم الطالب أو ولي الأمر أو الجوال أو الرقم الأكاديمي" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="بحث عن أسرة" />
+        <Input
+          autoFocus
+          className="h-10 ps-9"
+          placeholder="ابحث باسم الطالب أو ولي الأمر أو الجوال أو الرقم الأكاديمي"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="بحث عن أسرة"
+        />
       </div>
       <div className="mx-auto mt-4 max-w-2xl">
-        {q.trim().length < 2 ? (
-          <EmptyState compact illustration="search" title="كشف حساب أسرة" description="يجمع فواتير الأبناء كلهم وسنداتهم والرصيد الدائن في كشف واحد قابل للطباعة." />
+        {res.error ? (
+          <EmptyState
+            compact
+            illustration="lock"
+            title="البحث في الأسر لموظفي المالية"
+            description={res.error.message}
+          />
+        ) : q.trim().length < 2 ? (
+          <EmptyState
+            compact
+            illustration="search"
+            title="كشف حساب أسرة"
+            description="يجمع فواتير الأبناء كلهم وسنداتهم والرصيد الدائن في كشف واحد قابل للطباعة."
+          />
         ) : !res.data ? (
           <SkeletonLines lines={4} />
         ) : families.size ? (
           <ul className="overflow-hidden rounded-lg bg-card shadow-card">
             {[...families.values()].map((f) => (
               <li key={f.id}>
-                <Link href={`/finance/families/${f.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-hover">
+                <Link
+                  href={`/finance/families/${f.id}`}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-hover"
+                >
                   <Avatar name={f.name} size={32} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[15px] font-medium">{f.name}</span>
@@ -83,9 +127,18 @@ export function FamilyStatement({ guardianId }: { guardianId: string }) {
   const utils = trpc.useUtils();
   const [refundOpen, setRefundOpen] = useState(false);
   const onError = (e: { message: string }) => toast.error(e.message);
-  const apply = trpc.finance.receipts.applyCredit.useMutation({ onSuccess: (r) => (toast.success(`سُوّي ${money.fmt(r.used)} على الفواتير`), void utils.finance.invalidate()), onError });
+  const apply = trpc.finance.receipts.applyCredit.useMutation({
+    onSuccess: (r) => (
+      toast.success(`سُوّي ${money.fmt(r.used)} على الفواتير`),
+      void utils.finance.invalidate()
+    ),
+    onError,
+  });
   const today = useToday();
-  const pay = trpc.finance.receipts.payRefund.useMutation({ onSuccess: () => (toast.success("صُرف الاسترداد وقُيّد"), void utils.finance.invalidate()), onError });
+  const pay = trpc.finance.receipts.payRefund.useMutation({
+    onSuccess: () => (toast.success("صُرف الاسترداد وقُيّد"), void utils.finance.invalidate()),
+    onError,
+  });
   const f = q.data;
   const nav = financeNav("invoices");
   if (q.error) {
@@ -100,7 +153,10 @@ export function FamilyStatement({ guardianId }: { guardianId: string }) {
     <ModuleShell
       nav={nav}
       title={title}
-      crumbs={[{ title: "كشوف حساب الأسر", href: "/finance/families" }, ...(f ? [{ title: f.guardian.name }] : [])]}
+      crumbs={[
+        { title: "كشوف حساب الأسر", href: "/finance/families" },
+        ...(f ? [{ title: f.guardian.name }] : []),
+      ]}
       wide
       actions={
         f ? (
@@ -140,7 +196,10 @@ export function FamilyStatement({ guardianId }: { guardianId: string }) {
             <ul className="flex flex-wrap gap-2">
               {f.students.map((s) => (
                 <li key={s.id}>
-                  <Link href={`/students/${s.id}`} className="flex items-center gap-2 rounded-full bg-hover px-2.5 py-1 text-[13px] hover:bg-active">
+                  <Link
+                    href={`/students/${s.id}`}
+                    className="flex items-center gap-2 rounded-full bg-hover px-2.5 py-1 text-[13px] hover:bg-active"
+                  >
                     <Avatar name={s.fullName} size={18} src={s.photoUrl ?? undefined} />
                     {s.fullName.split(" ").slice(0, 2).join(" ")}
                     <span className="text-fg-3">{s.grade.name}</span>
@@ -154,7 +213,11 @@ export function FamilyStatement({ guardianId }: { guardianId: string }) {
             <Figure label="المدفوع" value={money.fmt(f.totals.paid)} />
             <Figure label="إشعارات دائنة" value={money.fmt(f.totals.credited)} />
             <Figure label="المستحق" value={money.fmt(f.totals.due)} />
-            <Figure label="المتأخر" value={money.fmt(f.totals.overdue)} tone={f.totals.overdue ? "danger" : undefined} />
+            <Figure
+              label="المتأخر"
+              value={money.fmt(f.totals.overdue)}
+              tone={f.totals.overdue ? "danger" : undefined}
+            />
             <Figure
               label="رصيد دائن"
               value={money.fmt(f.creditBalance)}
@@ -163,7 +226,11 @@ export function FamilyStatement({ guardianId }: { guardianId: string }) {
                 f.creditBalance > 0 && can("collections", "update") ? (
                   <span className="no-print flex gap-2">
                     {f.openInvoices.length ? (
-                      <button className="underline" disabled={apply.isPending} onClick={() => apply.mutate({ guardianId })}>
+                      <button
+                        className="underline"
+                        disabled={apply.isPending}
+                        onClick={() => apply.mutate({ guardianId })}
+                      >
                         تسويته
                       </button>
                     ) : null}
@@ -202,11 +269,21 @@ export function FamilyStatement({ guardianId }: { guardianId: string }) {
               {f.statement.map((m, i) => (
                 <tr key={i}>
                   <td className="whitespace-nowrap">{fmtDate(m.date)}</td>
-                  <td className="whitespace-nowrap">{m.link ? <Link href={m.link} className="hover:underline">{m.ref.replace(/\d+/g, (d) => docNo(Number(d), prefs.digits))}</Link> : m.ref}</td>
+                  <td className="whitespace-nowrap">
+                    {m.link ? (
+                      <Link href={m.link} className="hover:underline">
+                        {m.ref.replace(/\d+/g, (d) => docNo(Number(d), prefs.digits))}
+                      </Link>
+                    ) : (
+                      m.ref
+                    )}
+                  </td>
                   <td className="text-fg-2">{m.description}</td>
                   <td className={num}>{money.cell(m.debit)}</td>
                   <td className={num}>{money.cell(m.credit)}</td>
-                  <td className={cn(num, "font-medium", m.balance < 0 && "text-success-800")}>{money.fmt(m.balance, false)}</td>
+                  <td className={cn(num, "font-medium", m.balance < 0 && "text-success-800")}>
+                    {money.fmt(m.balance, false)}
+                  </td>
                 </tr>
               ))}
             </FinTable>
@@ -271,7 +348,21 @@ export function FamilyStatement({ guardianId }: { guardianId: string }) {
                       <span className="text-fg-3">{PAYMENT_METHOD[r.method].label}</span>
                     </td>
                     <td className="whitespace-nowrap">{fmtDate(r.date)}</td>
-                    <td>{r.status === "VOID" ? <Tag size="sm" color="red">ملغى</Tag> : r.chequeStatus === "BOUNCED" ? <Tag size="sm" color="red">مرتد</Tag> : <Tag size="sm" color="green">مرحّل</Tag>}</td>
+                    <td>
+                      {r.status === "VOID" ? (
+                        <Tag size="sm" color="red">
+                          ملغى
+                        </Tag>
+                      ) : r.chequeStatus === "BOUNCED" ? (
+                        <Tag size="sm" color="red">
+                          مرتد
+                        </Tag>
+                      ) : (
+                        <Tag size="sm" color="green">
+                          مرحّل
+                        </Tag>
+                      )}
+                    </td>
                     <td className={num}>{money.fmt(r.amountMinor, false)}</td>
                   </tr>
                 ))}
@@ -288,7 +379,13 @@ export function FamilyStatement({ guardianId }: { guardianId: string }) {
                         {labelOf(REFUND_STATUS, r.status).label}
                       </Tag>
                       {r.status === "APPROVED" && can("collections", "update") ? (
-                        <Button size="xs" variant="subtle" className="ms-1" loading={pay.isPending} onClick={() => pay.mutate({ id: r.id, date: today })}>
+                        <Button
+                          size="xs"
+                          variant="subtle"
+                          className="ms-1"
+                          loading={pay.isPending}
+                          onClick={() => pay.mutate({ id: r.id, date: today })}
+                        >
                           صرف
                         </Button>
                       ) : null}
@@ -299,14 +396,28 @@ export function FamilyStatement({ guardianId }: { guardianId: string }) {
               </FinTable>
             </section>
           </div>
-          {refundOpen ? <RefundDialog guardianId={guardianId} max={f.creditBalance} onClose={() => setRefundOpen(false)} /> : null}
+          {refundOpen ? (
+            <RefundDialog
+              guardianId={guardianId}
+              max={f.creditBalance}
+              onClose={() => setRefundOpen(false)}
+            />
+          ) : null}
         </>
       )}
     </ModuleShell>
   );
 }
 
-function RefundDialog({ guardianId, max, onClose }: { guardianId: string; max: number; onClose: () => void }) {
+function RefundDialog({
+  guardianId,
+  max,
+  onClose,
+}: {
+  guardianId: string;
+  max: number;
+  onClose: () => void;
+}) {
   const money = useMoney();
   const utils = trpc.useUtils();
   const [amount, setAmount] = useState<number | null>(max);
@@ -322,23 +433,43 @@ function RefundDialog({ guardianId, max, onClose }: { guardianId: string; max: n
   });
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title="طلب استرداد" description={`يُصرف من الرصيد الدائن (${money.fmt(max)}) بعد اعتماد مدير المدرسة.`}>
+      <DialogContent
+        title="طلب استرداد"
+        description={`يُصرف من الرصيد الدائن (${money.fmt(max)}) بعد اعتماد مدير المدرسة.`}
+      >
         <div className="space-y-3 px-5 pb-4">
           <Field label="المبلغ" error={amount !== null && amount > max ? "أكبر من الرصيد الدائن" : null}>
             <MoneyInput value={amount} onChange={setAmount} autoFocus />
           </Field>
           <Field label="طريقة الصرف">
-            <Select value={method} onChange={(v) => setMethod(v as PaymentMethodKey)} options={(["BANK_TRANSFER", "CASH", "CHEQUE"] as const).map((k) => ({ value: k, label: PAYMENT_METHOD[k].label }))} />
+            <Select
+              value={method}
+              onChange={(v) => setMethod(v as PaymentMethodKey)}
+              options={(["BANK_TRANSFER", "CASH", "CHEQUE"] as const).map((k) => ({
+                value: k,
+                label: PAYMENT_METHOD[k].label,
+              }))}
+            />
           </Field>
           <Field label="السبب">
-            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="مثال: انسحاب الطالب ورد الرصيد الزائد" />
+            <Textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="مثال: انسحاب الطالب ورد الرصيد الزائد"
+            />
           </Field>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>
             إلغاء
           </Button>
-          <Button variant="primary" icon={<HandCoins className="size-3.5" />} loading={m.isPending} disabled={!amount || amount > max || reason.trim().length < 3} onClick={() => m.mutate({ guardianId, amountMinor: amount!, method, reason })}>
+          <Button
+            variant="primary"
+            icon={<HandCoins className="size-3.5" />}
+            loading={m.isPending}
+            disabled={!amount || amount > max || reason.trim().length < 3}
+            onClick={() => m.mutate({ guardianId, amountMinor: amount!, method, reason })}
+          >
             إرسال للاعتماد
           </Button>
         </DialogFooter>
@@ -346,4 +477,3 @@ function RefundDialog({ guardianId, max, onClose }: { guardianId: string; max: n
     </Dialog>
   );
 }
-

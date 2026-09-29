@@ -9,6 +9,7 @@ import type { TenantDb } from "@/server/db/tenant";
 import { badRequest, forbidden, notFound } from "@/server/errors";
 import { currentYear } from "@/server/collections/options";
 import { teacherSectionIds } from "./student-scope";
+import { readModuleSettings } from "./module-settings.service";
 
 // ---------------------------------------------------------------------
 // النطاق
@@ -419,6 +420,15 @@ async function nextGrades(db: TenantDb) {
   return { ordered, next };
 }
 
+/** مستحقات الطلاب المنتظمين في العام (لسياسة منع إعادة القيد مع المديونية) */
+async function studentDebts(db: TenantDb | Prisma.TransactionClient, yearId: string) {
+  const invoices = await db.invoice.findMany({ where: { status: { in: ["ISSUED", "PARTIAL"] }, deletedAt: null, student: { academicYearId: yearId, status: "ACTIVE", deletedAt: null } }, select: { studentId: true, totalMinor: true, paidMinor: true, creditedMinor: true } });
+  const debts = new Map<string, number>();
+  for (const i of invoices) debts.set(i.studentId, (debts.get(i.studentId) ?? 0) + i.totalMinor - i.paidMinor - i.creditedMinor);
+  for (const [k, v] of debts) if (v <= 0) debts.delete(k);
+  return debts;
+}
+
 const addYears = (d: Date, n: number) => new Date(Date.UTC(d.getUTCFullYear() + n, d.getUTCMonth(), d.getUTCDate()));
 
 export async function yearEndPreview(db: TenantDb, session: SessionData) {
@@ -434,6 +444,7 @@ export async function yearEndPreview(db: TenantDb, session: SessionData) {
   ]);
   const count = new Map(byGrade.map((g) => [g.gradeId, g._count._all]));
   const startYear = year.startDate.getUTCFullYear() + 1;
+  const debts = await studentDebts(db, year.id);
   return {
     year: { id: year.id, name: year.name, startDate: year.startDate, endDate: year.endDate },
     suggested: { name: `${startYear}–${startYear + 1}`, startDate: addYears(year.startDate, 1).toISOString().slice(0, 10), endDate: addYears(year.endDate, 1).toISOString().slice(0, 10) },
@@ -445,6 +456,7 @@ export async function yearEndPreview(db: TenantDb, session: SessionData) {
     teacherLoads: loads,
     openTransfers,
     pendingLeaves,
+    debtors: { count: debts.size, totalMinor: [...debts.values()].reduce((a, b) => a + b, 0), blockReenrollment: readModuleSettings(session.tenant.settings, "finance").blockReenrollment },
     endsInFuture: year.endDate.getTime() > Date.now(),
   };
 }
@@ -472,6 +484,8 @@ export async function closeYear(db: TenantDb, session: SessionData, input: Close
   if (await db.academicYear.findFirst({ where: { name } })) throw badRequest("يوجد عام دراسي بالاسم نفسه");
   const { next } = await nextGrades(db);
   const retain = new Set(input.retainStudentIds);
+  // سياسة المديونية: من عليه مستحقات يُنقل للعام الجديد «مؤجلاً» دون فصل حتى السداد
+  const hold = readModuleSettings(session.tenant.settings, "finance").blockReenrollment ? await studentDebts(db, year.id) : new Map<string, number>();
 
   return db.$transaction(
     async (tx) => {
@@ -503,6 +517,7 @@ export async function closeYear(db: TenantDb, session: SessionData, input: Close
       let promoted = 0;
       let retained = 0;
       let graduated = 0;
+      let deferred = 0;
       for (const st of students) {
         const keep = retain.has(st.id);
         const target = keep ? { id: st.gradeId } : next.get(st.gradeId);
@@ -512,14 +527,16 @@ export async function closeYear(db: TenantDb, session: SessionData, input: Close
           continue;
         }
         const secName = st.sectionId ? sectionName.get(st.sectionId) : undefined;
-        const sectionId = secName ? (newSection.get(`${st.branchId}|${target.id}|${secName}`) ?? null) : null;
-        await tx.student.update({ where: { id: st.id }, data: { academicYearId: newYear.id, gradeId: target.id, sectionId, updatedById: session.user.id } });
+        const held = hold.has(st.id);
+        const sectionId = secName && !held ? (newSection.get(`${st.branchId}|${target.id}|${secName}`) ?? null) : null;
+        await tx.student.update({ where: { id: st.id }, data: { academicYearId: newYear.id, gradeId: target.id, sectionId, ...(held ? { status: "DEFERRED" as const } : {}), updatedById: session.user.id } });
+        if (held) deferred++;
         if (keep) retained++;
         else promoted++;
       }
       await tx.academicYear.update({ where: { id: year.id }, data: { isCurrent: false, updatedById: session.user.id } });
       await tx.academicYear.update({ where: { id: newYear.id }, data: { isCurrent: true, updatedById: session.user.id } });
-      return { yearId: newYear.id, name: newYear.name, promoted, retained, graduated, sections: sections.length, teacherLoads: loads.length };
+      return { yearId: newYear.id, name: newYear.name, promoted, retained, graduated, deferred, sections: sections.length, teacherLoads: loads.length };
     },
     { timeout: 120_000 },
   );

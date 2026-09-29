@@ -239,7 +239,8 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
     color: "slate",
     grants: merge(
       grant(["students", "attendance", "report_cards", "invoices", "transport", "timetable"], VIEW("ASSIGNED")),
-      grant(["collections"], { view: "ASSIGNED", create: "ASSIGNED" }),
+      // سندات أسرته فقط؛ لا تسجيل مدفوعات (الدفع الإلكتروني غير مفعّل)
+      grant(["collections"], VIEW("ASSIGNED")),
       grant(["transfers"], { view: "ASSIGNED", create: "ASSIGNED" }),
       grant(["messages"], { view: "OWN", create: "OWN" }),
       grant(["announcements", "events"], VIEW("ALL")),

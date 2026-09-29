@@ -250,7 +250,7 @@ function NavLink({ href, icon, children }: { href: string; icon: React.ReactNode
 function ModulesGroup() {
   const { can } = useApp();
   const pathname = usePathname();
-  const items = MODULE_NAV.filter((m) => can(m.module, "view"));
+  const items = MODULE_NAV.filter((m) => can(m.module, m.action ?? "view"));
   if (!items.length) return null;
   return (
     <>

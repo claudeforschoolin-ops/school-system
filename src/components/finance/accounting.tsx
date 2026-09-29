@@ -3,11 +3,32 @@
  * المحاسبة العامة: دفتر اليومية، القيد اليدوي بمؤشر توازن حيّ، صفحة القيد (عكس القيود اليدوية)،
  * دليل الحسابات شجرياً بأرصدته، دفتر الأستاذ لحساب، الفترات وقائمة الإقفال، ومراكز التكلفة.
  */
-import { BookOpen, CheckCircle2, ChevronDown, ChevronLeft, CircleAlert, CircleX, FilePlus2, Lock, LockOpen, Pencil, Plus, Scale, Sparkles, Trash2, Undo2 } from "lucide-react";
+import {
+  BookOpen,
+  CheckCircle2,
+  ChevronDown,
+  ChevronLeft,
+  CircleAlert,
+  CircleX,
+  FilePlus2,
+  Lock,
+  LockOpen,
+  Pencil,
+  Plus,
+  Scale,
+  Sparkles,
+  Trash2,
+  Undo2,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { ACCOUNT_TYPE, JOURNAL_SOURCE, type AccountTypeKey, type JournalSourceKey } from "@/lib/finance/labels";
+import {
+  ACCOUNT_TYPE,
+  JOURNAL_SOURCE,
+  type AccountTypeKey,
+  type JournalSourceKey,
+} from "@/lib/finance/labels";
 import { formatNumber } from "@/lib/numbers";
 import { trpc, type RouterOutputs } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
@@ -23,7 +44,22 @@ import { Tag } from "@/components/ui/tag";
 import { toast } from "@/components/ui/toast";
 import { useApp, usePrefs } from "@/components/shell/app-context";
 import { ModuleShell } from "@/components/modules/module-shell";
-import { ACCOUNTING_TABS, DocLink, Figure, FinTable, financeNav, MoneyInput, monthStart, num, RangePicker, useFmtDate, useMoney, useToday, yearStart, docNo } from "./common";
+import {
+  ACCOUNTING_TABS,
+  DocLink,
+  Figure,
+  FinTable,
+  financeNav,
+  MoneyInput,
+  monthStart,
+  num,
+  RangePicker,
+  useFmtDate,
+  useMoney,
+  useToday,
+  yearStart,
+  docNo,
+} from "./common";
 
 type Account = RouterOutputs["finance"]["accounting"]["chart"]["accounts"][number];
 const SOURCES = Object.keys(JOURNAL_SOURCE) as JournalSourceKey[];
@@ -42,7 +78,12 @@ export function JournalPage() {
   const [source, setSource] = useState<JournalSourceKey | "all">("all");
   const [search, setSearch] = useState("");
   const [cursors, setCursors] = useState<number[]>([]);
-  const q = trpc.finance.accounting.entries.useQuery({ ...range, source: source === "all" ? null : source, q: search.trim() || null, cursor: cursors.at(-1) ?? null });
+  const q = trpc.finance.accounting.entries.useQuery({
+    ...range,
+    source: source === "all" ? null : source,
+    q: search.trim() || null,
+    cursor: cursors.at(-1) ?? null,
+  });
   const rows = q.data?.rows ?? [];
   return (
     <ModuleShell
@@ -61,8 +102,22 @@ export function JournalPage() {
     >
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <RangePicker from={range.from} to={range.to} onChange={(r) => (setRange(r), setCursors([]))} />
-        <Select size="sm" className="w-48" value={source} onChange={(v) => (setSource(v as JournalSourceKey | "all"), setCursors([]))} options={[{ value: "all", label: "كل المصادر" }, ...SOURCES.map((s) => ({ value: s, label: JOURNAL_SOURCE[s].label }))]} />
-        <Input className="h-7 w-56 text-[13px]" placeholder="رقم القيد، البيان، المرجع" value={search} onChange={(e) => (setSearch(e.target.value), setCursors([]))} />
+        <Select
+          size="sm"
+          className="w-48"
+          value={source}
+          onChange={(v) => (setSource(v as JournalSourceKey | "all"), setCursors([]))}
+          options={[
+            { value: "all", label: "كل المصادر" },
+            ...SOURCES.map((s) => ({ value: s, label: JOURNAL_SOURCE[s].label })),
+          ]}
+        />
+        <Input
+          className="h-7 w-56 text-[13px]"
+          placeholder="رقم القيد، البيان، المرجع"
+          value={search}
+          onChange={(e) => (setSearch(e.target.value), setCursors([]))}
+        />
       </div>
       {q.error ? (
         <EmptyState illustration="lock" title="لا يمكن عرض القيود" description={q.error.message} />
@@ -86,16 +141,29 @@ export function JournalPage() {
             {rows.map((e) => (
               <tr key={e.id} className={cn(e.isReversed && "text-fg-3")}>
                 <td>
-                  <Link href={`/finance/accounting/entries/${e.id}`} className="tabular font-medium hover:underline">
+                  <Link
+                    href={`/finance/accounting/entries/${e.id}`}
+                    className="tabular font-medium hover:underline"
+                  >
                     {docNo(e.number, prefs.digits)}
                   </Link>
-                  {e.periodClosed ? <Lock className="ms-1 inline size-3 text-fg-3" aria-label="فترة مقفلة" /> : null}
+                  {e.periodClosed ? (
+                    <Lock className="ms-1 inline size-3 text-fg-3" aria-label="فترة مقفلة" />
+                  ) : null}
                 </td>
                 <td className="whitespace-nowrap">{fmtDate(e.date)}</td>
                 <td className="max-w-[360px] truncate">
                   {e.description}
-                  {e.isReversed ? <Tag size="sm" color="red" className="ms-1">معكوس</Tag> : null}
-                  {e.postedInClosedPeriod ? <Tag size="sm" color="orange" className="ms-1">في فترة مقفلة</Tag> : null}
+                  {e.isReversed ? (
+                    <Tag size="sm" color="red" className="ms-1">
+                      معكوس
+                    </Tag>
+                  ) : null}
+                  {e.postedInClosedPeriod ? (
+                    <Tag size="sm" color="orange" className="ms-1">
+                      في فترة مقفلة
+                    </Tag>
+                  ) : null}
                 </td>
                 <td>
                   <Tag size="sm" color={JOURNAL_SOURCE[e.source].color}>
@@ -113,16 +181,31 @@ export function JournalPage() {
             ))}
           </FinTable>
           <div className="mt-3 flex justify-between">
-            <Button size="sm" variant="ghost" disabled={!cursors.length} onClick={() => setCursors(cursors.slice(0, -1))}>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={!cursors.length}
+              onClick={() => setCursors(cursors.slice(0, -1))}
+            >
               الأحدث
             </Button>
-            <Button size="sm" variant="ghost" disabled={!q.data.nextCursor} onClick={() => setCursors([...cursors, q.data!.nextCursor!])}>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={!q.data.nextCursor}
+              onClick={() => setCursors([...cursors, q.data!.nextCursor!])}
+            >
               الأقدم
             </Button>
           </div>
         </>
       ) : (
-        <EmptyState compact illustration="table" title="لا قيود بهذه المعايير" description="القيود الآلية تُنشأ من الفواتير والسندات، ويمكن إضافة قيد يدوي." />
+        <EmptyState
+          compact
+          illustration="table"
+          title="لا قيود بهذه المعايير"
+          description="القيود الآلية تُنشأ من الفواتير والسندات، ويمكن إضافة قيد يدوي."
+        />
       )}
     </ModuleShell>
   );
@@ -132,7 +215,14 @@ export function JournalPage() {
 // القيد اليدوي
 // ---------------------------------------------------------------------
 
-type Line = { key: number; accountId: string | null; debit: number | null; credit: number | null; costCenterId: string | null; description: string };
+type Line = {
+  key: number;
+  accountId: string | null;
+  debit: number | null;
+  credit: number | null;
+  costCenterId: string | null;
+  description: string;
+};
 
 export function ManualEntryPage() {
   const { can } = useApp();
@@ -163,9 +253,27 @@ export function ManualEntryPage() {
   const diff = debit - credit;
   const filled = lines.filter((l) => l.accountId && ((l.debit ?? 0) > 0 || (l.credit ?? 0) > 0));
   const bothSides = lines.some((l) => (l.debit ?? 0) > 0 && (l.credit ?? 0) > 0);
-  const valid = filled.length >= 2 && diff === 0 && debit > 0 && !bothSides && description.trim().length >= 3 && (!allowClosed || closedReason.trim().length >= 5);
-  const set = (key: number, patch: Partial<Line>) => setLines(lines.map((l) => (l.key === key ? { ...l, ...patch } : l)));
-  const addLine = () => setLines([...lines, { key: Math.max(...lines.map((l) => l.key)) + 1, accountId: null, debit: null, credit: null, costCenterId: null, description: "" }]);
+  const valid =
+    filled.length >= 2 &&
+    diff === 0 &&
+    debit > 0 &&
+    !bothSides &&
+    description.trim().length >= 3 &&
+    (!allowClosed || closedReason.trim().length >= 5);
+  const set = (key: number, patch: Partial<Line>) =>
+    setLines(lines.map((l) => (l.key === key ? { ...l, ...patch } : l)));
+  const addLine = () =>
+    setLines([
+      ...lines,
+      {
+        key: Math.max(...lines.map((l) => l.key)) + 1,
+        accountId: null,
+        debit: null,
+        credit: null,
+        costCenterId: null,
+        description: "",
+      },
+    ]);
   if (!can("accounting", "create")) {
     return (
       <ModuleShell nav={financeNav("accounting")} tabs={ACCOUNTING_TABS} title="قيد يدوي">
@@ -174,13 +282,24 @@ export function ManualEntryPage() {
     );
   }
   return (
-    <ModuleShell nav={financeNav("accounting")} tabs={ACCOUNTING_TABS} title="قيد يدوي" crumbs={[{ title: "قيد يدوي" }]} wide>
-      <div className="mb-4 grid gap-3 md:grid-cols-[160px_1fr_200px]">
+    <ModuleShell
+      nav={financeNav("accounting")}
+      tabs={ACCOUNTING_TABS}
+      title="قيد يدوي"
+      crumbs={[{ title: "قيد يدوي" }]}
+      wide
+    >
+      <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-[160px_1fr_200px]">
         <Field label="التاريخ">
           <Input type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
         </Field>
         <Field label="البيان">
-          <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="مثال: إثبات مصروف كهرباء شهر أغسطس المستحق" autoFocus />
+          <Input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="مثال: إثبات مصروف كهرباء شهر أغسطس المستحق"
+            autoFocus
+          />
         </Field>
         <Field label="المرجع (اختياري)">
           <Input dir="ltr" value={reference} onChange={(e) => setReference(e.target.value)} />
@@ -200,24 +319,61 @@ export function ManualEntryPage() {
           </thead>
           <tbody>
             {lines.map((l) => (
-              <tr key={l.key} className="[&_td]:border-b [&_td]:border-line/60 [&_td]:px-2 [&_td]:py-1.5 align-top">
+              <tr
+                key={l.key}
+                className="[&_td]:border-b [&_td]:border-line/60 [&_td]:px-2 [&_td]:py-1.5 align-top"
+              >
                 <td>
-                  <AccountSelect accounts={accounts} value={l.accountId} onChange={(v) => set(l.key, { accountId: v })} />
+                  <AccountSelect
+                    accounts={accounts}
+                    value={l.accountId}
+                    onChange={(v) => set(l.key, { accountId: v })}
+                  />
                 </td>
                 <td>
-                  <MoneyInput value={l.debit} onChange={(v) => set(l.key, { debit: v, ...(v ? { credit: null } : {}) })} aria-label="مدين" onEnter={addLine} />
+                  <MoneyInput
+                    value={l.debit}
+                    onChange={(v) => set(l.key, { debit: v, ...(v ? { credit: null } : {}) })}
+                    aria-label="مدين"
+                    onEnter={addLine}
+                  />
                 </td>
                 <td>
-                  <MoneyInput value={l.credit} onChange={(v) => set(l.key, { credit: v, ...(v ? { debit: null } : {}) })} aria-label="دائن" onEnter={addLine} />
+                  <MoneyInput
+                    value={l.credit}
+                    onChange={(v) => set(l.key, { credit: v, ...(v ? { debit: null } : {}) })}
+                    aria-label="دائن"
+                    onEnter={addLine}
+                  />
                 </td>
                 <td>
-                  <Select size="sm" value={l.costCenterId ?? "none"} onChange={(v) => set(l.key, { costCenterId: v === "none" ? null : v })} options={[{ value: "none", label: "—" }, ...(centers.data?.rows ?? []).filter((c) => c.isActive).map((c) => ({ value: c.id, label: c.name }))]} />
+                  <Select
+                    size="sm"
+                    value={l.costCenterId ?? "none"}
+                    onChange={(v) => set(l.key, { costCenterId: v === "none" ? null : v })}
+                    options={[
+                      { value: "none", label: "—" },
+                      ...(centers.data?.rows ?? [])
+                        .filter((c) => c.isActive)
+                        .map((c) => ({ value: c.id, label: c.name })),
+                    ]}
+                  />
                 </td>
                 <td>
-                  <Input className="h-7 text-[13px]" value={l.description} onChange={(e) => set(l.key, { description: e.target.value })} />
+                  <Input
+                    className="h-7 text-[13px]"
+                    value={l.description}
+                    onChange={(e) => set(l.key, { description: e.target.value })}
+                  />
                 </td>
                 <td>
-                  <Button size="icon-sm" variant="ghost" aria-label="حذف السطر" disabled={lines.length <= 2} onClick={() => setLines(lines.filter((x) => x.key !== l.key))}>
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label="حذف السطر"
+                    disabled={lines.length <= 2}
+                    onClick={() => setLines(lines.filter((x) => x.key !== l.key))}
+                  >
                     <Trash2 className="size-3.5" />
                   </Button>
                 </td>
@@ -246,7 +402,14 @@ export function ManualEntryPage() {
             الترحيل في فترة مقفلة (يُسجل في سجل التدقيق)
           </label>
         ) : null}
-        {allowClosed ? <Input className="h-7 w-64 text-[13px]" placeholder="سبب الترحيل في الفترة المقفلة" value={closedReason} onChange={(e) => setClosedReason(e.target.value)} /> : null}
+        {allowClosed ? (
+          <Input
+            className="h-7 w-64 text-[13px]"
+            placeholder="سبب الترحيل في الفترة المقفلة"
+            value={closedReason}
+            onChange={(e) => setClosedReason(e.target.value)}
+          />
+        ) : null}
         <span className="flex-1" />
         <Button
           variant="primary"
@@ -258,7 +421,13 @@ export function ManualEntryPage() {
               date,
               description,
               reference: reference || null,
-              lines: filled.map((l) => ({ accountId: l.accountId!, debit: l.debit ?? 0, credit: l.credit ?? 0, costCenterId: l.costCenterId, description: l.description || null })),
+              lines: filled.map((l) => ({
+                accountId: l.accountId!,
+                debit: l.debit ?? 0,
+                credit: l.credit ?? 0,
+                costCenterId: l.costCenterId,
+                description: l.description || null,
+              })),
               allowClosedPeriod: allowClosed,
               closedReason: allowClosed ? closedReason : null,
             })
@@ -268,7 +437,10 @@ export function ManualEntryPage() {
         </Button>
       </div>
       {bothSides ? <p className="mt-2 text-[13px] text-danger-700">السطر الواحد إما مدين أو دائن.</p> : null}
-      <p className="mt-2 text-[12px] text-fg-3">بعد الترحيل لا يُعدَّل القيد ولا يُحذف؛ التصحيح بقيد عكسي. قاعدة البيانات نفسها ترفض أي قيد غير متوازن.</p>
+      <p className="mt-2 text-[12px] text-fg-3">
+        بعد الترحيل لا يُعدَّل القيد ولا يُحذف؛ التصحيح بقيد عكسي. قاعدة البيانات نفسها ترفض أي قيد غير
+        متوازن.
+      </p>
     </ModuleShell>
   );
 }
@@ -283,16 +455,41 @@ export function BalanceIndicator({ diff, total }: { diff: number; total: number 
       aria-live="polite"
       data-testid="balance-indicator"
       data-balanced={ok}
-      className={cn("flex items-center gap-2 rounded-md px-3 py-1.5 text-[13px] font-medium", ok ? "bg-success-50 text-success-800" : total === 0 ? "bg-hover text-fg-3" : "bg-danger-50 text-danger-700")}
+      className={cn(
+        "flex items-center gap-2 rounded-md px-3 py-1.5 text-[13px] font-medium",
+        ok
+          ? "bg-success-50 text-success-800"
+          : total === 0
+            ? "bg-hover text-fg-3"
+            : "bg-danger-50 text-danger-700",
+      )}
     >
-      {ok ? <Scale className="size-4" /> : total === 0 ? <Scale className="size-4" /> : <CircleAlert className="size-4" />}
-      {ok ? "القيد متوازن" : total === 0 && diff === 0 ? "أدخل المبالغ" : `غير متوازن: الفرق ${money.fmt(Math.abs(diff))} ${diff > 0 ? "زيادة في المدين" : "زيادة في الدائن"}`}
+      {ok ? (
+        <Scale className="size-4" />
+      ) : total === 0 ? (
+        <Scale className="size-4" />
+      ) : (
+        <CircleAlert className="size-4" />
+      )}
+      {ok
+        ? "القيد متوازن"
+        : total === 0 && diff === 0
+          ? "أدخل المبالغ"
+          : `غير متوازن: الفرق ${money.fmt(Math.abs(diff))} ${diff > 0 ? "زيادة في المدين" : "زيادة في الدائن"}`}
     </div>
   );
 }
 
 /** منتقي حساب بالبحث بالرمز أو الاسم */
-function AccountSelect({ accounts, value, onChange }: { accounts: Account[]; value: string | null; onChange: (id: string) => void }) {
+function AccountSelect({
+  accounts,
+  value,
+  onChange,
+}: {
+  accounts: Account[];
+  value: string | null;
+  onChange: (id: string) => void;
+}) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const cur = accounts.find((a) => a.id === value);
@@ -321,7 +518,11 @@ function AccountSelect({ accounts, value, onChange }: { accounts: Account[]; val
           {list.length ? (
             list.map((a) => (
               <li key={a.id}>
-                <button type="button" className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-start text-[13px] hover:bg-hover" onMouseDown={(e) => (e.preventDefault(), onChange(a.id), setOpen(false))}>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-start text-[13px] hover:bg-hover"
+                  onMouseDown={(e) => (e.preventDefault(), onChange(a.id), setOpen(false))}
+                >
                   <bdi dir="ltr" className="tabular text-fg-3">
                     {a.code}
                   </bdi>
@@ -416,12 +617,18 @@ export function EntryDetail({ id }: { id: string }) {
                 </Link>
               ) : null}
               {e.reversal ? (
-                <Link href={`/finance/accounting/entries/${e.reversal.id}`} className="text-fg-2 underline decoration-line underline-offset-4">
+                <Link
+                  href={`/finance/accounting/entries/${e.reversal.id}`}
+                  className="text-fg-2 underline decoration-line underline-offset-4"
+                >
                   القيد العكسي رقم {docNo(e.reversal.number, prefs.digits)}
                 </Link>
               ) : null}
               {e.original ? (
-                <Link href={`/finance/accounting/entries/${e.original.id}`} className="text-fg-2 underline decoration-line underline-offset-4">
+                <Link
+                  href={`/finance/accounting/entries/${e.original.id}`}
+                  className="text-fg-2 underline decoration-line underline-offset-4"
+                >
                   يعكس القيد رقم {docNo(e.original.number, prefs.digits)}
                 </Link>
               ) : null}
@@ -442,7 +649,16 @@ export function EntryDetail({ id }: { id: string }) {
               <tr>
                 <td colSpan={4}>
                   <span className="flex items-center gap-2">
-                    الإجمالي {totalD === totalC ? <Tag size="sm" color="green">متوازن</Tag> : <Tag size="sm" color="red">غير متوازن</Tag>}
+                    الإجمالي{" "}
+                    {totalD === totalC ? (
+                      <Tag size="sm" color="green">
+                        متوازن
+                      </Tag>
+                    ) : (
+                      <Tag size="sm" color="red">
+                        غير متوازن
+                      </Tag>
+                    )}
                   </span>
                 </td>
                 <td className={num}>{money.fmt(totalD, false)}</td>
@@ -459,7 +675,11 @@ export function EntryDetail({ id }: { id: string }) {
                     </bdi>{" "}
                     {l.name}
                   </Link>
-                  {l.reconciled ? <Tag size="sm" color="teal" className="ms-1">مطابق بنكياً</Tag> : null}
+                  {l.reconciled ? (
+                    <Tag size="sm" color="teal" className="ms-1">
+                      مطابق بنكياً
+                    </Tag>
+                  ) : null}
                 </td>
                 <td className="text-fg-2">{l.description ?? ""}</td>
                 <td className="text-fg-2">{l.costCenter ?? ""}</td>
@@ -469,11 +689,16 @@ export function EntryDetail({ id }: { id: string }) {
               </tr>
             ))}
           </FinTable>
-          <p className="mt-2 text-[12px] text-fg-3">القيود المرحّلة غير قابلة للتعديل أو الحذف (تفرضه قاعدة البيانات)؛ التصحيح بقيد عكسي فقط.</p>
+          <p className="mt-2 text-[12px] text-fg-3">
+            القيود المرحّلة غير قابلة للتعديل أو الحذف (تفرضه قاعدة البيانات)؛ التصحيح بقيد عكسي فقط.
+          </p>
         </>
       )}
       <Dialog open={reversing} onOpenChange={setReversing}>
-        <DialogContent title="قيد عكسي" description="يُرحّل قيد بعكس كل السطور بتاريخ اليوم، ويُعلَّم الأصل «معكوس».">
+        <DialogContent
+          title="قيد عكسي"
+          description="يُرحّل قيد بعكس كل السطور بتاريخ اليوم، ويُعلَّم الأصل «معكوس»."
+        >
           <div className="px-5 pb-4">
             <Field label="السبب">
               <Textarea value={reason} onChange={(ev) => setReason(ev.target.value)} autoFocus />
@@ -483,7 +708,12 @@ export function EntryDetail({ id }: { id: string }) {
             <Button variant="ghost" onClick={() => setReversing(false)}>
               تراجع
             </Button>
-            <Button variant="primary" loading={reverse.isPending} disabled={reason.trim().length < 3} onClick={() => reverse.mutate({ id, reason })}>
+            <Button
+              variant="primary"
+              loading={reverse.isPending}
+              disabled={reason.trim().length < 3}
+              onClick={() => reverse.mutate({ id, reason })}
+            >
               ترحيل القيد العكسي
             </Button>
           </DialogFooter>
@@ -525,7 +755,12 @@ export function ChartOfAccounts() {
       wide
       actions={
         q.data?.canEdit ? (
-          <Button size="sm" variant="primary" icon={<Plus className="size-3.5" />} onClick={() => setEditing("new")}>
+          <Button
+            size="sm"
+            variant="primary"
+            icon={<Plus className="size-3.5" />}
+            onClick={() => setEditing("new")}
+          >
             حساب
           </Button>
         ) : null
@@ -535,7 +770,10 @@ export function ChartOfAccounts() {
         <label className="flex items-center gap-2">
           <Checkbox checked={showZero} onChange={setShowZero} /> إظهار الحسابات الصفرية
         </label>
-        <button className="hover:text-fg" onClick={() => setCollapsed(new Set(accounts.filter((a) => a.isGroup).map((a) => a.id)))}>
+        <button
+          className="hover:text-fg"
+          onClick={() => setCollapsed(new Set(accounts.filter((a) => a.isGroup).map((a) => a.id)))}
+        >
           طي الكل
         </button>
         <button className="hover:text-fg" onClick={() => setCollapsed(new Set())}>
@@ -565,8 +803,20 @@ export function ChartOfAccounts() {
               <td>
                 <span className="flex items-center gap-1" style={{ paddingInlineStart: depth * 18 }}>
                   {a.isGroup ? (
-                    <button className="grid size-5 place-items-center rounded hover:bg-hover" aria-label={collapsed.has(a.id) ? "فتح" : "طي"} onClick={() => setCollapsed((s) => (s.has(a.id) ? new Set([...s].filter((x) => x !== a.id)) : new Set([...s, a.id])))}>
-                      {collapsed.has(a.id) ? <ChevronLeft className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+                    <button
+                      className="grid size-5 place-items-center rounded hover:bg-hover"
+                      aria-label={collapsed.has(a.id) ? "فتح" : "طي"}
+                      onClick={() =>
+                        setCollapsed((s) =>
+                          s.has(a.id) ? new Set([...s].filter((x) => x !== a.id)) : new Set([...s, a.id]),
+                        )
+                      }
+                    >
+                      {collapsed.has(a.id) ? (
+                        <ChevronLeft className="size-3.5" />
+                      ) : (
+                        <ChevronDown className="size-3.5" />
+                      )}
                     </button>
                   ) : (
                     <span className="w-5" />
@@ -581,7 +831,9 @@ export function ChartOfAccounts() {
                       {a.name}
                     </Link>
                   )}
-                  {a.systemKey ? <Sparkles className="size-3 text-fg-3" aria-label="حساب نظامي تستخدمه القيود الآلية" /> : null}
+                  {a.systemKey ? (
+                    <Sparkles className="size-3 text-fg-3" aria-label="حساب نظامي تستخدمه القيود الآلية" />
+                  ) : null}
                 </span>
               </td>
               <td>
@@ -594,7 +846,12 @@ export function ChartOfAccounts() {
               <td className={num}>{a.balance ? money.fmt(a.balance, false) : "—"}</td>
               <td>
                 {q.data.canEdit ? (
-                  <Button size="icon-sm" variant="ghost" aria-label="تعديل الحساب" onClick={() => setEditing(a)}>
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label="تعديل الحساب"
+                    onClick={() => setEditing(a)}
+                  >
                     <Pencil className="size-3" />
                   </Button>
                 ) : null}
@@ -603,14 +860,36 @@ export function ChartOfAccounts() {
           ))}
         </FinTable>
       )}
-      {editing ? <AccountDialog account={editing === "new" ? null : editing} accounts={accounts} onClose={() => setEditing(null)} /> : null}
+      {editing ? (
+        <AccountDialog
+          account={editing === "new" ? null : editing}
+          accounts={accounts}
+          onClose={() => setEditing(null)}
+        />
+      ) : null}
     </ModuleShell>
   );
 }
 
-function AccountDialog({ account, accounts, onClose }: { account: Account | null; accounts: Account[]; onClose: () => void }) {
+function AccountDialog({
+  account,
+  accounts,
+  onClose,
+}: {
+  account: Account | null;
+  accounts: Account[];
+  onClose: () => void;
+}) {
   const utils = trpc.useUtils();
-  const [v, setV] = useState({ code: account?.code ?? "", name: account?.name ?? "", parentId: account?.parentId ?? null, isGroup: account?.isGroup ?? false, description: account?.description ?? "", cashFlowGroup: account?.cashFlowGroup ?? null, isActive: account?.isActive ?? true });
+  const [v, setV] = useState({
+    code: account?.code ?? "",
+    name: account?.name ?? "",
+    parentId: account?.parentId ?? null,
+    isGroup: account?.isGroup ?? false,
+    description: account?.description ?? "",
+    cashFlowGroup: account?.cashFlowGroup ?? null,
+    isActive: account?.isActive ?? true,
+  });
   const m = trpc.finance.accounting.saveAccount.useMutation({
     onSuccess: () => {
       toast.success("حُفظ الحساب");
@@ -623,13 +902,26 @@ function AccountDialog({ account, accounts, onClose }: { account: Account | null
   const hasMoves = Boolean(account && (account.debit || account.credit));
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title={account ? "تعديل حساب" : "حساب جديد"} description="النوع والجانب الطبيعي يُورثان من الحساب الأب. لا يُحذف حساب عليه حركة؛ يُعطَّل فقط.">
+      <DialogContent
+        title={account ? "تعديل حساب" : "حساب جديد"}
+        description="النوع والجانب الطبيعي يُورثان من الحساب الأب. لا يُحذف حساب عليه حركة؛ يُعطَّل فقط."
+      >
         <div className="grid grid-cols-2 gap-3 px-5 pb-4">
           <Field label="الحساب الأب" className="col-span-2">
-            <Select value={v.parentId ?? undefined} onChange={(p) => setV({ ...v, parentId: p })} options={groups.map((g) => ({ value: g.id, label: `${g.code} — ${g.name}` }))} placeholder="اختر المجموعة" />
+            <Select
+              value={v.parentId ?? undefined}
+              onChange={(p) => setV({ ...v, parentId: p })}
+              options={groups.map((g) => ({ value: g.id, label: `${g.code} — ${g.name}` }))}
+              placeholder="اختر المجموعة"
+            />
           </Field>
           <Field label="الرمز">
-            <Input dir="ltr" value={v.code} onChange={(e) => setV({ ...v, code: e.target.value })} disabled={Boolean(account?.systemKey)} />
+            <Input
+              dir="ltr"
+              value={v.code}
+              onChange={(e) => setV({ ...v, code: e.target.value })}
+              disabled={Boolean(account?.systemKey)}
+            />
           </Field>
           <Field label="الاسم">
             <Input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} />
@@ -651,7 +943,12 @@ function AccountDialog({ account, accounts, onClose }: { account: Account | null
             <Input value={v.description} onChange={(e) => setV({ ...v, description: e.target.value })} />
           </Field>
           <label className="flex items-center gap-2 text-[14px]">
-            <Checkbox checked={v.isGroup} disabled={hasMoves} onChange={(on) => setV({ ...v, isGroup: on })} /> حساب تجميعي
+            <Checkbox
+              checked={v.isGroup}
+              disabled={hasMoves}
+              onChange={(on) => setV({ ...v, isGroup: on })}
+            />{" "}
+            حساب تجميعي
           </label>
           <label className="flex items-center gap-2 text-[14px]">
             <Checkbox checked={v.isActive} onChange={(on) => setV({ ...v, isActive: on })} /> نشط
@@ -661,7 +958,19 @@ function AccountDialog({ account, accounts, onClose }: { account: Account | null
           <Button variant="ghost" onClick={onClose}>
             إلغاء
           </Button>
-          <Button variant="primary" loading={m.isPending} disabled={!v.code.trim() || v.name.trim().length < 2 || !v.parentId} onClick={() => m.mutate({ id: account?.id ?? null, ...v, description: v.description || null, cashFlowGroup: v.cashFlowGroup as "CASH" | "OPERATING" | "INVESTING" | "FINANCING" | null })}>
+          <Button
+            variant="primary"
+            loading={m.isPending}
+            disabled={!v.code.trim() || v.name.trim().length < 2 || !v.parentId}
+            onClick={() =>
+              m.mutate({
+                id: account?.id ?? null,
+                ...v,
+                description: v.description || null,
+                cashFlowGroup: v.cashFlowGroup as "CASH" | "OPERATING" | "INVESTING" | "FINANCING" | null,
+              })
+            }
+          >
             حفظ
           </Button>
         </DialogFooter>
@@ -684,7 +993,16 @@ export function LedgerPage({ accountId }: { accountId: string }) {
   const d = q.data;
   const title = d ? `${d.account.code} — ${d.account.name}` : "دفتر الأستاذ";
   return (
-    <ModuleShell nav={financeNav("accounting")} tabs={ACCOUNTING_TABS} title={title} crumbs={[{ title: "دليل الحسابات", href: "/finance/accounting/chart" }, ...(d ? [{ title: d.account.name }] : [])]} wide>
+    <ModuleShell
+      nav={financeNav("accounting")}
+      tabs={ACCOUNTING_TABS}
+      title={title}
+      crumbs={[
+        { title: "دليل الحسابات", href: "/finance/accounting/chart" },
+        ...(d ? [{ title: d.account.name }] : []),
+      ]}
+      wide
+    >
       {q.error ? (
         <EmptyState illustration="lock" title="لا يمكن عرض دفتر الأستاذ" description={q.error.message} />
       ) : (
@@ -729,7 +1047,9 @@ export function LedgerPage({ accountId }: { accountId: string }) {
                     <tr key={r.id}>
                       <td className="whitespace-nowrap">{fmtDate(r.date)}</td>
                       <td>
-                        <DocLink href={`/finance/accounting/entries/${r.entryId}`}>{docNo(r.number, prefs.digits)}</DocLink>
+                        <DocLink href={`/finance/accounting/entries/${r.entryId}`}>
+                          {docNo(r.number, prefs.digits)}
+                        </DocLink>
                       </td>
                       <td className="max-w-[340px] truncate">
                         {r.sourceLink ? (
@@ -764,7 +1084,6 @@ export function LedgerPage({ accountId }: { accountId: string }) {
 
 export function PeriodsPage() {
   const prefs = usePrefs();
-  const fmtDate = useFmtDate();
   const q = trpc.finance.accounting.years.useQuery();
   const utils = trpc.useUtils();
   const [selected, setSelected] = useState<string | null>(null);
@@ -773,11 +1092,31 @@ export function PeriodsPage() {
   const [reason, setReason] = useState("");
   const onError = (e: { message: string }) => toast.error(e.message);
   const refresh = () => void utils.finance.accounting.invalidate();
-  const addYear = trpc.finance.accounting.addYear.useMutation({ onSuccess: () => (toast.success("أُضيف العام المالي بفتراته"), refresh()), onError });
-  const reopenM = trpc.finance.accounting.reopenPeriod.useMutation({ onSuccess: () => (toast.success("أُعيد فتح الفترة وسُجل السبب"), setReopen(null), setReason(""), refresh()), onError });
-  const closeYearM = trpc.finance.accounting.closeYear.useMutation({ onSuccess: () => (toast.success("أُقفل العام ونُقل صافي الدخل إلى الأرباح المبقاة"), setCloseYear(null), refresh()), onError });
+  const addYear = trpc.finance.accounting.addYear.useMutation({
+    onSuccess: () => (toast.success("أُضيف العام المالي بفتراته"), refresh()),
+    onError,
+  });
+  const reopenM = trpc.finance.accounting.reopenPeriod.useMutation({
+    onSuccess: () => (
+      toast.success("أُعيد فتح الفترة وسُجل السبب"),
+      setReopen(null),
+      setReason(""),
+      refresh()
+    ),
+    onError,
+  });
+  const closeYearM = trpc.finance.accounting.closeYear.useMutation({
+    onSuccess: () => (
+      toast.success("أُقفل العام ونُقل صافي الدخل إلى الأرباح المبقاة"),
+      setCloseYear(null),
+      refresh()
+    ),
+    onError,
+  });
   const d = q.data;
-  const nextYear = d?.years.length ? new Date(d.years[0]!.startDate).getUTCFullYear() + 1 : new Date().getUTCFullYear();
+  const nextYear = d?.years.length
+    ? new Date(d.years[0]!.startDate).getUTCFullYear() + 1
+    : new Date().getUTCFullYear();
   return (
     <ModuleShell
       nav={financeNav("accounting")}
@@ -785,7 +1124,12 @@ export function PeriodsPage() {
       wide
       actions={
         d?.canClose ? (
-          <Button size="sm" icon={<Plus className="size-3.5" />} loading={addYear.isPending} onClick={() => addYear.mutate({ year: nextYear })}>
+          <Button
+            size="sm"
+            icon={<Plus className="size-3.5" />}
+            loading={addYear.isPending}
+            onClick={() => addYear.mutate({ year: nextYear })}
+          >
             العام المالي {formatNumber(nextYear, prefs.digits, { useGrouping: false })}
           </Button>
         ) : null
@@ -796,13 +1140,16 @@ export function PeriodsPage() {
       ) : !d ? (
         <SkeletonLines lines={12} />
       ) : (
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
           <div className="space-y-5">
             {d.years.map((y) => (
               <section key={y.id} className="rounded-lg bg-card p-4 shadow-card">
                 <div className="mb-3 flex items-center justify-between">
                   <h2 className="text-[16px] font-semibold">
-                    {y.name} <Tag size="sm" color={y.status === "CLOSED" ? "slate" : "green"}>{y.status === "CLOSED" ? "مقفل" : "مفتوح"}</Tag>
+                    {y.name}{" "}
+                    <Tag size="sm" color={y.status === "CLOSED" ? "slate" : "green"}>
+                      {y.status === "CLOSED" ? "مقفل" : "مفتوح"}
+                    </Tag>
                   </h2>
                   {d.canReopen && y.status !== "CLOSED" && y.periods.every((p) => p.status === "CLOSED") ? (
                     <Button size="sm" onClick={() => setCloseYear(y.id)}>
@@ -815,14 +1162,22 @@ export function PeriodsPage() {
                     <button
                       key={p.id}
                       onClick={() => setSelected(p.id)}
-                      className={cn("rounded-md border p-2.5 text-start transition-colors", selected === p.id ? "border-navy-600 bg-hover" : "border-line hover:bg-hover")}
+                      className={cn(
+                        "rounded-md border p-2.5 text-start transition-colors",
+                        selected === p.id ? "border-navy-600 bg-hover" : "border-line hover:bg-hover",
+                      )}
                     >
                       <span className="flex items-center justify-between text-[14px] font-medium">
                         {p.name}
-                        {p.status === "CLOSED" ? <Lock className="size-3.5 text-fg-3" /> : <LockOpen className="size-3.5 text-success-800" />}
+                        {p.status === "CLOSED" ? (
+                          <Lock className="size-3.5 text-fg-3" />
+                        ) : (
+                          <LockOpen className="size-3.5 text-success-800" />
+                        )}
                       </span>
                       <span className="mt-0.5 block text-[12px] text-fg-3">
-                        {formatNumber(p.entries, prefs.digits)} قيد{p.closedBy ? ` · أقفلها ${p.closedBy}` : ""}
+                        {formatNumber(p.entries, prefs.digits)} قيد
+                        {p.closedBy ? ` · أقفلها ${p.closedBy}` : ""}
                       </span>
                     </button>
                   ))}
@@ -832,18 +1187,30 @@ export function PeriodsPage() {
           </div>
           <aside>
             {selected ? (
-              <CloseChecklist periodId={selected} canClose={d.canClose} canReopen={d.canReopen} onReopen={() => setReopen(selected)} />
+              <CloseChecklist
+                periodId={selected}
+                canClose={d.canClose}
+                canReopen={d.canReopen}
+                onReopen={() => setReopen(selected)}
+              />
             ) : (
-              <div className="rounded-lg bg-card p-5 text-[13px] text-fg-3 shadow-card">اختر فترة لعرض قائمة الإقفال: الاعتراف بالإيراد، الورديات، المطابقة البنكية، الشيكات، وسندات الصرف.</div>
+              <div className="rounded-lg bg-card p-5 text-[13px] text-fg-3 shadow-card">
+                اختر فترة لعرض قائمة الإقفال: الاعتراف بالإيراد، الورديات، المطابقة البنكية، الشيكات، وسندات
+                الصرف.
+              </div>
             )}
             <p className="mt-3 text-[12px] text-fg-3">
-              الفترة المقفلة ترفض قاعدة البيانات الترحيل فيها. إعادة الفتح أو الترحيل الاستثنائي من صلاحية المدير وتُسجل بسببها في سجل التدقيق.
+              الفترة المقفلة ترفض قاعدة البيانات الترحيل فيها. إعادة الفتح أو الترحيل الاستثنائي من صلاحية
+              المدير وتُسجل بسببها في سجل التدقيق.
             </p>
           </aside>
         </div>
       )}
       <Dialog open={Boolean(reopen)} onOpenChange={(o) => !o && setReopen(null)}>
-        <DialogContent title="إعادة فتح الفترة" description="تُسجَّل إعادة الفتح وسببها في سجل التدقيق غير القابل للتعديل.">
+        <DialogContent
+          title="إعادة فتح الفترة"
+          description="تُسجَّل إعادة الفتح وسببها في سجل التدقيق غير القابل للتعديل."
+        >
           <div className="px-5 pb-4">
             <Field label="السبب">
               <Textarea value={reason} onChange={(e) => setReason(e.target.value)} autoFocus />
@@ -853,7 +1220,12 @@ export function PeriodsPage() {
             <Button variant="ghost" onClick={() => setReopen(null)}>
               تراجع
             </Button>
-            <Button variant="primary" loading={reopenM.isPending} disabled={reason.trim().length < 5} onClick={() => reopenM.mutate({ periodId: reopen!, reason })}>
+            <Button
+              variant="primary"
+              loading={reopenM.isPending}
+              disabled={reason.trim().length < 5}
+              onClick={() => reopenM.mutate({ periodId: reopen!, reason })}
+            >
               إعادة الفتح
             </Button>
           </DialogFooter>
@@ -872,16 +1244,32 @@ export function PeriodsPage() {
   );
 }
 
-function CloseChecklist({ periodId, canClose, canReopen, onReopen }: { periodId: string; canClose: boolean; canReopen: boolean; onReopen: () => void }) {
+function CloseChecklist({
+  periodId,
+  canClose,
+  canReopen,
+  onReopen,
+}: {
+  periodId: string;
+  canClose: boolean;
+  canReopen: boolean;
+  onReopen: () => void;
+}) {
   const money = useMoney();
   const q = trpc.finance.accounting.checklist.useQuery({ periodId });
   const utils = trpc.useUtils();
   const onError = (e: { message: string }) => toast.error(e.message);
   const recognize = trpc.finance.accounting.recognize.useMutation({
-    onSuccess: (r) => (toast.success(r.posted ? `اعتُرف بإيراد ${money.fmt(r.total)}` : "لا إيراد مستحق الاعتراف"), void utils.finance.invalidate()),
+    onSuccess: (r) => (
+      toast.success(r.posted ? `اعتُرف بإيراد ${money.fmt(r.total)}` : "لا إيراد مستحق الاعتراف"),
+      void utils.finance.invalidate()
+    ),
     onError,
   });
-  const close = trpc.finance.accounting.closePeriod.useMutation({ onSuccess: () => (toast.success("أُقفلت الفترة"), void utils.finance.accounting.invalidate()), onError });
+  const close = trpc.finance.accounting.closePeriod.useMutation({
+    onSuccess: () => (toast.success("أُقفلت الفترة"), void utils.finance.accounting.invalidate()),
+    onError,
+  });
   const [force, setForce] = useState(false);
   if (!q.data) return <SkeletonLines lines={8} />;
   const p = q.data.period;
@@ -890,18 +1278,32 @@ function CloseChecklist({ periodId, canClose, canReopen, onReopen }: { periodId:
   return (
     <section className="rounded-lg bg-card p-4 shadow-card">
       <h3 className="text-[15px] font-semibold">
-        قائمة إقفال {p.name} <Tag size="sm" color={p.status === "CLOSED" ? "slate" : "green"}>{p.status === "CLOSED" ? "مقفلة" : "مفتوحة"}</Tag>
+        قائمة إقفال {p.name}{" "}
+        <Tag size="sm" color={p.status === "CLOSED" ? "slate" : "green"}>
+          {p.status === "CLOSED" ? "مقفلة" : "مفتوحة"}
+        </Tag>
       </h3>
       <ul className="mt-3 space-y-2">
         {q.data.items.map((i) => (
           <li key={i.key} className="flex items-start gap-2 text-[14px]">
-            {i.ok ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success-800" /> : i.blocking ? <CircleX className="mt-0.5 size-4 shrink-0 text-danger-700" /> : <CircleAlert className="mt-0.5 size-4 shrink-0 text-warning-700" />}
+            {i.ok ? (
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success-800" />
+            ) : i.blocking ? (
+              <CircleX className="mt-0.5 size-4 shrink-0 text-danger-700" />
+            ) : (
+              <CircleAlert className="mt-0.5 size-4 shrink-0 text-warning-700" />
+            )}
             <span className="flex-1">
               {i.label}
               {i.detail ? <span className="block text-[12px] text-fg-3">{i.detail}</span> : null}
             </span>
             {i.key === "recognition" && !i.ok && p.status !== "CLOSED" && canClose ? (
-              <Button size="xs" variant="subtle" loading={recognize.isPending} onClick={() => recognize.mutate({ periodId })}>
+              <Button
+                size="xs"
+                variant="subtle"
+                loading={recognize.isPending}
+                onClick={() => recognize.mutate({ periodId })}
+              >
                 اعتراف الآن
               </Button>
             ) : null}
@@ -936,7 +1338,14 @@ function CloseChecklist({ periodId, canClose, canReopen, onReopen }: { periodId:
               <Checkbox checked={force} onChange={setForce} /> الإقفال رغم التنبيهات
             </label>
           ) : null}
-          <Button size="sm" variant="primary" icon={<Lock className="size-3.5" />} loading={close.isPending} disabled={blocking.length > 0 || (warnings.length > 0 && !force)} onClick={() => close.mutate({ periodId, force })}>
+          <Button
+            size="sm"
+            variant="primary"
+            icon={<Lock className="size-3.5" />}
+            loading={close.isPending}
+            disabled={blocking.length > 0 || (warnings.length > 0 && !force)}
+            onClick={() => close.mutate({ periodId, force })}
+          >
             إقفال الفترة
           </Button>
           {blocking.length ? <p className="text-[12px] text-danger-700">أكمل البنود الحمراء أولاً.</p> : null}
@@ -953,9 +1362,19 @@ function CloseChecklist({ periodId, canClose, canReopen, onReopen }: { periodId:
 export function CostCentersPage() {
   const q = trpc.finance.accounting.costCenters.useQuery();
   const utils = trpc.useUtils();
-  const [editing, setEditing] = useState<{ id: string | null; code: string; name: string; kind: "BRANCH" | "STAGE" | "DEPARTMENT"; isActive: boolean } | null>(null);
+  const [editing, setEditing] = useState<{
+    id: string | null;
+    code: string;
+    name: string;
+    kind: "BRANCH" | "STAGE" | "DEPARTMENT";
+    isActive: boolean;
+  } | null>(null);
   const save = trpc.finance.accounting.saveCostCenter.useMutation({
-    onSuccess: () => (toast.success("حُفظ مركز التكلفة"), setEditing(null), void utils.finance.accounting.costCenters.invalidate()),
+    onSuccess: () => (
+      toast.success("حُفظ مركز التكلفة"),
+      setEditing(null),
+      void utils.finance.accounting.costCenters.invalidate()
+    ),
     onError: (e) => toast.error(e.message),
   });
   const KIND = { BRANCH: "فرع", STAGE: "مرحلة", DEPARTMENT: "قسم" } as const;
@@ -965,13 +1384,21 @@ export function CostCentersPage() {
       tabs={ACCOUNTING_TABS}
       actions={
         q.data?.canEdit ? (
-          <Button size="sm" variant="primary" icon={<Plus className="size-3.5" />} onClick={() => setEditing({ id: null, code: "", name: "", kind: "DEPARTMENT", isActive: true })}>
+          <Button
+            size="sm"
+            variant="primary"
+            icon={<Plus className="size-3.5" />}
+            onClick={() => setEditing({ id: null, code: "", name: "", kind: "DEPARTMENT", isActive: true })}
+          >
             مركز تكلفة
           </Button>
         ) : null
       }
     >
-      <p className="mb-3 text-[13px] text-fg-3">الإيرادات والمصروفات تُحمَّل على مركز تكلفة الفرع تلقائياً، ويمكن تخصيص السطور يدوياً. تقارير قائمة الدخل تُصفّى حسبه.</p>
+      <p className="mb-3 text-[13px] text-fg-3">
+        الإيرادات والمصروفات تُحمَّل على مركز تكلفة الفرع تلقائياً، ويمكن تخصيص السطور يدوياً. تقارير قائمة
+        الدخل تُصفّى حسبه.
+      </p>
       {!q.data ? (
         <SkeletonLines lines={6} />
       ) : (
@@ -995,10 +1422,33 @@ export function CostCentersPage() {
               </td>
               <td>{c.name}</td>
               <td>{KIND[c.kind as keyof typeof KIND] ?? c.kind}</td>
-              <td>{c.isActive ? <Tag size="sm" color="green">نشط</Tag> : <Tag size="sm" color="gray">معطّل</Tag>}</td>
+              <td>
+                {c.isActive ? (
+                  <Tag size="sm" color="green">
+                    نشط
+                  </Tag>
+                ) : (
+                  <Tag size="sm" color="gray">
+                    معطّل
+                  </Tag>
+                )}
+              </td>
               <td>
                 {q.data.canEdit ? (
-                  <Button size="icon-sm" variant="ghost" aria-label="تعديل" onClick={() => setEditing({ id: c.id, code: c.code, name: c.name, kind: c.kind as "BRANCH" | "STAGE" | "DEPARTMENT", isActive: c.isActive })}>
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label="تعديل"
+                    onClick={() =>
+                      setEditing({
+                        id: c.id,
+                        code: c.code,
+                        name: c.name,
+                        kind: c.kind as "BRANCH" | "STAGE" | "DEPARTMENT",
+                        isActive: c.isActive,
+                      })
+                    }
+                  >
                     <Pencil className="size-3" />
                   </Button>
                 ) : null}
@@ -1012,23 +1462,43 @@ export function CostCentersPage() {
           <DialogContent title={editing.id ? "تعديل مركز تكلفة" : "مركز تكلفة جديد"}>
             <div className="grid grid-cols-2 gap-3 px-5 pb-4">
               <Field label="الرمز">
-                <Input dir="ltr" value={editing.code} onChange={(e) => setEditing({ ...editing, code: e.target.value })} />
+                <Input
+                  dir="ltr"
+                  value={editing.code}
+                  onChange={(e) => setEditing({ ...editing, code: e.target.value })}
+                />
               </Field>
               <Field label="النوع">
-                <Select value={editing.kind} onChange={(k) => setEditing({ ...editing, kind: k as "BRANCH" | "STAGE" | "DEPARTMENT" })} options={Object.entries(KIND).map(([value, label]) => ({ value, label }))} />
+                <Select
+                  value={editing.kind}
+                  onChange={(k) => setEditing({ ...editing, kind: k as "BRANCH" | "STAGE" | "DEPARTMENT" })}
+                  options={Object.entries(KIND).map(([value, label]) => ({ value, label }))}
+                />
               </Field>
               <Field label="الاسم" className="col-span-2">
-                <Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
+                <Input
+                  value={editing.name}
+                  onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                />
               </Field>
               <label className="flex items-center gap-2 text-[14px]">
-                <Checkbox checked={editing.isActive} onChange={(on) => setEditing({ ...editing, isActive: on })} /> نشط
+                <Checkbox
+                  checked={editing.isActive}
+                  onChange={(on) => setEditing({ ...editing, isActive: on })}
+                />{" "}
+                نشط
               </label>
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setEditing(null)}>
                 إلغاء
               </Button>
-              <Button variant="primary" loading={save.isPending} disabled={!editing.code.trim() || editing.name.trim().length < 2} onClick={() => save.mutate(editing)}>
+              <Button
+                variant="primary"
+                loading={save.isPending}
+                disabled={!editing.code.trim() || editing.name.trim().length < 2}
+                onClick={() => save.mutate(editing)}
+              >
                 حفظ
               </Button>
             </DialogFooter>
@@ -1038,4 +1508,3 @@ export function CostCentersPage() {
     </ModuleShell>
   );
 }
-

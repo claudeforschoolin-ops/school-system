@@ -53,16 +53,26 @@ describe("المرحلة ٣ — النظام المحاسبي", () => {
     const accepted = await rootDb.admission.findUniqueOrThrow({ where: { id: admission.id } });
 
     // فاتورة التسجيل صدرت آلياً برقم ١ وقيدها متوازن
-    const invoice = await rootDb.invoice.findFirstOrThrow({ where: { tenantId: s.tenantId, studentId: accepted.studentId!, source: "ADMISSION" } });
+    const invoice = await rootDb.invoice.findFirstOrThrow({
+      where: { tenantId: s.tenantId, studentId: accepted.studentId!, source: "ADMISSION" },
+    });
     expect(invoice.number).toBe(1);
     expect(invoice.status).toBe("ISSUED");
     expect(invoice.totalMinor).toBe(100_000); // مواطن: الضريبة تتحملها الدولة (٠٪)
-    const issueEntry = await rootDb.journalEntry.findUniqueOrThrow({ where: { id: invoice.journalEntryId! }, include: { lines: true } });
+    const issueEntry = await rootDb.journalEntry.findUniqueOrThrow({
+      where: { id: invoice.journalEntryId! },
+      include: { lines: true },
+    });
     const sum = (k: "debitMinor" | "creditMinor") => issueEntry.lines.reduce((a, l) => a + Number(l[k]), 0);
     expect(sum("debitMinor")).toBe(sum("creditMinor"));
 
     // التحصيل
-    const receipt = await s.acc.finance.receipts.create({ guardianId: invoice.guardianId!, amountMinor: 100_000, method: "CASH", date: today() });
+    const receipt = await s.acc.finance.receipts.create({
+      guardianId: invoice.guardianId!,
+      amountMinor: 100_000,
+      method: "CASH",
+      date: today(),
+    });
     expect(receipt.number).toBe(1);
     const paid = await rootDb.invoice.findUniqueOrThrow({ where: { id: invoice.id } });
     expect(paid.status).toBe("PAID");
@@ -85,34 +95,134 @@ describe("المرحلة ٣ — النظام المحاسبي", () => {
 
   it("قاعدة البيانات ترفض القيد غير المتوازن وتعديل القيد المرحّل وحذفه والترحيل في فترة مقفلة", async () => {
     const s = await financeSchool();
-    const [cash, rev] = await Promise.all([rootDb.account.findFirstOrThrow({ where: { tenantId: s.tenantId, systemKey: "CASH" } }), rootDb.account.findFirstOrThrow({ where: { tenantId: s.tenantId, code: "4801" } })]);
-    const period = await rootDb.fiscalPeriod.findFirstOrThrow({ where: { tenantId: s.tenantId, startDate: { lte: new Date(today()) }, endDate: { gte: new Date(today()) } } });
-    const base = { tenantId: s.tenantId, date: new Date(today()), periodId: period.id, description: "اختبار", source: "MANUAL" as const };
+    const [cash, rev] = await Promise.all([
+      rootDb.account.findFirstOrThrow({ where: { tenantId: s.tenantId, systemKey: "CASH" } }),
+      rootDb.account.findFirstOrThrow({ where: { tenantId: s.tenantId, code: "4801" } }),
+    ]);
+    const period = await rootDb.fiscalPeriod.findFirstOrThrow({
+      where: {
+        tenantId: s.tenantId,
+        startDate: { lte: new Date(today()) },
+        endDate: { gte: new Date(today()) },
+      },
+    });
+    const base = {
+      tenantId: s.tenantId,
+      date: new Date(today()),
+      periodId: period.id,
+      description: "اختبار",
+      source: "MANUAL" as const,
+    };
     // غير متوازن (حتى بالعميل الجذري المتجاوز للتطبيق)
     await expect(
-      rootDb.journalEntry.create({ data: { ...base, number: 9001, totalMinor: 500n, lines: { create: [{ tenantId: s.tenantId, accountId: cash.id, debitMinor: 500n }, { tenantId: s.tenantId, accountId: rev.id, creditMinor: 400n }] } } }),
+      rootDb.journalEntry.create({
+        data: {
+          ...base,
+          number: 9001,
+          totalMinor: 500n,
+          lines: {
+            create: [
+              { tenantId: s.tenantId, accountId: cash.id, debitMinor: 500n },
+              { tenantId: s.tenantId, accountId: rev.id, creditMinor: 400n },
+            ],
+          },
+        },
+      }),
     ).rejects.toThrow();
     // سطر بمدين ودائن معاً
     await expect(
-      rootDb.journalEntry.create({ data: { ...base, number: 9002, totalMinor: 500n, lines: { create: [{ tenantId: s.tenantId, accountId: cash.id, debitMinor: 500n, creditMinor: 500n }, { tenantId: s.tenantId, accountId: rev.id, creditMinor: 0n }] } } }),
+      rootDb.journalEntry.create({
+        data: {
+          ...base,
+          number: 9002,
+          totalMinor: 500n,
+          lines: {
+            create: [
+              { tenantId: s.tenantId, accountId: cash.id, debitMinor: 500n, creditMinor: 500n },
+              { tenantId: s.tenantId, accountId: rev.id, creditMinor: 0n },
+            ],
+          },
+        },
+      }),
     ).rejects.toThrow();
     // قيد صحيح عبر الواجهة ثم محاولة تعديله وحذفه
-    const ok = await s.acc.finance.accounting.createEntry({ date: today(), description: "تأجير الصالة لجهة خارجية", lines: [{ accountId: cash.id, debit: 50_000, credit: 0 }, { accountId: rev.id, debit: 0, credit: 50_000 }] });
+    const ok = await s.acc.finance.accounting.createEntry({
+      date: today(),
+      description: "تأجير الصالة لجهة خارجية",
+      lines: [
+        { accountId: cash.id, debit: 50_000, credit: 0 },
+        { accountId: rev.id, debit: 0, credit: 50_000 },
+      ],
+    });
     const line = await rootDb.journalLine.findFirstOrThrow({ where: { entryId: ok.id } });
-    await expect(rootDb.journalLine.update({ where: { id: line.id }, data: { debitMinor: 1n } })).rejects.toThrow();
+    await expect(
+      rootDb.journalLine.update({ where: { id: line.id }, data: { debitMinor: 1n } }),
+    ).rejects.toThrow();
     await expect(rootDb.journalLine.delete({ where: { id: line.id } })).rejects.toThrow();
     await expect(rootDb.journalEntry.delete({ where: { id: ok.id } })).rejects.toThrow();
     // الخدمة ترفض عدم التوازن برسالة واضحة
-    await expect(s.acc.finance.accounting.createEntry({ date: today(), description: "غير متوازن", lines: [{ accountId: cash.id, debit: 10, credit: 0 }, { accountId: rev.id, debit: 0, credit: 9 }] })).rejects.toMatchObject({ message: expect.stringContaining("غير متوازن") });
+    await expect(
+      s.acc.finance.accounting.createEntry({
+        date: today(),
+        description: "غير متوازن",
+        lines: [
+          { accountId: cash.id, debit: 10, credit: 0 },
+          { accountId: rev.id, debit: 0, credit: 9 },
+        ],
+      }),
+    ).rejects.toMatchObject({ message: expect.stringContaining("غير متوازن") });
     // الفترة المقفلة
     await rootDb.fiscalPeriod.update({ where: { id: period.id }, data: { status: "CLOSED" } });
-    await expect(s.acc.finance.accounting.createEntry({ date: today(), description: "بعد الإقفال", lines: [{ accountId: cash.id, debit: 10, credit: 0 }, { accountId: rev.id, debit: 0, credit: 10 }] })).rejects.toMatchObject({ message: expect.stringContaining("مقفلة") });
-    await expect(rootDb.journalEntry.create({ data: { ...base, number: 9003, totalMinor: 10n, lines: { create: [{ tenantId: s.tenantId, accountId: cash.id, debitMinor: 10n }, { tenantId: s.tenantId, accountId: rev.id, creditMinor: 10n }] } } })).rejects.toThrow(/مقفلة/);
+    await expect(
+      s.acc.finance.accounting.createEntry({
+        date: today(),
+        description: "بعد الإقفال",
+        lines: [
+          { accountId: cash.id, debit: 10, credit: 0 },
+          { accountId: rev.id, debit: 0, credit: 10 },
+        ],
+      }),
+    ).rejects.toMatchObject({ message: expect.stringContaining("مقفلة") });
+    await expect(
+      rootDb.journalEntry.create({
+        data: {
+          ...base,
+          number: 9003,
+          totalMinor: 10n,
+          lines: {
+            create: [
+              { tenantId: s.tenantId, accountId: cash.id, debitMinor: 10n },
+              { tenantId: s.tenantId, accountId: rev.id, creditMinor: 10n },
+            ],
+          },
+        },
+      }),
+    ).rejects.toThrow(/مقفلة/);
     // المحاسب لا يملك الترحيل الاستثنائي؛ المدير يملكه ويُعلَّم القيد
-    await expect(s.acc.finance.accounting.createEntry({ date: today(), description: "استثناء", allowClosedPeriod: true, closedReason: "تصحيح", lines: [{ accountId: cash.id, debit: 10, credit: 0 }, { accountId: rev.id, debit: 0, credit: 10 }] })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      s.acc.finance.accounting.createEntry({
+        date: today(),
+        description: "استثناء",
+        allowClosedPeriod: true,
+        closedReason: "تصحيح",
+        lines: [
+          { accountId: cash.id, debit: 10, credit: 0 },
+          { accountId: rev.id, debit: 0, credit: 10 },
+        ],
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
     const principal = await makeUser(s.t, "PRINCIPAL");
     const p = await callerFor(s.tenantId, principal.id);
-    const override = await p.caller.finance.accounting.createEntry({ date: today(), description: "تصحيح معتمد", allowClosedPeriod: true, closedReason: "تصحيح خطأ مطابقة", lines: [{ accountId: cash.id, debit: 10, credit: 0 }, { accountId: rev.id, debit: 0, credit: 10 }] });
+    const override = await p.caller.finance.accounting.createEntry({
+      date: today(),
+      description: "تصحيح معتمد",
+      allowClosedPeriod: true,
+      closedReason: "تصحيح خطأ مطابقة",
+      lines: [
+        { accountId: cash.id, debit: 10, credit: 0 },
+        { accountId: rev.id, debit: 0, credit: 10 },
+      ],
+    });
     expect(override.postedInClosedPeriod).toBe(true);
   });
 
@@ -127,18 +237,43 @@ describe("المرحلة ٣ — النظام المحاسبي", () => {
     // الأصغر يُربط بولي أمر الأكبر كولي أساسي
     const ga = await rootDb.studentGuardian.findFirstOrThrow({ where: { studentId: a.id } });
     await rootDb.studentGuardian.updateMany({ where: { studentId: b.id }, data: { isPrimary: false } });
-    await rootDb.studentGuardian.create({ data: { tenantId: s.tenantId, studentId: b.id, guardianId: ga.guardianId, relation: "FATHER", isPrimary: true } });
+    await rootDb.studentGuardian.create({
+      data: {
+        tenantId: s.tenantId,
+        studentId: b.id,
+        guardianId: ga.guardianId,
+        relation: "FATHER",
+        isPrimary: true,
+      },
+    });
 
-    const input = { academicYearId: s.year.id, gradeIds: [s.g1.id], feeItemIds: [s.item("TUITION").id, s.item("BOOKS").id], planId: null, issueDate: today(), applyDiscounts: true };
+    const input = {
+      academicYearId: s.year.id,
+      gradeIds: [s.g1.id],
+      feeItemIds: [s.item("TUITION").id, s.item("BOOKS").id],
+      planId: null,
+      issueDate: today(),
+      applyDiscounts: true,
+    };
     const preview = await s.acc.finance.invoices.bulkPreview(input);
     expect(preview.count).toBe(3);
     const row = (id: string) => preview.rows.find((r) => r.studentId === id)!;
     expect(row(a.id).discount).toBe(0);
     expect(row(b.id).discount).toBe(90_000); // ٥٪ من ١٨٬٠٠٠
     expect(row(c.id).tax).toBe(Math.round((1_880_000 * 1500) / 10000)); // ١٥٪ على الدراسية والكتب
-    const issued = await s.acc.finance.invoices.bulkIssue({ ...input, description: "رسوم الفصل الأول", notify: false });
+    const issued = await s.acc.finance.invoices.bulkIssue({
+      ...input,
+      description: "رسوم الفصل الأول",
+      notify: false,
+    });
     expect(issued.count).toBe(3);
-    const numbers = (await rootDb.invoice.findMany({ where: { tenantId: s.tenantId }, select: { number: true }, orderBy: { number: "asc" } })).map((i) => i.number);
+    const numbers = (
+      await rootDb.invoice.findMany({
+        where: { tenantId: s.tenantId },
+        select: { number: true },
+        orderBy: { number: "asc" },
+      })
+    ).map((i) => i.number);
     expect(numbers).toEqual([1, 2, 3]);
     // إعادة التشغيل لا تكرر الفوترة
     const again = await s.acc.finance.invoices.bulkPreview(input);
@@ -157,8 +292,19 @@ describe("المرحلة ٣ — النظام المحاسبي", () => {
   it("الاعتراف الشهري بالإيراد المؤجل ينقل حصة الشهر من المؤجل إلى الإيراد", async () => {
     const s = await financeSchool();
     const st = await s.student(s.g1.id, s.s1a.id);
-    await s.acc.finance.invoices.create({ studentId: st.id, feeItemIds: [s.item("TUITION").id], issueDate: today(), notify: false });
-    const period = await rootDb.fiscalPeriod.findFirstOrThrow({ where: { tenantId: s.tenantId, startDate: { lte: new Date(today()) }, endDate: { gte: new Date(today()) } } });
+    await s.acc.finance.invoices.create({
+      studentId: st.id,
+      feeItemIds: [s.item("TUITION").id],
+      issueDate: today(),
+      notify: false,
+    });
+    const period = await rootDb.fiscalPeriod.findFirstOrThrow({
+      where: {
+        tenantId: s.tenantId,
+        startDate: { lte: new Date(today()) },
+        endDate: { gte: new Date(today()) },
+      },
+    });
     const r = await s.acc.finance.accounting.recognize({ periodId: period.id });
     expect(r.posted).toBe(true);
     expect(r.total).toBeGreaterThan(0);
@@ -175,19 +321,50 @@ describe("المرحلة ٣ — النظام المحاسبي", () => {
   it("الدفعة الزائدة رصيد دائن، والشيك المرتد يعيد الدين، والإشعار الدائن والاسترداد بموافقة المدير", async () => {
     const s = await financeSchool();
     const st = await s.student(s.g1.id, s.s1a.id);
-    const inv = await s.acc.finance.invoices.create({ studentId: st.id, feeItemIds: [s.item("BOOKS").id], issueDate: today(), notify: false });
+    const inv = await s.acc.finance.invoices.create({
+      studentId: st.id,
+      feeItemIds: [s.item("BOOKS").id],
+      issueDate: today(),
+      notify: false,
+    });
     const guardianId = inv.guardianId!;
     // دفعة زائدة
-    await s.acc.finance.receipts.create({ guardianId, amountMinor: 100_000, method: "BANK_TRANSFER", reference: "TRX-1", date: today() });
+    await s.acc.finance.receipts.create({
+      guardianId,
+      amountMinor: 100_000,
+      method: "BANK_TRANSFER",
+      reference: "TRX-1",
+      date: today(),
+    });
     let fam = await s.acc.finance.receipts.family({ guardianId });
     expect(inv.totalMinor).toBe(92_000); // الكتب ٨٠٠ + ١٥٪ حتى للمواطن
     expect(fam.creditBalance).toBe(8_000);
     expect(fam.totals.due).toBe(0);
     // فاتورة ثانية تُسدَّد بشيك يرتد
-    const inv2 = await s.acc.finance.invoices.create({ studentId: st.id, lines: [{ feeItemId: s.item("TUITION").id, description: "رسوم دراسية", unitMinor: 50_000 }], issueDate: today(), notify: false, applyDiscounts: false });
-    const cheque = await s.acc.finance.receipts.create({ guardianId, amountMinor: 50_000, method: "CHEQUE", chequeNumber: "000123", chequeBank: "البنك الأهلي", chequeDate: today(), date: today(), allocations: [{ invoiceId: inv2.id, amountMinor: 50_000 }] });
+    const inv2 = await s.acc.finance.invoices.create({
+      studentId: st.id,
+      lines: [{ feeItemId: s.item("TUITION").id, description: "رسوم دراسية", unitMinor: 50_000 }],
+      issueDate: today(),
+      notify: false,
+      applyDiscounts: false,
+    });
+    const cheque = await s.acc.finance.receipts.create({
+      guardianId,
+      amountMinor: 50_000,
+      method: "CHEQUE",
+      chequeNumber: "000123",
+      chequeBank: "البنك الأهلي",
+      chequeDate: today(),
+      date: today(),
+      allocations: [{ invoiceId: inv2.id, amountMinor: 50_000 }],
+    });
     expect((await rootDb.invoice.findUniqueOrThrow({ where: { id: inv2.id } })).status).toBe("PAID");
-    await s.acc.finance.receipts.cheque({ receiptId: cheque.id, action: "BOUNCE", date: today(), note: "رصيد غير كافٍ" });
+    await s.acc.finance.receipts.cheque({
+      receiptId: cheque.id,
+      action: "BOUNCE",
+      date: today(),
+      note: "رصيد غير كافٍ",
+    });
     expect((await rootDb.invoice.findUniqueOrThrow({ where: { id: inv2.id } })).status).toBe("ISSUED");
     // استخدام الرصيد الدائن
     await s.acc.finance.receipts.applyCredit({ guardianId });
@@ -195,12 +372,24 @@ describe("المرحلة ٣ — النظام المحاسبي", () => {
     expect(fam.creditBalance).toBe(0);
     expect(fam.totals.due).toBe(42_000);
     // إشعار دائن بالمتبقي
-    await s.acc.finance.invoices.creditNote({ invoiceId: inv2.id, totalMinor: 42_000, reason: "إعفاء جزئي بقرار الإدارة", kind: "ADJUSTMENT" });
+    await s.acc.finance.invoices.creditNote({
+      invoiceId: inv2.id,
+      totalMinor: 42_000,
+      reason: "إعفاء جزئي بقرار الإدارة",
+      kind: "ADJUSTMENT",
+    });
     expect((await rootDb.invoice.findUniqueOrThrow({ where: { id: inv2.id } })).status).toBe("PAID");
     // استرداد: يلزم رصيد دائن ثم موافقة المدير
     await s.acc.finance.receipts.create({ guardianId, amountMinor: 5_000, method: "CASH", date: today() });
-    const refund = await s.acc.finance.receipts.requestRefund({ guardianId, amountMinor: 5_000, method: "CASH", reason: "استرداد الرصيد الزائد" });
-    await expect(s.acc.finance.receipts.payRefund({ id: refund.id, date: today() })).rejects.toMatchObject({ message: expect.stringContaining("لم يُعتمد") });
+    const refund = await s.acc.finance.receipts.requestRefund({
+      guardianId,
+      amountMinor: 5_000,
+      method: "CASH",
+      reason: "استرداد الرصيد الزائد",
+    });
+    await expect(s.acc.finance.receipts.payRefund({ id: refund.id, date: today() })).rejects.toMatchObject({
+      message: expect.stringContaining("لم يُعتمد"),
+    });
     const principal = await makeUser(s.t, "PRINCIPAL");
     const p = await callerFor(s.tenantId, principal.id);
     await p.caller.approval.decide({ requestId: refund.approvalRequestId!, decision: "APPROVED" });
@@ -215,13 +404,32 @@ describe("المرحلة ٣ — النظام المحاسبي", () => {
   it("الصلاحيات: أمين الصندوق يحتاج وردية للنقد ولا يصل للقيود، والمدقق يقرأ ولا يعدّل، وعزل المدارس", async () => {
     const s = await financeSchool();
     const st = await s.student(s.g1.id, s.s1a.id);
-    const inv = await s.acc.finance.invoices.create({ studentId: st.id, feeItemIds: [s.item("BOOKS").id], issueDate: today(), notify: false });
+    const inv = await s.acc.finance.invoices.create({
+      studentId: st.id,
+      feeItemIds: [s.item("BOOKS").id],
+      issueDate: today(),
+      notify: false,
+    });
     const cashier = await makeUser(s.t, "CASHIER");
     const c = await callerFor(s.tenantId, cashier.id);
-    await expect(c.caller.finance.receipts.create({ guardianId: inv.guardianId!, amountMinor: 1000, method: "CASH", date: today() })).rejects.toMatchObject({ message: expect.stringContaining("وردية") });
+    await expect(
+      c.caller.finance.receipts.create({
+        guardianId: inv.guardianId!,
+        amountMinor: 1000,
+        method: "CASH",
+        date: today(),
+      }),
+    ).rejects.toMatchObject({ message: expect.stringContaining("وردية") });
     await c.caller.finance.receipts.openSession({ openingFloatMinor: 50_000 });
-    await c.caller.finance.receipts.create({ guardianId: inv.guardianId!, amountMinor: 80_000, method: "CASH", date: today() });
-    await expect(c.caller.finance.accounting.createEntry({ date: today(), description: "محاولة", lines: [] as never })).rejects.toBeTruthy();
+    await c.caller.finance.receipts.create({
+      guardianId: inv.guardianId!,
+      amountMinor: 80_000,
+      method: "CASH",
+      date: today(),
+    });
+    await expect(
+      c.caller.finance.accounting.createEntry({ date: today(), description: "محاولة", lines: [] as never }),
+    ).rejects.toBeTruthy();
     await expect(c.caller.finance.accounting.entries({})).rejects.toMatchObject({ code: "FORBIDDEN" });
     // عجز ١٠ ريالات عند الإغلاق يُقيَّد
     const closed = await c.caller.finance.receipts.closeSession({ countedMinor: 129_000 });
@@ -230,8 +438,12 @@ describe("المرحلة ٣ — النظام المحاسبي", () => {
 
     const auditor = await makeUser(s.t, "AUDITOR");
     const a = await callerFor(s.tenantId, auditor.id);
-    await expect(a.caller.finance.reports.trialBalance({ from: today(), to: today() })).resolves.toHaveProperty("balanced", true);
-    await expect(a.caller.finance.invoices.cancel({ id: inv.id, reason: "محاولة" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      a.caller.finance.reports.trialBalance({ from: today(), to: today() }),
+    ).resolves.toHaveProperty("balanced", true);
+    await expect(a.caller.finance.invoices.cancel({ id: inv.id, reason: "محاولة" })).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
 
     const other = await makeTenant();
     const owner = await makeUser(other, "OWNER");
@@ -244,7 +456,12 @@ describe("المرحلة ٣ — النظام المحاسبي", () => {
   it("الانسحاب: المديونية تمنع شهادة النقل، والتسوية التناسبية تُصدر إشعاراً دائناً بالأشهر غير المستهلكة", async () => {
     const s = await financeSchool();
     const st = await s.student(s.g1.id, s.s1a.id);
-    const inv = await s.acc.finance.invoices.create({ studentId: st.id, feeItemIds: [s.item("TUITION").id], issueDate: today(), notify: false });
+    const inv = await s.acc.finance.invoices.create({
+      studentId: st.id,
+      feeItemIds: [s.item("TUITION").id],
+      issueDate: today(),
+      notify: false,
+    });
     const settlement = await s.acc.finance.invoices.settlement({ studentId: st.id, effectiveDate: today() });
     expect(settlement.outstanding).toBe(inv.totalMinor);
     expect(settlement.proposals.length).toBe(1);
@@ -253,8 +470,107 @@ describe("المرحلة ٣ — النظام المحاسبي", () => {
     await s.acc.finance.invoices.applySettlement({ studentId: st.id, effectiveDate: today() });
     const after = await rootDb.invoice.findUniqueOrThrow({ where: { id: inv.id } });
     expect(after.creditedMinor).toBe(settlement.totalCredit);
-    await expect(s.acc.finance.invoices.applySettlement({ studentId: st.id, effectiveDate: today() })).rejects.toMatchObject({ message: expect.stringContaining("مسبقاً") });
+    await expect(
+      s.acc.finance.invoices.applySettlement({ studentId: st.id, effectiveDate: today() }),
+    ).rejects.toMatchObject({ message: expect.stringContaining("مسبقاً") });
     const tb = await s.acc.finance.reports.trialBalance({ from: today(), to: today() });
     expect(tb.balanced).toBe(true);
+  });
+  it("تذكيرات السداد: مرحلة التأخير تُرسل مرة واحدة لكل أسرة، وتحترم الإيقاف والإعداد", async () => {
+    const s = await financeSchool();
+    const st = await s.student(s.g1.id, s.s1a.id);
+    const past = new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10);
+    const inv = await s.acc.finance.invoices.create({
+      studentId: st.id,
+      feeItemIds: [s.item("BOOKS").id],
+      issueDate: past,
+      dueDate: past,
+      notify: false,
+    });
+    const count = () =>
+      rootDb.outboundMessage.count({ where: { tenantId: s.tenantId, body: { contains: "تأخر سداد" } } });
+    const before = await count();
+    const r1 = await s.acc.finance.invoices.sendReminders();
+    expect(r1.families).toBe(1);
+    expect(await count()).toBe(before + 1);
+    expect((await rootDb.invoice.findUniqueOrThrow({ where: { id: inv.id } })).reminderLevel).toBe(13); // القسط ١، المرحلة ٣
+    // التكرار لا يعيد الإرسال
+    expect((await s.acc.finance.invoices.sendReminders()).families).toBe(0);
+    // فاتورة موقوفة التذكيرات لا تُذكَّر
+    const inv2 = await s.acc.finance.invoices.create({
+      studentId: st.id,
+      lines: [{ feeItemId: s.item("BOOKS").id, description: "كتب إضافية", unitMinor: 10_000 }],
+      issueDate: past,
+      dueDate: past,
+      notify: false,
+      applyDiscounts: false,
+    });
+    await s.acc.finance.invoices.pauseReminders({ id: inv2.id, paused: true });
+    expect((await s.acc.finance.invoices.sendReminders()).families).toBe(0);
+    // الإعداد معطّل
+    await s.acc.moduleSettings.update({ key: "finance", patch: { remindersEnabled: false } });
+    await s.acc.finance.invoices.pauseReminders({ id: inv2.id, paused: false });
+    const acc2 = await callerFor(s.tenantId, s.accountant.id);
+    expect((await acc2.caller.finance.invoices.sendReminders()).disabled).toBe(true);
+  });
+  it("سياسة المديونية عند إنهاء العام: المدين يُنقل «مؤجلاً» دون فصل، والمسدِّد يُرفَّع بفصله", async () => {
+    const s = await financeSchool();
+    const debtor = await s.student(s.g1.id, s.s1a.id, "مدين");
+    const clear = await s.student(s.g1.id, s.s1a.id, "مسدد");
+    await s.acc.finance.invoices.create({
+      studentId: debtor.id,
+      feeItemIds: [s.item("BOOKS").id],
+      issueDate: today(),
+      notify: false,
+    });
+    await s.acc.moduleSettings.update({ key: "finance", patch: { blockReenrollment: true } });
+    const principal = await makeUser(s.t, "PRINCIPAL");
+    const { caller } = await callerFor(s.tenantId, principal.id);
+    const preview = await caller.academic.yearEndPreview();
+    expect(preview.debtors).toMatchObject({ count: 1, blockReenrollment: true });
+    const r = await caller.academic.closeYear({
+      name: "العام التالي",
+      startDate: preview.suggested.startDate,
+      endDate: preview.suggested.endDate,
+      retainStudentIds: [],
+      confirm: s.year.name,
+    });
+    expect(r.deferred).toBe(1);
+    const [d, c] = await Promise.all(
+      [debtor, clear].map((x) => rootDb.student.findUniqueOrThrow({ where: { id: x.id } })),
+    );
+    expect(d!.status).toBe("DEFERRED");
+    expect(d!.sectionId).toBeNull();
+    expect(d!.gradeId).toBe(s.g2.id);
+    expect(c!.status).toBe("ACTIVE");
+    expect(c!.sectionId).not.toBeNull();
+  });
+  it("ولي الأمر: يرى فواتير أسرته وسنداتها فقط، ولا يبحث في الأسر ولا يسجّل مدفوعات", async () => {
+    const s = await financeSchool();
+    const mine = await s.student(s.g1.id, s.s1a.id, "ابني");
+    const other = await s.student(s.g1.id, s.s1a.id, "غيري");
+    const myInv = await s.acc.finance.invoices.create({ studentId: mine.id, feeItemIds: [s.item("BOOKS").id], issueDate: today(), notify: false });
+    const otherInv = await s.acc.finance.invoices.create({ studentId: other.id, feeItemIds: [s.item("BOOKS").id], issueDate: today(), notify: false });
+    const myReceipt = await s.acc.finance.receipts.create({ guardianId: myInv.guardianId!, amountMinor: 10_000, method: "CASH", date: today() });
+    const otherReceipt = await s.acc.finance.receipts.create({ guardianId: otherInv.guardianId!, amountMinor: 10_000, method: "CASH", date: today() });
+    const parent = await makeUser(s.t, "PARENT");
+    await rootDb.guardian.update({ where: { id: myInv.guardianId! }, data: { userId: parent.id } });
+    const { caller: p } = await callerFor(s.tenantId, parent.id);
+    // فواتير أبنائه فقط
+    expect((await p.finance.invoices.forStudent({ studentId: mine.id })).map((i) => i.id)).toEqual([myInv.id]);
+    await expect(p.finance.invoices.get({ id: otherInv.id })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    // كشف أسرته فقط
+    expect((await p.finance.receipts.family({ guardianId: myInv.guardianId! })).guardian.id).toBe(myInv.guardianId);
+    await expect(p.finance.receipts.family({ guardianId: otherInv.guardianId! })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(p.finance.receipts.refunds({ guardianId: otherInv.guardianId! })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    // سنداته فقط
+    expect((await p.finance.receipts.list({})).map((r) => r.id)).toEqual([myReceipt.id]);
+    await expect(p.finance.receipts.get({ id: otherReceipt.id })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    // لا بحث في الأسر، ولا تسجيل مدفوعات، ولا إعداد الرسوم أو خصومات الطلاب
+    await expect(p.finance.receipts.search({ q: "طالب" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(p.finance.receipts.create({ guardianId: otherInv.guardianId!, amountMinor: 100, method: "CASH", date: today() })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(p.finance.setup.get()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(p.finance.setup.studentDiscounts({ studentId: other.id })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(p.finance.invoices.preview({ studentId: other.id })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });
