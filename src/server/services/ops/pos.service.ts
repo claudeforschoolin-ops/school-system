@@ -3,6 +3,7 @@
  * محفظة الطالب مسبقة الدفع: شحن من الصندوق أو من رصيد ولي الأمر الدائن، حد يومي، فئات ممنوعة، إشعارات، وسجل حركات غير قابل للتعديل.
  * القيود: المبيعات (الصندوق/البنك/المحافظ ← الإيراد + الضريبة)، تكلفة البضاعة (التكلفة ← المخزون)، الشحن (الصندوق ← أرصدة المحافظ).
  */
+import { toISODate } from "@/lib/dates";
 import { exceedsDailyLimit, posTotals } from "@/lib/ops/calc";
 import type { SessionData } from "@/server/auth/session";
 import type { TenantDb } from "@/server/db/tenant";
@@ -94,7 +95,7 @@ export async function createSale(db: TenantDb, session: SessionData, input: Sale
 
   const sale = await db.$transaction(async (txRaw) => {
     const tx = txRaw as unknown as Tx;
-    const number = await nextNo(tx, session, `sale-${input.kind.toLowerCase()}`);
+    const number = await nextNo(tx, session, "sale");
     const today = todayOf(session);
     const cc = await branchCostCenter(tx, session.tenant.id, wh.branchId);
     let costTotal = 0;
@@ -164,7 +165,7 @@ export async function voidSale(db: TenantDb, session: SessionData, id: string, r
   requireOps(session, MODULE[s.kind as "STORE"], "approve", "إلغاء البيع يتطلب صلاحية الاعتماد");
   if (s.status !== "COMPLETED") throw badRequest("العملية ملغاة مسبقاً");
   if (s.paymentMethod === "STUDENT_ACCOUNT") throw badRequest("البيع على الحساب يُلغى بإشعار دائن على فاتورته من المالية");
-  if (s.date.toISOString().slice(0, 10) !== todayOf(session)) throw badRequest("يُلغى البيع في يومه فقط؛ استخدم مرتجعاً");
+  if (toISODate(s.date, session.tenant.timezone) !== todayOf(session)) throw badRequest("يُلغى البيع في يومه فقط؛ استخدم مرتجعاً");
   return db.$transaction(async (txRaw) => {
     const tx = txRaw as unknown as Tx;
     for (const l of s.lines) await moveStock(tx, session, { itemId: l.itemId, warehouseId: s.warehouseId, quantity: l.quantity, valueMinor: l.costMinor, kind: "SALE_RETURN", date: todayOf(session), reference: `إلغاء بيع ${s.number}`, sourceType: "Sale", sourceId: s.id, notes: reason });
@@ -182,7 +183,11 @@ export async function listSales(db: TenantDb, session: SessionData, input: { kin
   requireOps(session, MODULE[input.kind], "view");
   const to = input.to ?? todayOf(session);
   const from = input.from ?? to;
-  const sales = await db.sale.findMany({ where: { kind: input.kind, date: { gte: dateOnly(from), lt: new Date(dateOnly(to).getTime() + 86_400_000) } }, include: { lines: true }, orderBy: { number: "desc" } });
+  // نافذة موسّعة ثم تصفية بالتاريخ المحلي للمدرسة
+  const sales = (await db.sale.findMany({ where: { kind: input.kind, date: { gte: new Date(dateOnly(from).getTime() - 86_400_000), lt: new Date(dateOnly(to).getTime() + 2 * 86_400_000) } }, include: { lines: true }, orderBy: { number: "desc" } })).filter((s) => {
+    const d = toISODate(s.date, session.tenant.timezone);
+    return d >= from && d <= to;
+  });
   const ok = sales.filter((s) => s.status === "COMPLETED");
   const byItem = new Map<string, { name: string; quantity: number; totalMinor: number; costMinor: number }>();
   for (const s of ok)

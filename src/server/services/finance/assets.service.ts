@@ -191,9 +191,15 @@ export async function createAsset(db: TenantDb, session: SessionData, input: Ass
       if (!bank) throw badRequest("اختر الحساب البنكي");
       credit = bank.accountId;
     }
+    // الرصيد الافتتاحي لأصل قديم يُقيد في أول فترة محاسبية متاحة
+    let entryDate = input.purchaseDate;
+    if (input.fundedBy === "OPENING") {
+      const first = await tx.fiscalPeriod.findFirst({ where: { status: "OPEN", endDate: { gte: dateOnly(entryDate) } }, orderBy: { startDate: "asc" } });
+      if (first && isoOf(first.startDate)! > entryDate) entryDate = isoOf(first.startDate)!;
+    }
     const entry = await postEntry(tx, session, {
-      date: input.purchaseDate,
-      description: `اقتناء أصل: ${asset.name} (${tag})`,
+      date: entryDate,
+      description: `${input.fundedBy === "OPENING" ? "رصيد افتتاحي لأصل" : "اقتناء أصل"}: ${asset.name} (${tag})`,
       source: "FIXED_ASSET",
       sourceType: "FixedAsset",
       sourceId: asset.id,

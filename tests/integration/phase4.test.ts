@@ -1,3 +1,4 @@
+import { toISODate } from "@/lib/dates";
 import { describe, expect, it } from "vitest";
 import { rootDb } from "@/server/db/client";
 import { validateSessionToken, createSession } from "@/server/auth/session";
@@ -5,7 +6,8 @@ import { verifyReportCard } from "@/server/services/assessment/results.service";
 import { callerFor, makeTenant, makeUser, uid } from "./helpers";
 import { fakeNationalId, makeSchool } from "./school-fixture";
 
-const today = () => new Date().toISOString().slice(0, 10);
+// التاريخ المحلي للمدرسة (كما يحسبه النظام) لا تاريخ UTC
+const today = () => toISODate(new Date(), "Asia/Riyadh");
 const addDays = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 const weekday = (iso: string) => {
   let d = iso;

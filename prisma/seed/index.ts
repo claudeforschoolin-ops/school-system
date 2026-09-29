@@ -21,6 +21,7 @@ import { bullets, callout, doc, h2, mentionUser, p, todos } from "./doc";
 import { seedPhase2 } from "./phase2";
 import { seedPhase3 } from "./phase3-finance";
 import { seedPhase4 } from "./phase4";
+import { seedPhase5 } from "./phase5";
 
 const TENANT_SLUG = "demo";
 const TZ = "Asia/Riyadh";
@@ -509,6 +510,8 @@ async function main() {
   await seedPhase3(tenant.id);
   console.log("⏳ المرحلة ٤: التقييم والموارد البشرية والرواتب...");
   await seedPhase4(tenant.id);
+  console.log("⏳ المرحلة ٥: العمليات والخدمات...");
+  await seedPhase5(tenant.id);
 
   const counts = await Promise.all([
     rootDb.user.count({ where: { tenantId: tenant.id } }),

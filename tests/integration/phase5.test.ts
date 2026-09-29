@@ -1,9 +1,11 @@
+import { toISODate } from "@/lib/dates";
 import { describe, expect, it } from "vitest";
 import { rootDb } from "@/server/db/client";
 import { callerFor, makeUser, uid } from "./helpers";
 import { makeSchool } from "./school-fixture";
 
-const today = () => new Date().toISOString().slice(0, 10);
+// التاريخ المحلي للمدرسة (كما يحسبه النظام) لا تاريخ UTC
+const today = () => toISODate(new Date(), "Asia/Riyadh");
 const thisMonth = () => today().slice(0, 7);
 const prevMonth = (m: string) => {
   const [y = 2000, mm = 1] = m.split("-").map(Number);
@@ -278,7 +280,6 @@ describe("المرحلة ٥ — الصيانة والنقل والمكتبة", (
 
   it("المكتبة: إعارة وحد أقصى، إرجاع متأخر بغرامة تُضاف لحساب الطالب، والحجز يُعرض عند الإرجاع", async () => {
     const s = await opsSchool();
-    const lib = await s.as(s.users.librarian);
     const owner = await s.as(s.users.owner);
     await owner.moduleSettings.update({ key: "library", patch: { maxLoans: 1, finePerDayMinor: 100, fineCapMinor: 500, graceDays: 0 } });
     const lib2 = await s.as(s.users.librarian);

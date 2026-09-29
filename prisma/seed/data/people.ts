@@ -45,6 +45,8 @@ export const PEOPLE: PersonSeed[] = [
   { key: "procurement", name: "أ. ياسر بن عوض الجهني", email: "procurement@demo.manassa.sa", jobTitle: "مسؤول المخزون والمشتريات", role: "PROCUREMENT", branch: null, color: "gold", demo: true, teamspaces: [["operations", "EDIT"]] },
   { key: "transport", name: "أ. حمد بن فالح الرشيدي", email: "transport@demo.manassa.sa", jobTitle: "مسؤول النقل المدرسي", role: "TRANSPORT", branch: null, color: "teal", demo: true, teamspaces: [["operations", "EDIT"]] },
   { key: "reception", name: "أ. لمى بنت يوسف العمري", email: "reception@demo.manassa.sa", jobTitle: "موظفة الاستقبال", role: "RECEPTION", branch: "GIRLS", color: "green", demo: true, teamspaces: [["communication", "VIEW"]] },
+  { key: "nurse", name: "أ. نورة بنت فهد السبيعي", email: "nurse@demo.manassa.sa", jobTitle: "ممرضة المدرسة", role: "NURSE", branch: "BOYS", color: "red", demo: true },
+  { key: "canteen", name: "أ. بدر بن ناصر الغامدي", email: "canteen@demo.manassa.sa", jobTitle: "مسؤول المقصف", role: "CANTEEN", branch: "BOYS", color: "orange", demo: true },
   { key: "parent", name: "أ. عبدالعزيز بن محمد القرني", email: "parent@demo.manassa.sa", jobTitle: "ولي أمر", role: "PARENT", branch: null, color: "slate", demo: true },
   { key: "student", name: "يوسف بن عبدالعزيز القرني", email: "student@demo.manassa.sa", jobTitle: "طالب — الصف الثاني المتوسط", role: "STUDENT", branch: "BOYS", color: "navy", demo: true },
   { key: "auditor", name: "أ. وليد بن إبراهيم الخالدي", email: "auditor@demo.manassa.sa", jobTitle: "مدقق داخلي", role: "AUDITOR", branch: null, color: "gold", demo: true },
@@ -88,4 +90,4 @@ export const PEOPLE: PersonSeed[] = [
 ];
 
 /** أدوار تتطلب المصادقة الثنائية: تُفعَّل بسر معروف للحسابات التجريبية */
-export const DEMO_2FA_ROLES = new Set(["OWNER", "PRINCIPAL", "ACCOUNTANT", "CASHIER", "HR_MANAGER", "AUDITOR"]);
+export const DEMO_2FA_ROLES = new Set(["OWNER", "PRINCIPAL", "ACCOUNTANT", "CASHIER", "HR_MANAGER", "AUDITOR", "NURSE"]);

@@ -156,7 +156,7 @@ export async function seedPhase3(tenantId: string) {
   const currentBank = await banking.saveBankAccount(acc.db, acc.session, null, {
     name: "الحساب الجاري",
     bankName: "البنك الأهلي السعودي",
-    iban: "SA4410000000123456789012",
+    iban: "SA3510000000123456789012",
     accountId: await account("1111"),
     isActive: true,
   });

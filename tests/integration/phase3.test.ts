@@ -1,9 +1,11 @@
+import { toISODate } from "@/lib/dates";
 import { describe, expect, it } from "vitest";
 import { rootDb } from "@/server/db/client";
 import { callerFor, makeTenant, makeUser, uid } from "./helpers";
 import { fakeNationalId, makeSchool } from "./school-fixture";
 
-const today = () => new Date().toISOString().slice(0, 10);
+// التاريخ المحلي للمدرسة (كما يحسبه النظام) لا تاريخ UTC
+const today = () => toISODate(new Date(), "Asia/Riyadh");
 
 /** مدرسة بجدول رسوم: دراسية ١٨٬٠٠٠ وتسجيل ١٬٠٠٠ وكتب ٨٠٠ */
 async function financeSchool() {
