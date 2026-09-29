@@ -45,7 +45,8 @@ function stableEqual(a: unknown, b: unknown): boolean {
     const bd = b instanceof Date ? b.toISOString() : b;
     return ad === bd;
   }
-  return JSON.stringify(a) === JSON.stringify(b);
+  if (typeof a === "bigint" || typeof b === "bigint") return String(a) === String(b);
+  return JSON.stringify(a, (_k, v) => (typeof v === "bigint" ? v.toString() : v)) === JSON.stringify(b, (_k, v) => (typeof v === "bigint" ? v.toString() : v));
 }
 
 export interface Diff {

@@ -22,6 +22,12 @@ const LABELS: Record<TemplateKey, string> = {
   transfer_completed: "تنفيذ التحويل",
   activity_consent: "موافقة على نشاط/رحلة",
   behavior_notice: "ملاحظة سلوكية",
+  invoice_issued: "إصدار فاتورة",
+  receipt_issued: "إيصال سداد",
+  reminder_before: "تذكير قبل الاستحقاق",
+  reminder_due: "تذكير يوم الاستحقاق",
+  reminder_overdue: "تذكير بالتأخر",
+  reminder_final: "إشعار أخير بالمديونية",
 };
 
 export function TemplatesEditor({ keys }: { keys: TemplateKey[] }) {

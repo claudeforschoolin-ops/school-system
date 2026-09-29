@@ -3,6 +3,7 @@
  */
 import { activitiesCollection } from "./activities";
 import { admissionsCollection } from "./admissions";
+import { invoicesCollection, vouchersCollection } from "./finance";
 import { behaviorCollection, counselingCollection } from "./behavior";
 import { leavesCollection, transfersCollection } from "./requests";
 import { studentsCollection } from "./students";
@@ -16,6 +17,8 @@ export const COLLECTIONS: Record<string, SystemCollection> = {
   [behaviorCollection.source]: behaviorCollection,
   [counselingCollection.source]: counselingCollection,
   [activitiesCollection.source]: activitiesCollection,
+  [invoicesCollection.source]: invoicesCollection,
+  [vouchersCollection.source]: vouchersCollection,
 };
 
 export const COLLECTION_SOURCES = Object.keys(COLLECTIONS);

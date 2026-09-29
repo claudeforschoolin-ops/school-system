@@ -14,5 +14,11 @@ export const DEFAULT_TEMPLATES = {
   transfer_completed: "تم تنفيذ طلب {kind} لـ{student}. رقم الشهادة: {certificate} — {school}",
   behavior_notice: "نفيدكم بتسجيل ملاحظة سلوكية على {student}: {category}. نأمل التواصل مع المدرسة عند الحاجة — {school}",
   activity_consent: "يرجى الموافقة على مشاركة {student} في «{activity}» بتاريخ {date} — {school}",
+  invoice_issued: "صدرت فاتورة رقم {number} لـ{student} بمبلغ {amount}، تستحق في {dueDate} — {school}",
+  receipt_issued: "استلمنا {amount} ({method}) بسند رقم {number}. الرصيد المتبقي: {balance}. شكراً لكم — {school}",
+  reminder_before: "تذكير: يستحق قسط {student} بمبلغ {amount} في {dueDate} — {school}",
+  reminder_due: "يستحق اليوم قسط {student} بمبلغ {amount}. نشكر مبادرتكم بالسداد — {school}",
+  reminder_overdue: "نفيدكم بتأخر سداد {amount} لـ{student} منذ {days} يوماً. نأمل السداد أو التواصل مع المحاسبة — {school}",
+  reminder_final: "إشعار أخير: مستحقات {student} المتأخرة {amount} منذ {days} يوماً. قد تُطبَّق سياسة المديونية — {school}",
 } as const;
 export type TemplateKey = keyof typeof DEFAULT_TEMPLATES;

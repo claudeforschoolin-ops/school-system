@@ -75,8 +75,8 @@ model Branch {
 
   students   Student[]
   admissions Admission[]
-  sections  Section[]
-  userRoles UserRole[]
+  sections   Section[]
+  userRoles  UserRole[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -118,10 +118,10 @@ model Grade {
   updatedById String?
   deletedAt   DateTime?
 
-  students       Student[]
-  admissions     Admission[]
-  gradeSubjects  GradeSubject[]
-  sections Section[]
+  students      Student[]
+  admissions    Admission[]
+  gradeSubjects GradeSubject[]
+  sections      Section[]
 
   @@unique([tenantId, code])
   @@index([tenantId, stageId])
@@ -170,8 +170,8 @@ model AcademicYear {
 
   students   Student[]
   admissions Admission[]
-  terms    Term[]
-  sections Section[]
+  terms      Term[]
+  sections   Section[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -258,22 +258,22 @@ enum PermissionScope {
 }
 
 model Role {
-  id           String   @id @default(cuid())
-  tenantId     String
-  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
   /// مفتاح ثابت للأدوار النظامية (OWNER, PRINCIPAL...) أو معرّف مخصص
-  key          String
-  name         String
-  description  String?
-  isSystem     Boolean  @default(false)
+  key         String
+  name        String
+  description String?
+  isSystem    Boolean  @default(false)
   /// المصادقة الثنائية إلزامية لهذا الدور
-  requires2fa  Boolean  @default(false)
-  color        String   @default("slate")
-  position     Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  createdById  String?
-  updatedById  String?
+  requires2fa Boolean  @default(false)
+  color       String   @default("slate")
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  updatedById String?
 
   permissions RolePermission[]
   users       UserRole[]
@@ -486,18 +486,18 @@ model ApprovalStep {
 // ---------------------------------------------------------------------
 
 model Teamspace {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
   key         String
   name        String
   icon        String?
   description String?
   /// الوحدات التي تمنح صلاحية الاطلاع على المساحة (أي منها يكفي)
-  moduleKeys  String[] @default([])
-  position    Float    @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  moduleKeys  String[]  @default([])
+  position    Float     @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   createdById String?
   updatedById String?
   deletedAt   DateTime?
@@ -1028,6 +1028,7 @@ model Guardian {
   deletedAt       DateTime?
 
   students StudentGuardian[]
+  invoices Invoice[]
 
   @@unique([tenantId, nationalIdHash])
   @@index([tenantId, phone])
@@ -1092,15 +1093,17 @@ model Student {
   updatedById       String?
   deletedAt         DateTime?
 
-  guardians      StudentGuardian[]
-  documents      StudentDocument[]
-  attendance     Attendance[]
-  admission      Admission?
-  leaves         StudentLeave[]
-  transfers      Transfer[]
-  behavior       BehaviorRecord[]
-  cases          CounselingCase[]
-  registrations  ActivityRegistration[]
+  guardians     StudentGuardian[]
+  documents     StudentDocument[]
+  attendance    Attendance[]
+  admission     Admission?
+  leaves        StudentLeave[]
+  transfers     Transfer[]
+  behavior      BehaviorRecord[]
+  cases         CounselingCase[]
+  registrations ActivityRegistration[]
+  invoices      Invoice[]
+  discounts     StudentDiscount[]
 
   @@unique([tenantId, academicNumber])
   @@unique([tenantId, nationalIdHash])
@@ -1166,29 +1169,29 @@ enum AdmissionStage {
 }
 
 model Admission {
-  id               String         @id @default(cuid())
+  id               String            @id @default(cuid())
   tenantId         String
   branchId         String
-  branch           Branch         @relation(fields: [branchId], references: [id])
+  branch           Branch            @relation(fields: [branchId], references: [id])
   /// رقم الطلب
   number           Int
   academicYearId   String
-  academicYear     AcademicYear   @relation(fields: [academicYearId], references: [id])
-  stage            AdmissionStage @default(NEW)
+  academicYear     AcademicYear      @relation(fields: [academicYearId], references: [id])
+  stage            AdmissionStage    @default(NEW)
   firstName        String
-  fatherName       String         @default("")
-  grandfatherName  String         @default("")
-  familyName       String         @default("")
+  fatherName       String            @default("")
+  grandfatherName  String            @default("")
+  familyName       String            @default("")
   fullName         String
   gender           Gender?
-  nationality      String         @default("SA")
-  idType           IdType         @default(NATIONAL_ID)
+  nationality      String            @default("SA")
+  idType           IdType            @default(NATIONAL_ID)
   nationalIdHash   String?
   nationalIdEnc    String?
   nationalIdLast4  String?
-  birthDate        DateTime?      @db.Date
+  birthDate        DateTime?         @db.Date
   requestedGradeId String?
-  requestedGrade   Grade?         @relation(fields: [requestedGradeId], references: [id])
+  requestedGrade   Grade?            @relation(fields: [requestedGradeId], references: [id])
   previousSchool   String?
   /// ولي الأمر الأساسي
   guardianName     String?
@@ -1196,10 +1199,10 @@ model Admission {
   guardianPhone    String?
   guardianEmail    String?
   /// بقية بيانات الأب والأم والوصي من النموذج [{relation, name, phone, email, occupation, nationalIdLast4, nationalIdEnc}]
-  contacts         Json           @default("[]")
+  contacts         Json              @default("[]")
   address          String?
   /// المرفقات (FileValue[])
-  attachments      Json           @default("[]")
+  attachments      Json              @default("[]")
   /// كيف عرفتنا
   source           String?
   /// المسؤول عن المتابعة
@@ -1210,14 +1213,14 @@ model Admission {
   decisionAt       DateTime?
   decisionReason   String?
   /// PUBLIC_FORM | STAFF
-  submittedVia     String         @default("STAFF")
-  studentId        String?        @unique
-  student          Student?       @relation(fields: [studentId], references: [id])
+  submittedVia     String            @default("STAFF")
+  studentId        String?           @unique
+  student          Student?          @relation(fields: [studentId], references: [id])
   notes            Json?
-  customValues     Json           @default("{}")
-  position         Float          @default(0)
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  customValues     Json              @default("{}")
+  position         Float             @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   createdById      String?
   updatedById      String?
   deletedAt        DateTime?
@@ -1238,25 +1241,25 @@ enum AttendanceStatus {
 }
 
 model Attendance {
-  id             String           @id @default(cuid())
-  tenantId       String
-  branchId       String
-  studentId      String
-  student        Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  sectionId      String
-  date           DateTime         @db.Date
+  id           String           @id @default(cuid())
+  tenantId     String
+  branchId     String
+  studentId    String
+  student      Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  sectionId    String
+  date         DateTime         @db.Date
   /// 0 = تحضير يومي، وإلا رقم الحصة
-  period         Int              @default(0)
-  status         AttendanceStatus
-  reason         String?
-  minutesLate    Int?
+  period       Int              @default(0)
+  status       AttendanceStatus
+  reason       String?
+  minutesLate  Int?
   /// MANUAL | LEAVE | IMPORT
-  source         String           @default("MANUAL")
-  leaveId        String?
-  recordedById   String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  updatedById    String?
+  source       String           @default("MANUAL")
+  leaveId      String?
+  recordedById String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  updatedById  String?
 
   @@unique([studentId, date, period])
   @@index([tenantId, sectionId, date])
@@ -1265,30 +1268,30 @@ model Attendance {
 
 /// إجازة أو استئذان طالب
 model StudentLeave {
-  id             String         @id @default(cuid())
-  tenantId       String
-  branchId       String
-  number         Int
-  studentId      String
-  student        Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id           String         @id @default(cuid())
+  tenantId     String
+  branchId     String
+  number       Int
+  studentId    String
+  student      Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
   /// LEAVE (إجازة) | EARLY_DISMISSAL (استئذان)
-  kind           String         @default("LEAVE")
-  startDate      DateTime       @db.Date
-  endDate        DateTime       @db.Date
-  reason         String
-  requestedBy    String?
-  attachments    Json           @default("[]")
-  status         ApprovalStatus @default(PENDING)
-  decidedById    String?
-  decidedAt      DateTime?
-  decisionNote   String?
-  customValues   Json           @default("{}")
-  position       Float          @default(0)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  createdById    String?
-  updatedById    String?
-  deletedAt      DateTime?
+  kind         String         @default("LEAVE")
+  startDate    DateTime       @db.Date
+  endDate      DateTime       @db.Date
+  reason       String
+  requestedBy  String?
+  attachments  Json           @default("[]")
+  status       ApprovalStatus @default(PENDING)
+  decidedById  String?
+  decidedAt    DateTime?
+  decisionNote String?
+  customValues Json           @default("{}")
+  position     Float          @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  createdById  String?
+  updatedById  String?
+  deletedAt    DateTime?
 
   @@unique([tenantId, number])
   @@index([tenantId, status])
@@ -1403,26 +1406,26 @@ enum CaseStatus {
 
 /// حالة إرشادية سرّية: يراها المرشد المسؤول والإدارة فقط
 model CounselingCase {
-  id                 String      @id @default(cuid())
+  id                 String     @id @default(cuid())
   tenantId           String
   branchId           String
   number             Int
   studentId          String
-  student            Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student            Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
   title              String
   category           String
-  severity           Severity    @default(LOW)
-  status             CaseStatus  @default(OPEN)
+  severity           Severity   @default(LOW)
+  status             CaseStatus @default(OPEN)
   counselorId        String
   /// خطة العلاج الفردية (Tiptap)
   plan               Json?
   guardianSummonedAt DateTime?
-  openedAt           DateTime    @default(now())
+  openedAt           DateTime   @default(now())
   closedAt           DateTime?
-  customValues       Json        @default("{}")
-  position           Float       @default(0)
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
+  customValues       Json       @default("{}")
+  position           Float      @default(0)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
   createdById        String?
   updatedById        String?
   deletedAt          DateTime?
@@ -1609,19 +1612,19 @@ model TeacherAssignment {
 
 /// جدول الجرس: أيام الدراسة وتوقيت الحصص لكل فرع
 model BellSchedule {
-  id          String   @id @default(cuid())
-  tenantId    String
-  branchId    String
-  name        String
+  id             String   @id @default(cuid())
+  tenantId       String
+  branchId       String
+  name           String
   /// أيام الدراسة (0=الأحد … 6=السبت)
-  days        Int[]
+  days           Int[]
   /// [{index, start: "07:00", end: "07:45"}] — الحصص فقط؛ الفسح بين الأوقات
-  periods     Json
+  periods        Json
   /// أقصى عدد حصص متتالية للمعلم
-  maxConsecutive Int   @default(3)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  updatedById String?
+  maxConsecutive Int      @default(3)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  updatedById    String?
 
   @@unique([tenantId, branchId])
 }
@@ -1722,22 +1725,706 @@ model Activity {
 }
 
 model ActivityRegistration {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   tenantId      String
   activityId    String
-  activity      Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  activity      Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
   studentId     String
-  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student       Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   /// REGISTERED | WAITLIST | CANCELLED | ATTENDED
-  status        String   @default("REGISTERED")
+  status        String    @default("REGISTERED")
   /// NOT_REQUIRED | PENDING | GRANTED | DENIED
-  consentStatus String   @default("NOT_REQUIRED")
+  consentStatus String    @default("NOT_REQUIRED")
   consentBy     String?
   consentAt     DateTime?
-  createdAt     DateTime @default(now())
+  /// فاتورة رسم النشاط
+  invoiceId     String?
+  createdAt     DateTime  @default(now())
   createdById   String?
-  updatedAt     DateTime @updatedAt
+  updatedAt     DateTime  @updatedAt
 
   @@unique([activityId, studentId])
   @@index([tenantId, studentId])
+}
+
+// =====================================================================
+// المرحلة ٣: النظام المحاسبي — كل المبالغ أعداد صحيحة بأصغر وحدة (هللة).
+// سطور القيود BigInt (أرصدة الأصول الكبيرة)، والمستندات Int (مبلغ المستند الواحد).
+// =====================================================================
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum BalanceSide {
+  DEBIT
+  CREDIT
+}
+
+/// دليل الحسابات (شجري)
+model Account {
+  id            String      @id @default(cuid())
+  tenantId      String
+  code          String
+  name          String
+  type          AccountType
+  normalSide    BalanceSide
+  parentId      String?
+  parent        Account?    @relation("AccountTree", fields: [parentId], references: [id])
+  children      Account[]   @relation("AccountTree")
+  /// حساب تجميعي (عنوان) لا يُرحَّل عليه مباشرة
+  isGroup       Boolean     @default(false)
+  /// مفتاح نظامي لخريطة القيود الآلية (CASH، AR_TUITION، DEFERRED_REVENUE…)
+  systemKey     String?
+  /// تصنيف قائمة التدفقات النقدية: CASH | OPERATING | INVESTING | FINANCING
+  cashFlowGroup String?
+  description   String?
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  createdById   String?
+  updatedById   String?
+  deletedAt     DateTime?
+
+  lines JournalLine[]
+
+  @@unique([tenantId, code])
+  @@unique([tenantId, systemKey])
+  @@index([tenantId, parentId])
+}
+
+/// مراكز التكلفة: الفرع، المرحلة، القسم
+model CostCenter {
+  id        String   @id @default(cuid())
+  tenantId  String
+  code      String
+  name      String
+  /// BRANCH | STAGE | DEPARTMENT
+  kind      String
+  branchId  String?
+  stageId   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, code])
+}
+
+enum PeriodStatus {
+  OPEN
+  CLOSED
+}
+
+/// العام المالي (مستقل عن العام الدراسي)
+model FiscalYear {
+  id             String       @id @default(cuid())
+  tenantId       String
+  name           String
+  startDate      DateTime     @db.Date
+  endDate        DateTime     @db.Date
+  status         PeriodStatus @default(OPEN)
+  closedAt       DateTime?
+  closedById     String?
+  closingEntryId String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  periods FiscalPeriod[]
+
+  @@unique([tenantId, name])
+}
+
+/// الفترة المحاسبية (شهر)
+model FiscalPeriod {
+  id           String       @id @default(cuid())
+  tenantId     String
+  fiscalYearId String
+  fiscalYear   FiscalYear   @relation(fields: [fiscalYearId], references: [id])
+  name         String
+  startDate    DateTime     @db.Date
+  endDate      DateTime     @db.Date
+  status       PeriodStatus @default(OPEN)
+  closedAt     DateTime?
+  closedById   String?
+  reopenReason String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  entries JournalEntry[]
+
+  @@unique([fiscalYearId, startDate])
+  @@index([tenantId, startDate])
+}
+
+enum JournalSource {
+  MANUAL
+  OPENING
+  INVOICE
+  CREDIT_NOTE
+  RECEIPT
+  RECEIPT_VOID
+  CREDIT_APPLICATION
+  REFUND
+  PAYMENT_VOUCHER
+  REVENUE_RECOGNITION
+  CHEQUE
+  CASH_SESSION
+  BANK_TRANSFER
+  WRITE_OFF
+  CLOSING
+  REVERSAL
+}
+
+/// القيد اليومي — لا يُعدَّل بعد الترحيل (يُعكس بقيد)؛ التوازن مفروض بمشغّل في قاعدة البيانات
+model JournalEntry {
+  id                   String        @id @default(cuid())
+  tenantId             String
+  number               Int
+  date                 DateTime      @db.Date
+  periodId             String
+  period               FiscalPeriod  @relation(fields: [periodId], references: [id])
+  description          String
+  source               JournalSource
+  /// المستند المصدر (Invoice، Receipt…)
+  sourceType           String?
+  sourceId             String?
+  reference            String?
+  academicYearId       String?
+  totalMinor           BigInt
+  reversalOfId         String?       @unique
+  isReversed           Boolean       @default(false)
+  /// رُحّل في فترة مقفلة بصلاحية استثنائية
+  postedInClosedPeriod Boolean       @default(false)
+  createdById          String?
+  createdAt            DateTime      @default(now())
+
+  lines JournalLine[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, date])
+  @@index([tenantId, sourceType, sourceId])
+}
+
+model JournalLine {
+  id              String       @id @default(cuid())
+  tenantId        String
+  entryId         String
+  entry           JournalEntry @relation(fields: [entryId], references: [id])
+  accountId       String
+  account         Account      @relation(fields: [accountId], references: [id])
+  debitMinor      BigInt       @default(0)
+  creditMinor     BigInt       @default(0)
+  costCenterId    String?
+  studentId       String?
+  guardianId      String?
+  description     String?
+  /// المطابقة البنكية
+  statementLineId String?      @unique
+  reconciledAt    DateTime?
+
+  @@index([tenantId, accountId])
+  @@index([entryId])
+  @@index([tenantId, guardianId])
+}
+
+model TaxCode {
+  id              String   @id @default(cuid())
+  tenantId        String
+  code            String
+  name            String
+  /// النسبة بنقاط الأساس (1500 = ١٥٪)
+  rateBp          Int
+  /// STANDARD | ZERO | EXEMPT | OUT_OF_SCOPE
+  kind            String
+  outputAccountId String?
+  inputAccountId  String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tenantId, code])
+}
+
+enum FeeKind {
+  TUITION
+  REGISTRATION
+  TRANSPORT
+  ACTIVITY
+  BOOKS
+  UNIFORM
+  MEALS
+  LATE_FEE
+  OTHER
+}
+
+/// بند رسوم
+model FeeItem {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  code                String
+  name                String
+  kind                FeeKind
+  revenueAccountId    String
+  receivableAccountId String
+  /// إيراد مؤجل يُعترف به شهرياً على مدة العام الدراسي
+  deferred            Boolean  @default(false)
+  taxCodeId           String?
+  /// رمز ضريبي بديل للمواطنين (مثل تحمّل الدولة للضريبة)
+  citizenTaxCodeId    String?
+  refundable          Boolean  @default(true)
+  isActive            Boolean  @default(true)
+  position            Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  createdById         String?
+  updatedById         String?
+
+  @@unique([tenantId, code])
+}
+
+/// جدول رسوم لعام دراسي × فرع × مرحلة × صف (الأكثر تحديداً يغلب)
+model FeeSchedule {
+  id             String   @id @default(cuid())
+  tenantId       String
+  academicYearId String
+  name           String
+  branchId       String?
+  stageId        String?
+  gradeId        String?
+  isActive       Boolean  @default(true)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdById    String?
+  updatedById    String?
+
+  lines FeeScheduleLine[]
+
+  @@index([tenantId, academicYearId])
+}
+
+model FeeScheduleLine {
+  id          String      @id @default(cuid())
+  tenantId    String
+  scheduleId  String
+  schedule    FeeSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  feeItemId   String
+  amountMinor Int
+  /// اختياري (مثل النقل): لا يُفوتر إلا بطلب
+  optional    Boolean     @default(false)
+
+  @@unique([scheduleId, feeItemId])
+}
+
+/// خطة تقسيط: أجزاء بأوزان وتواريخ استحقاق، وغرامة تأخير اختيارية
+model InstallmentPlan {
+  id             String   @id @default(cuid())
+  tenantId       String
+  name           String
+  /// SINGLE | TERMLY | MONTHLY | CUSTOM
+  kind           String
+  /// [{label, weight, dueDate}]
+  parts          Json
+  /// NONE | PERCENT | FIXED
+  lateFeeKind    String   @default("NONE")
+  /// نقاط أساس للنسبة أو هللات للمبلغ الثابت
+  lateFeeValue   Int      @default(0)
+  graceDays      Int      @default(0)
+  isDefault      Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  academicYearId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+enum DiscountKind {
+  SIBLING
+  STAFF
+  MERIT
+  SCHOLARSHIP
+  EARLY_PAYMENT
+  MANUAL
+}
+
+model DiscountType {
+  id                 String       @id @default(cuid())
+  tenantId           String
+  code               String
+  name               String
+  kind               DiscountKind
+  /// PERCENT (نقاط أساس) | FIXED (هللات)
+  method             String
+  value              Int
+  /// خصم الأشقاء بترتيب الأخ: [{order: 2, valueBp: 500}, …]
+  siblingTiers       Json?
+  /// البنود المشمولة (فارغ = الرسوم الدراسية)
+  feeItemIds         String[]
+  validFrom          DateTime?    @db.Date
+  validTo            DateTime?    @db.Date
+  /// يتطلب موافقة إذا تجاوز الخصم هذا المبلغ (أو دائماً إن كان 0)
+  approvalLimitMinor Int?
+  isActive           Boolean      @default(true)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@unique([tenantId, code])
+}
+
+model StudentDiscount {
+  id                String   @id @default(cuid())
+  tenantId          String
+  studentId         String
+  student           Student  @relation(fields: [studentId], references: [id])
+  discountTypeId    String
+  academicYearId    String
+  /// قيمة بديلة لقيمة النوع
+  valueOverride     Int?
+  /// ACTIVE | PENDING | REJECTED | REVOKED
+  status            String   @default("ACTIVE")
+  approvalRequestId String?
+  note              String?
+  createdById       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([tenantId, studentId])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+model InvoiceBatch {
+  id             String   @id @default(cuid())
+  tenantId       String
+  number         Int
+  academicYearId String
+  description    String
+  scope          Json
+  count          Int
+  totalMinor     Int
+  createdById    String?
+  createdAt      DateTime @default(now())
+
+  @@unique([tenantId, number])
+}
+
+/// الفاتورة — الرقم التسلسلي يُسند عند الإصدار دون انقطاع
+model Invoice {
+  id                String        @id @default(cuid())
+  tenantId          String
+  number            Int?
+  status            InvoiceStatus @default(DRAFT)
+  studentId         String
+  student           Student       @relation(fields: [studentId], references: [id])
+  guardianId        String?
+  guardian          Guardian?     @relation(fields: [guardianId], references: [id])
+  branchId          String
+  academicYearId    String
+  costCenterId      String?
+  issueDate         DateTime?     @db.Date
+  dueDate           DateTime      @db.Date
+  subtotalMinor     Int
+  discountMinor     Int           @default(0)
+  taxMinor          Int           @default(0)
+  totalMinor        Int
+  paidMinor         Int           @default(0)
+  creditedMinor     Int           @default(0)
+  /// MANUAL | BULK | ADMISSION | ACTIVITY | LATE_FEE | DEBIT_NOTE | TRANSFER
+  source            String        @default("MANUAL")
+  sourceId          String?
+  batchId           String?
+  installmentPlanId String?
+  notes             String?
+  journalEntryId    String?
+  cancelReason      String?
+  cancelledAt       DateTime?
+  remindersPaused   Boolean       @default(false)
+  reminderLevel     Int           @default(0)
+  lastReminderAt    DateTime?
+  customValues      Json          @default("{}")
+  position          Float         @default(0)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  createdById       String?
+  updatedById       String?
+  deletedAt         DateTime?
+
+  lines        InvoiceLine[]
+  installments InvoiceInstallment[]
+  allocations  ReceiptAllocation[]
+  creditNotes  CreditNote[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+  @@index([tenantId, studentId])
+  @@index([tenantId, guardianId])
+  @@index([tenantId, dueDate])
+}
+
+model InvoiceLine {
+  id                  String    @id @default(cuid())
+  tenantId            String
+  invoiceId           String
+  invoice             Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  feeItemId           String?
+  description         String
+  quantity            Int       @default(1)
+  unitMinor           Int
+  amountMinor         Int
+  discountMinor       Int       @default(0)
+  taxCodeId           String?
+  taxRateBp           Int       @default(0)
+  taxMinor            Int       @default(0)
+  totalMinor          Int
+  revenueAccountId    String
+  receivableAccountId String
+  deferred            Boolean   @default(false)
+  /// ما اعتُرف به من الإيراد المؤجل
+  recognizedMinor     Int       @default(0)
+  /// ما خُفّض بإشعارات دائنة (قبل الضريبة)
+  creditedMinor       Int       @default(0)
+  /// تفصيل الخصومات: [{id, name, amountMinor}]
+  discountDetail      Json      @default("[]")
+  serviceStart        DateTime? @db.Date
+  serviceEnd          DateTime? @db.Date
+  position            Int       @default(0)
+}
+
+model InvoiceInstallment {
+  id               String   @id @default(cuid())
+  tenantId         String
+  invoiceId        String
+  invoice          Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  seq              Int
+  label            String
+  dueDate          DateTime @db.Date
+  amountMinor      Int
+  paidMinor        Int      @default(0)
+  lateFeeInvoiceId String?
+
+  @@unique([invoiceId, seq])
+}
+
+/// إشعار دائن: تخفيض فاتورة صادرة (تعديل، إلغاء، تناسب عند الانسحاب)
+model CreditNote {
+  id             String   @id @default(cuid())
+  tenantId       String
+  number         Int
+  invoiceId      String
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id])
+  date           DateTime @db.Date
+  /// ADJUSTMENT | CANCELLATION | PRORATION | DISCOUNT
+  kind           String
+  reason         String
+  amountMinor    Int
+  taxMinor       Int
+  totalMinor     Int
+  journalEntryId String?
+  /// المصدر (Transfer، ActivityRegistration…)
+  sourceType     String?
+  sourceId       String?
+  createdById    String?
+  createdAt      DateTime @default(now())
+
+  @@unique([tenantId, number])
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHEQUE
+  CARD
+  SADAD
+}
+
+/// سند القبض
+model Receipt {
+  id              String        @id @default(cuid())
+  tenantId        String
+  number          Int
+  date            DateTime      @db.Date
+  guardianId      String?
+  studentId       String?
+  payerName       String
+  method          PaymentMethod
+  amountMinor     Int
+  /// ما لم يُخصَّص على فواتير (يصبح رصيداً دائناً للأسرة)
+  unappliedMinor  Int           @default(0)
+  reference       String?
+  bankAccountId   String?
+  chequeNumber    String?
+  chequeBank      String?
+  chequeDate      DateTime?     @db.Date
+  /// PENDING | CLEARED | BOUNCED
+  chequeStatus    String?
+  chequeUpdatedAt DateTime?
+  cashSessionId   String?
+  branchId        String?
+  /// POSTED | VOID
+  status          String        @default("POSTED")
+  voidReason      String?
+  journalEntryId  String?
+  notes           String?
+  createdById     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  allocations ReceiptAllocation[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, guardianId])
+  @@index([tenantId, date])
+}
+
+/// تخصيص دفعة (أو رصيد دائن) على فاتورة/قسط
+model ReceiptAllocation {
+  id            String    @id @default(cuid())
+  tenantId      String
+  receiptId     String?
+  receipt       Receipt?  @relation(fields: [receiptId], references: [id])
+  invoiceId     String
+  invoice       Invoice   @relation(fields: [invoiceId], references: [id])
+  installmentId String?
+  amountMinor   Int
+  /// RECEIPT | CREDIT
+  source        String    @default("RECEIPT")
+  reversedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([tenantId, invoiceId])
+}
+
+/// دفتر الأرصدة الدائنة للأسرة (+ دخول، − استخدام/استرداد)
+model GuardianCredit {
+  id          String   @id @default(cuid())
+  tenantId    String
+  guardianId  String
+  studentId   String?
+  amountMinor Int
+  /// OVERPAYMENT | CREDIT_NOTE | APPLIED | REFUND | RECEIPT_VOID
+  source      String
+  sourceId    String?
+  note        String?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, guardianId])
+}
+
+model Refund {
+  id                String        @id @default(cuid())
+  tenantId          String
+  number            Int
+  guardianId        String
+  amountMinor       Int
+  method            PaymentMethod
+  bankAccountId     String?
+  reason            String
+  /// PENDING | APPROVED | PAID | REJECTED
+  status            String        @default("PENDING")
+  approvalRequestId String?
+  journalEntryId    String?
+  paidAt            DateTime?
+  createdById       String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@unique([tenantId, number])
+}
+
+/// سند الصرف (مصروفات وموردون) بموافقات حسب المبلغ
+model PaymentVoucher {
+  id                String        @id @default(cuid())
+  tenantId          String
+  number            Int
+  date              DateTime      @db.Date
+  payee             String
+  expenseAccountId  String
+  costCenterId      String?
+  method            PaymentMethod
+  bankAccountId     String?
+  amountMinor       Int
+  taxCodeId         String?
+  taxMinor          Int           @default(0)
+  totalMinor        Int
+  description       String
+  attachments       Json          @default("[]")
+  /// PENDING | APPROVED | PAID | REJECTED | CANCELLED
+  status            String        @default("PENDING")
+  approvalRequestId String?
+  journalEntryId    String?
+  paidAt            DateTime?
+  customValues      Json          @default("{}")
+  position          Float         @default(0)
+  createdById       String?
+  updatedById       String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  deletedAt         DateTime?
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+}
+
+model BankAccount {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  bankName  String
+  iban      String
+  /// حساب الأستاذ المقابل
+  accountId String   @unique
+  branchId  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  statementLines BankStatementLine[]
+}
+
+/// سطر كشف حساب بنكي مستورد (موجب = إيداع، سالب = سحب)
+model BankStatementLine {
+  id            String      @id @default(cuid())
+  tenantId      String
+  bankAccountId String
+  bankAccount   BankAccount @relation(fields: [bankAccountId], references: [id])
+  date          DateTime    @db.Date
+  description   String
+  reference     String?
+  amountMinor   Int
+  importBatch   String
+  matchedAt     DateTime?
+  matchedById   String?
+  createdAt     DateTime    @default(now())
+
+  @@index([bankAccountId, date])
+}
+
+/// وردية أمين الصندوق
+model CashSession {
+  id                String    @id @default(cuid())
+  tenantId          String
+  cashierId         String
+  branchId          String?
+  openedAt          DateTime  @default(now())
+  openingFloatMinor Int       @default(0)
+  closedAt          DateTime?
+  expectedMinor     Int?
+  countedMinor      Int?
+  differenceMinor   Int?
+  differenceEntryId String?
+  /// OPEN | CLOSED
+  status            String    @default("OPEN")
+  note              String?
+
+  @@index([tenantId, cashierId, status])
 }

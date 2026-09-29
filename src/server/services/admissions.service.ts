@@ -313,8 +313,8 @@ export async function findOrCreateGuardian(
 }
 
 /**
- * نقطة الربط بعد قبول الطالب. في المرحلة ٣ تُصدر هنا فاتورة رسوم التسجيل آلياً.
- * حالياً: تُسجَّل الحادثة في سجل التدقيق ليظهر أثرها في سجل الطالب.
+ * نقطة الربط بعد قبول الطالب: تسجيل الحادثة في التدقيق، وإصدار فاتورة رسوم التسجيل آلياً
+ * (من بند «تسجيل» في جدول رسوم صفه) مع إشعار ولي الأمر.
  */
 async function onStudentAccepted(db: TenantDb, session: SessionData, input: { studentId: string; admissionId: string }) {
   const { writeAudit } = await import("@/server/db/tenant");
@@ -322,6 +322,8 @@ async function onStudentAccepted(db: TenantDb, session: SessionData, input: { st
     { tenantId: session.tenant.id, actor: { id: session.user.id, name: session.user.name } },
     { action: "APPROVE", entityType: "Admission", entityId: input.admissionId, summary: "قبول الطالب وإنشاء ملفه", newValue: { studentId: input.studentId } },
   );
+  const { onAdmissionAccepted } = await import("./finance/billing.service");
+  await onAdmissionAccepted(db, session, input);
 }
 
 export async function admissionFunnel(db: TenantDb, session: SessionData, academicYearId?: string) {

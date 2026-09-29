@@ -4,6 +4,7 @@
  * شهادة النقل قبل خلو الطرف المالي. (التحقق الآلي من الرصيد يُضاف مع النظام المحاسبي — المرحلة ٣.)
  */
 import type { Prisma } from "@/generated/prisma/client";
+import { formatMoney } from "@/lib/money";
 import { TRANSFER_TYPE } from "@/lib/students";
 import { can } from "@/lib/rbac/access";
 import type { SessionData } from "@/server/auth/session";
@@ -104,6 +105,13 @@ export async function completeTransfer(db: TenantDb, session: SessionData, id: s
   if (t.status !== "APPROVED") throw badRequest("لا يُنفَّذ التحويل قبل اكتمال الموافقات");
   const type = t.type as TransferType;
   if (LEAVING.includes(type) && !t.financialClearance) throw badRequest("لم يُعتمد خلو الطرف المالي بعد");
+  if (LEAVING.includes(type)) {
+    // سياسة المديونية: لا تصدر شهادة النقل مع رصيد مستحق (قابلة للتعطيل من إعدادات المالية)
+    const { studentOutstanding } = await import("./finance/billing.service");
+    const { financeSettings } = await import("./finance/common");
+    const due = await studentOutstanding(db, t.studentId);
+    if (due > 0 && financeSettings(session).blockTransferCertificate) throw badRequest(`على الطالب مستحقات قائمة (${formatMoney(due, { currency: session.tenant.currency })})؛ سوِّها أو أصدر التسوية التناسبية قبل إصدار الشهادة`);
+  }
   const ctx = { db, session };
   let certificateNumber: string | null = null;
 

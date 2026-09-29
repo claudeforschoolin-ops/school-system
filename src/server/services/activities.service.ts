@@ -15,6 +15,8 @@ import { notify } from "./notifications.service";
 import { nextNumber } from "./sequence.service";
 import { requireStudentWhere, studentWhere } from "./student-scope";
 
+const billing = () => import("./finance/billing.service");
+
 type FileValue = { id: string; name: string; url: string; size?: number; mime?: string };
 
 /** نطاق الأنشطة: المدرسة / الفرع (وأنشطة المدرسة العامة) / المشرف أو فروع المعلم / أنشطة الأبناء */
@@ -135,7 +137,7 @@ export async function updateActivity(db: TenantDb, session: SessionData, id: str
   if (patch.requiresConsent === true) {
     await db.activityRegistration.updateMany({ where: { activityId: id, consentStatus: "NOT_REQUIRED" }, data: { consentStatus: "PENDING" } });
   }
-  if (patch.capacity !== undefined) await promoteWaitlist(db, id);
+  if (patch.capacity !== undefined) await promoteWaitlist(db, id, session);
   if (a.calendarEventId || patch.startAt) await syncCalendar(db, session, id);
   return updated;
 }
@@ -179,7 +181,7 @@ async function seatsTaken(db: TenantDb, id: string) {
 }
 
 /** ترقية أول المنتظرين عند توفر مقعد */
-async function promoteWaitlist(db: TenantDb, id: string) {
+async function promoteWaitlist(db: TenantDb, id: string, session?: SessionData) {
   const a = await db.activity.findFirst({ where: { id } });
   if (!a) return 0;
   let free = a.capacity === null ? Number.POSITIVE_INFINITY : a.capacity - (await seatsTaken(db, id));
@@ -189,6 +191,7 @@ async function promoteWaitlist(db: TenantDb, id: string) {
   for (const w of waiting) {
     if (free <= 0) break;
     await db.activityRegistration.update({ where: { id: w.id }, data: { status: "REGISTERED" } });
+    if (session) await billing().then((b) => b.onActivityRegistered(db, session, w.id));
     free--;
     promoted++;
   }
@@ -271,7 +274,9 @@ export async function registerStudents(db: TenantDb, session: SessionData, id: s
       free--;
       registered++;
     } else waitlisted++;
-    await db.activityRegistration.create({ data: { tenantId: session.tenant.id, activityId: id, studentId, status, consentStatus: a.requiresConsent ? "PENDING" : "NOT_REQUIRED", createdById: session.user.id } });
+    const reg = await db.activityRegistration.create({ data: { tenantId: session.tenant.id, activityId: id, studentId, status, consentStatus: a.requiresConsent ? "PENDING" : "NOT_REQUIRED", createdById: session.user.id } });
+    // رسم النشاط يُفوتر عند التسجيل الفعلي (لا في الانتظار)
+    if (status === "REGISTERED" && a.feeMinor) await (await billing()).onActivityRegistered(db, session, reg.id);
   }
   return { registered, waitlisted };
 }
@@ -294,7 +299,12 @@ export async function updateRegistration(db: TenantDb, session: SessionData, reg
     if (patch.consentStatus === "DENIED") data.status = "CANCELLED";
   }
   await db.activityRegistration.update({ where: { id: regId }, data });
-  if (data.status === "CANCELLED") await promoteWaitlist(db, a.id);
+  const b = await billing();
+  if (data.status === "CANCELLED" && reg.status !== "CANCELLED") {
+    await b.onActivityRegistrationCancelled(db, session, regId);
+    await promoteWaitlist(db, a.id, session);
+  }
+  if (data.status === "REGISTERED" && reg.status !== "REGISTERED") await b.onActivityRegistered(db, session, regId);
   return { ok: true };
 }
 

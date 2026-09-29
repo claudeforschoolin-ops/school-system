@@ -1,6 +1,7 @@
 /**
  * تهيئة مستأجر جديد: الأدوار النظامية بصلاحياتها، ومساحات الفرق الافتراضية.
  */
+import { ensureFinanceSetup } from "@/server/services/finance/defaults";
 import { rootDb } from "@/server/db/client";
 import { SYSTEM_ROLES } from "@/lib/rbac/defaults";
 
@@ -128,5 +129,7 @@ export async function provisionTenant(input: {
     teamspaces[ts.key] = created.id;
   }
 
+  // الإعداد المالي الافتراضي: دليل الحسابات، الضرائب، بنود الرسوم، العام المالي
+  await ensureFinanceSetup(tenant.id);
   return { tenant, roles, teamspaces };
 }

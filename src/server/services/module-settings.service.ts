@@ -28,6 +28,22 @@ export const MODULE_SETTINGS_SCHEMAS = {
     notifyAbsence: z.boolean(),
     notifyLate: z.boolean(),
   }),
+  finance: z.object({
+    legalName: z.string().trim().max(200),
+    vatNumber: z.string().trim().regex(/^(\d{15})?$/, "الرقم الضريبي ١٥ رقماً"),
+    crNumber: z.string().trim().max(20),
+    address: z.string().trim().max(300),
+    /** سندات الصرف فوق هذا المبلغ تتطلب اعتماد المدير */
+    voucherApprovalLimitMinor: z.number().int().min(0),
+    registrationDueDays: z.number().int().min(0).max(60),
+    /** منع إصدار شهادة النقل مع وجود مديونية */
+    blockTransferCertificate: z.boolean(),
+    /** منع إعادة القيد للعام الجديد مع وجود مديونية */
+    blockReenrollment: z.boolean(),
+    remindersEnabled: z.boolean(),
+    /** نسبة التحصيل المستهدفة من المستحق (نقاط أساس) */
+    collectionTargetBp: z.number().int().min(0).max(10000),
+  }),
   messageTemplates: z.object(Object.fromEntries(Object.keys(DEFAULT_TEMPLATES).map((k) => [k, z.string().trim().max(500).optional()])) as Record<keyof typeof DEFAULT_TEMPLATES, z.ZodOptional<z.ZodString>>),
 } as const;
 export type ModuleSettingsKey = keyof typeof MODULE_SETTINGS_SCHEMAS;
@@ -36,11 +52,23 @@ export const MODULE_SETTINGS_DEFAULTS = {
   students: { requiredDocuments: DOCUMENT_TYPES.filter((d) => d.required).map((d) => d.id), numberPrefix: undefined, numberPadding: 4 },
   admissions: { publicFormEnabled: true, intro: "" },
   attendance: { mode: "DAILY", lockHours: 48, absenceThreshold: 5, notifyAbsence: true, notifyLate: false },
+  finance: {
+    legalName: "",
+    vatNumber: "",
+    crNumber: "",
+    address: "",
+    voucherApprovalLimitMinor: 500000,
+    registrationDueDays: 7,
+    blockTransferCertificate: true,
+    blockReenrollment: false,
+    remindersEnabled: true,
+    collectionTargetBp: 9000,
+  },
   messageTemplates: {},
 } as const;
 
 /** الوحدة التي تحكم كل مجموعة إعدادات */
-const OWNER_MODULE: Record<ModuleSettingsKey, string> = { students: "students", admissions: "admissions", attendance: "attendance", messageTemplates: "settings" };
+const OWNER_MODULE: Record<ModuleSettingsKey, string> = { students: "students", admissions: "admissions", attendance: "attendance", finance: "accounting", messageTemplates: "settings" };
 
 export function readModuleSettings<K extends ModuleSettingsKey>(tenantSettings: unknown, key: K): z.infer<(typeof MODULE_SETTINGS_SCHEMAS)[K]> {
   const raw = ((tenantSettings ?? {}) as Record<string, unknown>)[key];

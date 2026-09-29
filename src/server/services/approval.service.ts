@@ -33,6 +33,9 @@ export interface ApprovalHookEvent {
 type ApprovalHook = (db: TenantDb, session: SessionData, request: { id: string; entityType: string | null; entityId: string | null; type: string }, event: ApprovalHookEvent) => Promise<void>;
 const APPROVAL_HOOKS: Record<string, () => Promise<ApprovalHook>> = {
   student_transfer: () => import("./transfers.service").then((m) => m.onTransferApproval),
+  student_discount: () => import("./finance/billing.service").then((m) => m.onDiscountApproval),
+  finance_refund: () => import("./finance/collections.service").then((m) => m.onRefundApproval),
+  payment_voucher: () => import("./finance/banking.service").then((m) => m.onVoucherApproval),
 };
 
 async function runApprovalHook(db: TenantDb, session: SessionData, request: { id: string; entityType: string | null; entityId: string | null; type: string }, event: ApprovalHookEvent) {

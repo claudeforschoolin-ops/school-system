@@ -6,6 +6,7 @@ import { admissionsRouter, studentsRouter } from "./routers/students";
 import { academicRouter, activitiesRouter, assignmentsRouter, curriculumRouter, moduleSettingsRouter, timetableRouter } from "./routers/academic";
 import { attendanceRouter, behaviorRouter, leavesRouter, transfersRouter } from "./routers/student-ops";
 import { accountRouter } from "./routers/account";
+import { financeRouter } from "./routers/finance";
 import { auditRouter, orgRouter, rolesRouter, usersRouter } from "./routers/admin";
 import { authRouter } from "./routers/auth";
 import { approvalRouter, calendarRouter, chatRouter, commentRouter, notificationRouter } from "./routers/collaboration";
@@ -40,6 +41,7 @@ export const appRouter = router({
   assignments: assignmentsRouter,
   timetable: timetableRouter,
   activities: activitiesRouter,
+  finance: financeRouter,
 });
 
 export type AppRouter = typeof appRouter;
