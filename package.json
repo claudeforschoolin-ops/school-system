@@ -23,6 +23,7 @@
     "db:reset": "prisma migrate reset --force",
     "db:seed": "tsx prisma/seed/index.ts",
     "db:seed:phase2": "tsx prisma/seed/phase2.ts",
+    "db:seed:phase3": "tsx prisma/seed/phase3-finance.ts",
     "postinstall": "prisma generate",
     "demo:totp": "tsx scripts/demo-totp.ts",
     "screens": "tsx scripts/screenshots.ts"

@@ -20,19 +20,22 @@ import { useApp } from "@/components/shell/app-context";
 import { StatCard } from "@/components/modules/module-shell";
 import { NewBehaviorDialog } from "./more-create-dialogs";
 import { StudentActivitiesTab } from "@/components/activities/student-activities-tab";
+import { StudentFinanceTab } from "@/components/finance/student-finance-tab";
 
 export function studentExtraTabs(can: (module: string, action: Action) => boolean): Array<{ key: string; label: string }> {
   const tabs: Array<{ key: string; label: string }> = [];
   if (can("attendance", "view")) tabs.push({ key: "attendance", label: "الحضور" });
   if (can("counseling", "view")) tabs.push({ key: "behavior", label: "السلوك" });
   if (can("activities", "view")) tabs.push({ key: "activities", label: "الأنشطة" });
+  if (can("invoices", "view")) tabs.push({ key: "finance", label: "المالية" });
   return tabs;
 }
 
-export function StudentExtraTabs({ tab, studentId }: { tab: string; studentId: string }) {
+export function StudentExtraTabs({ tab, studentId, student }: { tab: string; studentId: string; student: { id: string; fullName: string; academicNumber: string; grade?: { name: string } | null; section?: { name: string } | null } }) {
   if (tab === "attendance") return <AttendanceTab studentId={studentId} />;
   if (tab === "behavior") return <BehaviorTab studentId={studentId} />;
   if (tab === "activities") return <StudentActivitiesTab studentId={studentId} />;
+  if (tab === "finance") return <StudentFinanceTab student={student} />;
   return null;
 }
 

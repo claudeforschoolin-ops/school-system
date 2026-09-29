@@ -5,7 +5,8 @@
  * كل رقم قابل للنزول إلى القيد ثم المستند المصدر.
  */
 import type { Prisma } from "@/generated/prisma/client";
-import { AGING_BUCKETS, agingBucket, type AgingKey } from "@/lib/finance/calc";
+import { AGING_BUCKETS, agingBucket, applyBp, type AgingKey } from "@/lib/finance/calc";
+import { allocateMinor } from "@/lib/money";
 import type { SessionData } from "@/server/auth/session";
 import type { TenantDb } from "@/server/db/tenant";
 import { notFound } from "@/server/errors";
@@ -175,13 +176,15 @@ export async function cashFlow(db: TenantDb, session: SessionData, input: { from
     const cashDelta = e.lines.filter((l) => cashIds.has(l.accountId)).reduce((s, l) => s + n(l.debitMinor) - n(l.creditMinor), 0);
     if (!cashDelta) continue; // تحويلات داخلية بين النقد والبنوك
     const others = e.lines.filter((l) => !cashIds.has(l.accountId));
-    const weight = others.reduce((s, l) => s + n(l.debitMinor) + n(l.creditMinor), 0) || 1;
-    for (const l of others) {
+    if (!others.length) continue;
+    // توزيع أثر النقد على الحسابات المقابلة بلا فقد هللات
+    const shares = allocateMinor(cashDelta, others.map((l) => n(l.debitMinor) + n(l.creditMinor) || 1));
+    for (const [i, l] of others.entries()) {
       const a = accounts.find((x) => x.id === l.accountId)!;
       const group = a.cashFlowGroup === "INVESTING" || a.cashFlowGroup === "FINANCING" ? a.cashFlowGroup : "OPERATING";
       const parent = accounts.find((x) => x.id === a.parentId);
       const label = a.type === "REVENUE" || a.code.startsWith("12") || a.code.startsWith("22") || a.code.startsWith("23") ? "المتحصلات من أولياء الأمور" : a.type === "EXPENSE" || a.code.startsWith("21") || a.code.startsWith("24") ? "المدفوعات للمصروفات والموردين" : (parent?.name ?? a.name);
-      const share = Math.round((cashDelta * (n(l.debitMinor) + n(l.creditMinor))) / weight);
+      const share = shares[i]!;
       const g = groups.get(group) ?? new Map<string, number>();
       g.set(label, (g.get(label) ?? 0) + share);
       groups.set(group, g);
@@ -315,7 +318,7 @@ export async function collectionsReport(db: TenantDb, session: SessionData, inpu
   }
   const users = await db.user.findMany({ where: { id: { in: [...byCashier.keys()].filter(Boolean) } }, select: { id: true, name: true } });
   const due = dueInst.reduce((s, i) => s + i.amountMinor, 0);
-  const target = Math.round((due * financeSettings(session).collectionTargetBp) / 10000);
+  const target = applyBp(due, financeSettings(session).collectionTargetBp);
   const collected = receipts.reduce((s, r) => s + r.amountMinor, 0);
   return {
     collected,
@@ -418,7 +421,7 @@ export async function financeDashboard(db: TenantDb, session: SessionData) {
       expensesMonth: n(expMonth._sum.debitMinor) - n(expMonth._sum.creditMinor),
       cashAndBank: n(cashBal._sum.debitMinor) - n(cashBal._sum.creditMinor),
     },
-    months: months.map((m) => ({ ...m, target: Math.round((m.due * targetBp) / 10000) })),
+    months: months.map((m) => ({ ...m, target: applyBp(m.due, targetBp) })),
     actions: {
       overdue: overdueRows
         .sort((a, b) => a.i.dueDate.getTime() - b.i.dueDate.getTime())

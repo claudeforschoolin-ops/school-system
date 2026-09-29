@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { MODULE_GROUP_LABELS, type ModuleNavItem } from "@/lib/modules-nav";
+import { MODULE_GROUP_ICONS, MODULE_GROUP_LABELS, type ModuleNavItem } from "@/lib/modules-nav";
 import { formatNumber } from "@/lib/numbers";
 import { cn } from "@/lib/utils";
 import { usePrefs } from "@/components/shell/app-context";
@@ -42,7 +42,7 @@ export function ModuleShell({
   return (
     <>
       <PageTopbar
-        crumbs={[{ title: MODULE_GROUP_LABELS[nav.group], icon: nav.group === "students" ? "lucide:users" : "lucide:graduation-cap" }, { title: nav.label, icon: nav.icon, href: nav.href }, ...(crumbs ?? [])]}
+        crumbs={[{ title: MODULE_GROUP_LABELS[nav.group], icon: MODULE_GROUP_ICONS[nav.group] }, { title: nav.label, icon: nav.icon, href: nav.href }, ...(crumbs ?? [])]}
         actions={actions}
       />
       <div className={cn("mx-auto w-full px-6 pb-24 pt-8 md:px-12", wide ? "max-w-[1400px]" : "max-w-[1120px]")}>
@@ -77,7 +77,7 @@ export function ModuleShell({
   );
 }
 
-export function StatCard({ label, value, icon, tone, href, hint, format }: { label: string; value: number | null | undefined; icon: ReactNode; tone?: "danger" | "warning" | "success"; href?: string; hint?: string; format?: (n: number) => string }) {
+export function StatCard({ label, value, icon, tone, href, hint, format, compact }: { label: string; value: number | null | undefined; icon: ReactNode; tone?: "danger" | "warning" | "success"; href?: string; hint?: string; format?: (n: number) => string; compact?: boolean }) {
   const prefs = usePrefs();
   const body = (
     <>
@@ -85,7 +85,7 @@ export function StatCard({ label, value, icon, tone, href, hint, format }: { lab
         <span className="text-[13px] font-medium">{label}</span>
         <span className={cn("grid size-7 place-items-center rounded-md bg-hover", tone === "danger" && "bg-danger-50 text-danger-700", tone === "warning" && "bg-warning-50 text-warning-700", tone === "success" && "bg-success-50 text-success-800")}>{icon}</span>
       </div>
-      <div className={cn("mt-3 text-[28px] font-bold leading-none tabular text-fg", tone === "danger" && value ? "text-danger-700" : "")}>
+      <div className={cn("mt-3 font-bold leading-none tabular text-fg", compact ? "truncate text-[22px]" : "text-[28px]", tone === "danger" && value ? "text-danger-700" : "")}>
         {value === undefined ? <span className="inline-block h-7 w-10 animate-pulse rounded bg-hover" /> : value === null ? "—" : format ? format(value) : formatNumber(value, prefs.digits)}
       </div>
       {hint ? <p className="mt-1.5 text-[12px] text-fg-3">{hint}</p> : null}

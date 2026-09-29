@@ -4,6 +4,7 @@
  */
 import type { AccountType, JournalSource, Prisma } from "@/generated/prisma/client";
 import { recognizedToDate } from "@/lib/finance/calc";
+import { formatMoney } from "@/lib/money";
 import type { SessionData } from "@/server/auth/session";
 import type { TenantDb } from "@/server/db/tenant";
 import { writeAudit } from "@/server/db/tenant";
@@ -80,7 +81,8 @@ export async function saveAccount(db: TenantDb, session: SessionData, id: string
 
 export async function listCostCenters(db: TenantDb, session: SessionData) {
   requirePerm(session, "accounting", "view");
-  return db.costCenter.findMany({ orderBy: [{ kind: "asc" }, { code: "asc" }] });
+  const rows = await db.costCenter.findMany({ orderBy: [{ kind: "asc" }, { code: "asc" }] });
+  return { rows, canEdit: hasPerm(session, "accounting", "update") };
 }
 
 export async function saveCostCenter(db: TenantDb, session: SessionData, id: string | null, input: { code: string; name: string; kind: string; isActive: boolean }) {
@@ -229,7 +231,7 @@ export async function closeChecklist(db: TenantDb, session: SessionData, periodI
     period: p,
     items: [
       { key: "drafts", label: "لا فواتير مسودة", ok: drafts === 0, detail: drafts ? `${drafts} مسودة` : null, blocking: false },
-      { key: "recognition", label: "الاعتراف بالإيراد المؤجل للشهر", ok: recognition.total === 0, detail: recognition.total ? `مستحق الاعتراف: ${recognition.total} هللة` : null, blocking: true },
+      { key: "recognition", label: "الاعتراف بالإيراد المؤجل للشهر", ok: recognition.total === 0, detail: recognition.total ? `مستحق الاعتراف: ${formatMoney(recognition.total, { currency: session.tenant.currency })}` : null, blocking: true },
       { key: "cash", label: "إغلاق ورديات الصندوق", ok: openSessions === 0, detail: openSessions ? `${openSessions} وردية مفتوحة` : null, blocking: true },
       { key: "bank", label: "مطابقة كشوف البنك", ok: unmatched === 0, detail: unmatched ? `${unmatched} حركة غير مطابقة` : null, blocking: false },
       { key: "cheques", label: "متابعة الشيكات المستحقة", ok: pendingCheques === 0, detail: pendingCheques ? `${pendingCheques} شيك مستحق تحت التحصيل` : null, blocking: false },

@@ -136,10 +136,17 @@ export async function reconciliation(db: TenantDb, session: SessionData, bankAcc
     return { ...s, matched: matched ? { lineId: matched.id, entryNumber: matched.entry.number, entryId: matched.entry.id } : null, suggestion };
   });
   const statementBalance = statement.reduce((a, s) => a + s.amountMinor, 0);
+  // المقارنة على فترة الكشف المستورد فقط: حركة الدفاتر في الفترة مقابل حركة الكشف
+  const from = statement[0]?.date ?? null;
+  const to = statement.at(-1)?.date ?? null;
+  const inPeriod = from && to ? ledger.filter((l) => l.entry.date >= from && l.entry.date <= to) : [];
+  const bookMovement = inPeriod.reduce((a, l) => a + n(l.debitMinor) - n(l.creditMinor), 0);
   return {
     bank,
     bookBalance: bookBal.debit - bookBal.credit,
     statementBalance,
+    period: from && to ? { from, to } : null,
+    bookMovement,
     statement: statementRows,
     unmatchedLedger,
     matchedCount: matchedLineIds.size,

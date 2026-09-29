@@ -15,7 +15,7 @@ import {
   Pin, Plane, Presentation, Printer, Puzzle, QrCode, Receipt, Rocket, Ruler, Scale, School, ScrollText, Search, Send, Server, Settings,
   Settings2, Shapes, ShieldCheck, ShieldHalf, ShoppingCart, Signature, Siren, Smartphone, Smile, Sparkles, Stamp, Star, Stethoscope, Store,
   Sun, Sunrise, Table2, Tag, Target, Telescope, Tent, TestTube, Ticket, Timer, TrafficCone, TreePine, TriangleAlert, Trophy, Truck, Tv,
-  UserCog, UserPlus, UserCheck, UserX, UserRound, Users, UsersRound, ArrowLeftRight, CalendarX, ClipboardPen, Grid3x3, Utensils, Video, Wallet, Warehouse, Wifi, Workflow, Wrench, Zap, type LucideIcon,
+  UserCog, UserPlus, UserCheck, UserX, UserRound, Users, UsersRound, ArrowLeftRight, CalendarX, ClipboardPen, Grid3x3, Utensils, Video, Wallet, Warehouse, Wifi, Workflow, Wrench, Zap, ReceiptText, BookOpenCheck, ChartColumn, SlidersHorizontal, type LucideIcon,
 } from "lucide-react";
 
 export interface IconDef {
@@ -111,6 +111,10 @@ export const ICONS: readonly IconDef[] = [
   def("piggy-bank", PiggyBank, "ادخار موازنة"),
   def("credit-card", CreditCard, "بطاقة دفع"),
   def("receipt", Receipt, "فاتورة سند"),
+  def("receipt-text", ReceiptText, "فواتير رسوم"),
+  def("book-open-check", BookOpenCheck, "محاسبة قيود دفتر"),
+  def("chart-column", ChartColumn, "تقارير مالية أعمدة"),
+  def("sliders-horizontal", SlidersHorizontal, "إعدادات ضبط"),
   def("percent", Percent, "خصم نسبة"),
   def("chart-bar", ChartBar, "تقرير أعمدة"),
   def("chart-line", ChartLine, "اتجاه تقرير"),

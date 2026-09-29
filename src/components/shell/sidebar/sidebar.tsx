@@ -260,7 +260,7 @@ function ModulesGroup() {
         return (
           <SidebarGroup key={group} id={`modules-${group}`} title={MODULE_GROUP_LABELS[group]}>
             {list.map((m) => {
-              const active = pathname === m.href || pathname.startsWith(`${m.href}/`);
+              const active = pathname === m.href || (!m.exact && pathname.startsWith(`${m.href}/`));
               return (
                 <Link
                   key={m.key}

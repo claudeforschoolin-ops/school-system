@@ -19,6 +19,8 @@ import { useApp } from "@/components/shell/app-context";
 import type { CreateDialogProps } from "./create-dialogs";
 import { StudentPicker, type PickedStudent } from "./student-picker";
 import { NewActivityDialog } from "@/components/activities/activity-form";
+import { NewVoucherDialog } from "@/components/finance/voucher-dialog";
+import { NewInvoiceDialog } from "@/components/finance/new-invoice-dialog";
 
 export function SchoolCreateDialogs({ source, ...props }: CreateDialogProps & { source: string }) {
   if (source === "leaves") return <NewLeaveDialog {...props} />;
@@ -26,6 +28,8 @@ export function SchoolCreateDialogs({ source, ...props }: CreateDialogProps & { 
   if (source === "behavior") return <NewBehaviorDialog {...props} />;
   if (source === "counseling") return <NewCaseDialog {...props} />;
   if (source === "activities") return <NewActivityDialog {...props} />;
+  if (source === "invoices") return <NewInvoiceDialog {...props} />;
+  if (source === "vouchers") return <NewVoucherDialog {...props} />;
   return null;
 }
 

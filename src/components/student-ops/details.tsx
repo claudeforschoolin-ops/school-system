@@ -21,6 +21,7 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 import { Tag } from "@/components/ui/tag";
 import { toast } from "@/components/ui/toast";
 import { useApp } from "@/components/shell/app-context";
+import { SettlementCard } from "@/components/finance/settlement-card";
 import { PageTopbar } from "@/components/shell/page-topbar";
 import { useTabMeta } from "@/components/shell/tabs-bar";
 import { shiftDay } from "@/components/attendance/roll-call";
@@ -74,7 +75,7 @@ function StudentChip({ s }: { s: { id: string; fullName: string; photoUrl?: stri
 // ---------------------------------------------------------------------
 
 export function TransferDetail({ id }: { id: string }) {
-  const { prefs } = useApp();
+  const { prefs, can } = useApp();
   const utils = trpc.useUtils();
   const q = trpc.transfers.get.useQuery({ id });
   const [confirm, setConfirm] = useState<"complete" | "cancel" | null>(null);
@@ -138,6 +139,7 @@ export function TransferDetail({ id }: { id: string }) {
           ) : null}
         </div>
         <div className="space-y-4">
+          {leaving && can("invoices", "view") ? <SettlementCard studentId={t.student.id} effectiveDate={new Date(t.effectiveDate).toISOString().slice(0, 10)} transferId={t.id} /> : null}
           <Card title="الموافقات">
             {t.approval ? (
               <ol className="space-y-3">

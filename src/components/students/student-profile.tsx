@@ -87,7 +87,7 @@ export function StudentProfile({ id }: { id: string }) {
           {tab === "documents" ? <DocumentsTab s={s} /> : null}
           {tab === "notes" ? <NotesTab s={s} /> : null}
           {tab === "activity" ? <ActivityTab id={s.id} /> : null}
-          <StudentExtraTabs tab={tab} studentId={s.id} />
+          <StudentExtraTabs tab={tab} studentId={s.id} student={s} />
         </div>
       </div>
     </>

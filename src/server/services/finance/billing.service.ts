@@ -131,7 +131,7 @@ export async function grantStudentDiscount(db: TenantDb, session: SessionData, i
   if (type.kind === "SIBLING") throw badRequest("خصم الأشقاء يُطبَّق تلقائياً حسب ترتيب الأخ");
   const value = input.valueOverride ?? type.value;
   const tuition = await estimateTuition(db, student);
-  const amount = type.method === "PERCENT" ? Math.round((tuition * value) / 10000) : value;
+  const amount = type.method === "PERCENT" ? applyBp(tuition, value) : value;
   const needsApproval = type.approvalLimitMinor !== null && amount > type.approvalLimitMinor;
   const sd = await db.studentDiscount.create({
     data: { tenantId: session.tenant.id, studentId: student.id, discountTypeId: type.id, academicYearId: year.id, valueOverride: input.valueOverride, status: needsApproval ? "PENDING" : "ACTIVE", note: input.note, createdById: session.user.id },
@@ -658,7 +658,7 @@ export async function applyLateFees(db: TenantDb, session: SessionData, asOfIso?
     for (const i of due) {
       const unpaid = i.amountMinor - i.paidMinor;
       if (unpaid <= 0) continue;
-      const fee = plan.lateFeeKind === "PERCENT" ? Math.round((unpaid * plan.lateFeeValue) / 10000) : plan.lateFeeValue;
+      const fee = plan.lateFeeKind === "PERCENT" ? applyBp(unpaid, plan.lateFeeValue) : plan.lateFeeValue;
       if (fee <= 0) continue;
       await db.$transaction(async (tx) => {
         const draft = await buildDraft(tx as unknown as Tx, { studentId: i.invoice.studentId, academicYearId: i.invoice.academicYearId, lines: [{ feeItemId: lateItem.id, description: `غرامة تأخير ${i.label} — الفاتورة ${i.invoice.number}`, unitMinor: fee }], applyDiscounts: false });
@@ -759,7 +759,7 @@ export async function withdrawalSettlement(db: TenantDb, session: SessionData, s
       // الجزء غير المستهلك من صافي السطر (بعد الخصم والإشعارات) شاملاً الضريبة
       const net = l.amountMinor - l.discountMinor - l.creditedMinor;
       const unusedNet = net - recognizedToDate(net, l.serviceStart, l.serviceEnd, new Date(effective.getTime()));
-      const credit = unusedNet + Math.round((unusedNet * l.taxRateBp) / 10000);
+      const credit = unusedNet + applyBp(unusedNet, l.taxRateBp);
       if (credit > 0) proposals.push({ invoiceId: inv.id, number: inv.number, description: l.description, months: unused, totalMonths: total, creditMinor: Math.min(credit, inv.totalMinor - inv.creditedMinor) });
     }
   }

@@ -9,7 +9,9 @@ export interface ModuleNavItem {
   /** وحدة الصلاحيات */
   module: string;
   description: string;
-  group: "students" | "academic";
+  group: "students" | "academic" | "finance";
+  /** يُعدّ نشطاً عند تطابق المسار كاملاً فقط (للوحة الرئيسية لمجموعة) */
+  exact?: boolean;
 }
 
 export const MODULE_NAV: readonly ModuleNavItem[] = [
@@ -23,6 +25,15 @@ export const MODULE_NAV: readonly ModuleNavItem[] = [
   { key: "assignments", label: "تعيين المعلمين", href: "/academic/assignments", icon: "lucide:user-cog", module: "teacher_assignments", description: "إسناد المواد للمعلمين حسب النصاب والتأهيل، مع عبء كل معلم", group: "academic" },
   { key: "timetable", label: "جداول الحصص", href: "/academic/timetable", icon: "lucide:calendar-clock", module: "timetable", description: "توليد الجدول بالقيود، والتعديل بالسحب، وحصص الانتظار", group: "academic" },
   { key: "activities", label: "الأنشطة والفعاليات", href: "/activities", icon: "lucide:trophy", module: "activities", description: "الأندية والرحلات والمسابقات: التسجيل وموافقات أولياء الأمور والألبوم", group: "academic" },
+  { key: "finance", label: "لوحة المالية", href: "/finance", icon: "lucide:wallet", module: "finance_reports", description: "التحصيل مقابل المستهدف، الذمم المتأخرة، النقد، وما ينتظر إجراءك", group: "finance", exact: true },
+  { key: "collect", label: "التحصيل", href: "/finance/collect", icon: "lucide:banknote", module: "collections", description: "سند قبض سريع بالبحث، ووردية الصندوق، وسجل السندات والشيكات", group: "finance" },
+  { key: "invoices", label: "الفواتير", href: "/finance/invoices", icon: "lucide:receipt-text", module: "invoices", description: "فواتير الرسوم وأقساطها، والفوترة الجماعية، وكشوف حساب الأسر", group: "finance" },
+  { key: "vouchers", label: "سندات الصرف", href: "/finance/vouchers", icon: "lucide:hand-coins", module: "expenses", description: "المصروفات والمدفوعات للموردين بموافقات حسب المبلغ", group: "finance" },
+  { key: "accounting", label: "المحاسبة العامة", href: "/finance/accounting", icon: "lucide:book-open-check", module: "accounting", description: "دفتر اليومية والقيود، دليل الحسابات، والفترات المحاسبية وإقفالها", group: "finance" },
+  { key: "banking", label: "البنوك والنقدية", href: "/finance/banking", icon: "lucide:landmark", module: "banking", description: "الحسابات البنكية، استيراد الكشوف ومطابقتها، والتحويل بين الحسابات", group: "finance" },
+  { key: "finance-reports", label: "التقارير المالية", href: "/finance/reports", icon: "lucide:chart-column", module: "finance_reports", description: "ميزان المراجعة، قائمة الدخل، الميزانية، التدفقات، التقادم، والضريبة", group: "finance" },
+  { key: "fee-setup", label: "إعداد الرسوم", href: "/finance/setup", icon: "lucide:sliders-horizontal", module: "invoices", description: "بنود الرسوم وجداولها، خطط الأقساط، الخصومات والمنح، ورموز الضريبة", group: "finance" },
 ];
 
-export const MODULE_GROUP_LABELS = { students: "شؤون الطلاب", academic: "الشؤون الأكاديمية" } as const;
+export const MODULE_GROUP_LABELS = { students: "شؤون الطلاب", academic: "الشؤون الأكاديمية", finance: "المالية والمحاسبة" } as const;
+export const MODULE_GROUP_ICONS = { students: "lucide:users", academic: "lucide:graduation-cap", finance: "lucide:wallet" } as const;
