@@ -9,7 +9,7 @@ import { accountRouter } from "./routers/account";
 import { financeRouter } from "./routers/finance";
 import { assessmentRouter } from "./routers/assessment";
 import { hrRouter } from "./routers/hr";
-import { assetsRouter, budgetRouter, clinicRouter, inventoryRouter, libraryRouter, maintenanceRouter, posRouter, procurementRouter, safetyRouter, transportRouter } from "./routers/ops";
+import { opsRouter, assetsRouter, budgetRouter, clinicRouter, inventoryRouter, libraryRouter, maintenanceRouter, posRouter, procurementRouter, safetyRouter, transportRouter } from "./routers/ops";
 import { auditRouter, orgRouter, rolesRouter, usersRouter } from "./routers/admin";
 import { authRouter } from "./routers/auth";
 import { approvalRouter, calendarRouter, chatRouter, commentRouter, notificationRouter } from "./routers/collaboration";
@@ -57,6 +57,7 @@ export const appRouter = router({
   library: libraryRouter,
   safety: safetyRouter,
   clinic: clinicRouter,
+  ops: opsRouter,
 });
 
 export type AppRouter = typeof appRouter;

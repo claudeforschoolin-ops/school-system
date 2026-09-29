@@ -13,7 +13,7 @@ export interface ModuleNavItem {
   /** الإجراء المطلوب لإظهار الرابط (افتراضياً «عرض») */
   action?: "view" | "create" | "update";
   description: string;
-  group: "students" | "academic" | "assessment" | "hr" | "finance";
+  group: "students" | "academic" | "assessment" | "hr" | "finance" | "operations";
   /** يظهر فقط لهذه النطاقات (مثل روابط الأسرة أو الخدمة الذاتية) */
   scopes?: readonly Scope[];
   /** يُعدّ نشطاً عند تطابق المسار كاملاً فقط (للوحة الرئيسية لمجموعة) */
@@ -52,7 +52,22 @@ export const MODULE_NAV: readonly ModuleNavItem[] = [
   { key: "banking", label: "البنوك والنقدية", href: "/finance/banking", icon: "lucide:landmark", module: "banking", description: "الحسابات البنكية، استيراد الكشوف ومطابقتها، والتحويل بين الحسابات", group: "finance" },
   { key: "finance-reports", label: "التقارير المالية", href: "/finance/reports", icon: "lucide:chart-column", module: "finance_reports", description: "ميزان المراجعة، قائمة الدخل، الميزانية، التدفقات، التقادم، والضريبة", group: "finance" },
   { key: "fee-setup", label: "إعداد الرسوم", href: "/finance/setup", icon: "lucide:sliders-horizontal", module: "invoices", action: "update", description: "بنود الرسوم وجداولها، خطط الأقساط، الخصومات والمنح، ورموز الضريبة", group: "finance" },
+  { key: "budget", label: "الموازنة", href: "/finance/budget", icon: "lucide:target", module: "expenses", description: "الموازنة السنوية بالحساب ومركز التكلفة والشهر، واعتمادها، والفعلي مقابل الموازنة", group: "finance" },
+  { key: "assets", label: "الأصول الثابتة", href: "/finance/assets", icon: "lucide:building-2", module: "assets", description: "سجل الأصول والإهلاك الشهري بقيد آلي، والنقل والاستبعاد", group: "finance" },
+  { key: "maintenance", label: "الصيانة والمرافق", href: "/maintenance", icon: "lucide:wrench", module: "maintenance", description: "بلاغات الصيانة بلوحة كانبان، والصيانة الدورية، وحجز القاعات والملاعب", group: "operations" },
+  { key: "bookings", label: "حجز المرافق", href: "/maintenance/bookings", icon: "lucide:calendar-range", module: "maintenance", scopes: ["OWN"], description: "حجز القاعات والمختبرات والملاعب دون تعارض", group: "operations" },
+  { key: "inventory", label: "المخزون والمشتريات", href: "/inventory", icon: "lucide:package", module: "inventory", description: "الأصناف والمستودعات، وطلبات وأوامر الشراء، والاستلام وفواتير الموردين، والجرد", group: "operations" },
+  { key: "store", label: "متجر الزي والكتب", href: "/inventory/pos", icon: "lucide:shopping-bag", module: "inventory", action: "create", description: "نقطة بيع الزي والكتب نقداً أو على حساب الطالب", group: "operations" },
+  { key: "transport", label: "المواصلات", href: "/transport", icon: "lucide:bus", module: "transport", scopes: ["ALL", "BRANCH", "STAGE"], description: "الحافلات والخطوط والمحطات، وتسكين الطلاب وفواتير النقل، والرحلات اليومية", group: "operations" },
+  { key: "my-transport", label: "حافلة أبنائي", href: "/transport/my", icon: "lucide:bus", module: "transport", scopes: ["ASSIGNED", "OWN"], description: "خط الحافلة والمحطة والمواعيد وحالة رحلة اليوم", group: "operations" },
+  { key: "library", label: "المكتبة", href: "/library", icon: "lucide:library", module: "library", scopes: ["ALL", "BRANCH", "STAGE"], description: "الفهرس والإعارة والإرجاع بالمسح، والغرامات والحجوزات والجرد", group: "operations" },
+  { key: "my-library", label: "مكتبة أبنائي", href: "/library/my", icon: "lucide:book-marked", module: "library", scopes: ["ASSIGNED", "OWN"], description: "الكتب المعارة ومواعيد إرجاعها والحجوزات والغرامات", group: "operations" },
+  { key: "canteen", label: "المقصف", href: "/canteen", icon: "lucide:coffee", module: "canteen", action: "create", description: "نقطة بيع المقصف ومحافظ الطلاب المدفوعة مسبقاً", group: "operations" },
+  { key: "my-wallet", label: "محفظة المقصف", href: "/canteen/wallet", icon: "lucide:wallet-cards", module: "canteen", scopes: ["ASSIGNED", "OWN"], description: "رصيد أبنائك وحدود الصرف والحركات", group: "operations" },
+  { key: "safety", label: "الأمن والسلامة", href: "/safety", icon: "lucide:shield-check", module: "safety", scopes: ["ALL", "BRANCH", "STAGE"], description: "الزوار، واستلام الطلاب، والحوادث، وتمارين الإخلاء", group: "operations" },
+  { key: "my-pickups", label: "المفوضون بالاستلام", href: "/safety/my-pickups", icon: "lucide:user-check", module: "safety", scopes: ["ASSIGNED"], description: "من يحق له استلام أبنائك من المدرسة", group: "operations" },
+  { key: "clinic", label: "العيادة المدرسية", href: "/clinic", icon: "lucide:stethoscope", module: "clinic", description: "زيارات العيادة والأدوية وإشعار أولياء الأمور", group: "operations" },
 ];
 
-export const MODULE_GROUP_LABELS = { students: "شؤون الطلاب", academic: "الشؤون الأكاديمية", assessment: "التقييم والدرجات", hr: "الموارد البشرية", finance: "المالية والمحاسبة" } as const;
-export const MODULE_GROUP_ICONS = { students: "lucide:users", academic: "lucide:graduation-cap", assessment: "lucide:award", hr: "lucide:id-card", finance: "lucide:wallet" } as const;
+export const MODULE_GROUP_LABELS = { students: "شؤون الطلاب", academic: "الشؤون الأكاديمية", assessment: "التقييم والدرجات", hr: "الموارد البشرية", finance: "المالية والمحاسبة", operations: "العمليات والخدمات" } as const;
+export const MODULE_GROUP_ICONS = { students: "lucide:users", academic: "lucide:graduation-cap", assessment: "lucide:award", hr: "lucide:id-card", finance: "lucide:wallet", operations: "lucide:building" } as const;

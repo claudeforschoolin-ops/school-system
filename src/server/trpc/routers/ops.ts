@@ -12,7 +12,7 @@ import * as pos from "@/server/services/ops/pos.service";
 import * as procurement from "@/server/services/ops/procurement.service";
 import * as safety from "@/server/services/ops/safety.service";
 import * as transport from "@/server/services/ops/transport.service";
-import { requireOps } from "@/server/services/ops/common";
+import { opsLookups, requireOps } from "@/server/services/ops/common";
 import { authedProcedure, router } from "../init";
 
 const id = z.string().min(1).max(64);
@@ -298,4 +298,8 @@ export const clinicRouter = router({
   saveMedicine: p
     .input(z.object({ id: id.nullish(), name: text(120).min(2), form: opt(40), unit: text(20), quantity: z.number().int().min(0), minQty: z.number().int().min(0), expiryDate: isoDate.nullish(), isActive: z.boolean() }))
     .mutation(({ ctx, input }) => safety.saveMedicine(ctx.db, ctx.session, input)),
+});
+
+export const opsRouter = router({
+  lookups: p.query(({ ctx }) => opsLookups(ctx.db, ctx.session)),
 });

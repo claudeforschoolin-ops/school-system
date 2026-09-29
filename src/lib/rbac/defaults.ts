@@ -254,7 +254,7 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
     description: "نقطة بيع المقصف ومحافظ الطلاب وأصنافه",
     requires2fa: false,
     color: "slate",
-    grants: merge(commonStaff, grant(["canteen"], FULL("BRANCH")), grant(["inventory"], { view: "ALL", create: "ALL" }), grant(["students"], VIEW("BRANCH"))),
+    grants: merge(commonStaff, grant(["canteen"], FULL("BRANCH")), grant(["inventory"], { view: "ALL", create: "ALL", update: "ALL" }), grant(["students"], VIEW("BRANCH"))),
   },
   {
     key: "PARENT",

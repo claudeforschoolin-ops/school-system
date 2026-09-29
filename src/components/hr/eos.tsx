@@ -104,7 +104,7 @@ function Calculator_({ initialEmployee }: { initialEmployee: string | null }) {
   return (
     <SettingsCard
       title="حاسبة نهاية الخدمة"
-      description="المكافأة وفق المادتين ٨٤ و٨٥ على الأجر الفعلي الأخير، وبدل رصيد الإجازة، وراتب الأيام الأخيرة ناقص السلف. عند الاعتماد: القيد، ثم إيقاف حساب الموظف وإعادة إسناد مهامه لمديره."
+      description="المكافأة حسب قواعد «إعدادات الرواتب» (الأجر وجدول الاستحقاق)، وبدل رصيد الإجازة، وراتب الأيام الأخيرة ناقص السلف. عند الاعتماد: القيد، ثم إيقاف حساب الموظف وإعادة إسناد مهامه لمديره."
       footer={x ? <Button variant="primary" loading={create.isPending} onClick={() => create.mutate({ employeeId: v.employeeId, reason: v.reason, lastWorkingDay: v.lastWorkingDay, otherDeductionsMinor: v.other, notes: v.notes || null })}>إنشاء التصفية وإرسالها للاعتماد</Button> : undefined}
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">

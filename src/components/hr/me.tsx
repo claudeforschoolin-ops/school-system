@@ -164,7 +164,7 @@ export function LoanDialog({ employees, onClose }: { employees?: Array<{ id: str
   const months = v.amountMinor && v.installmentMinor ? Math.ceil(v.amountMinor / v.installmentMinor) : null;
   return (
     <Dialog open onOpenChange={(x) => !x && onClose()}>
-      <DialogContent title="طلب سلفة" description="تُعتمد من مدير الموارد البشرية، وتُستقطع أقساطها من الراتب بعد صرفها (بحد أقصى نصف الراتب شهرياً مع باقي الاستقطاعات).">
+      <DialogContent title="طلب سلفة" description="تُعتمد من مدير الموارد البشرية، وتُستقطع أقساطها من الراتب بعد صرفها (ضمن سقف الاستقطاعات في إعدادات الرواتب).">
         <div className="grid grid-cols-2 gap-3 px-5 pb-4">
           {employees ? (
             <Field label="الموظف" className="col-span-2">

@@ -176,3 +176,22 @@ export async function lowStockItems(db: Db) {
   const items = await db.inventoryItem.findMany({ where: { deletedAt: null, isActive: true, minQty: { gt: 0 } }, select: { id: true, sku: true, name: true, onHandQty: true, minQty: true, reorderQty: true, unit: true, category: true } });
   return items.filter((i) => i.onHandQty <= i.minQty);
 }
+
+/** قوائم الاختيار المشتركة لشاشات العمليات (للموظفين فقط) */
+export async function opsLookups(db: Db, session: SessionData) {
+  const staff = ["inventory", "maintenance", "transport", "library", "canteen", "safety", "clinic", "assets", "expenses"].some((m) => canOps(session, m, "view"));
+  if (!staff) throw forbidden("قوائم العمليات لموظفي المدرسة");
+  const [branches, rooms, taxCodes, banks, accounts, employees, users, warehouses, fiscalYears, costCenters] = await Promise.all([
+    db.branch.findMany({ where: { deletedAt: null }, select: { id: true, name: true }, orderBy: { code: "asc" } }),
+    db.room.findMany({ where: { deletedAt: null, isActive: true }, select: { id: true, name: true, branchId: true, kind: true }, orderBy: { code: "asc" } }),
+    db.taxCode.findMany({ where: { isActive: true }, select: { id: true, name: true, rateBp: true }, orderBy: { rateBp: "desc" } }),
+    db.bankAccount.findMany({ where: { isActive: true }, select: { id: true, name: true } }),
+    db.account.findMany({ where: { deletedAt: null, isGroup: false, isActive: true }, select: { id: true, code: true, name: true, type: true }, orderBy: { code: "asc" } }),
+    db.employee.findMany({ where: { deletedAt: null, status: { in: ["ACTIVE", "ON_LEAVE"] } }, select: { id: true, fullName: true, category: true, userId: true }, orderBy: { fullName: "asc" } }),
+    db.user.findMany({ where: { deletedAt: null, status: "ACTIVE", roles: { some: { role: { key: { notIn: ["PARENT", "STUDENT"] } } } } }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    db.warehouse.findMany({ where: { isActive: true }, select: { id: true, name: true, kind: true, branchId: true }, orderBy: { code: "asc" } }),
+    db.fiscalYear.findMany({ select: { id: true, name: true, status: true }, orderBy: { startDate: "desc" } }),
+    db.costCenter.findMany({ where: { isActive: true }, select: { id: true, code: true, name: true }, orderBy: { code: "asc" } }),
+  ]);
+  return { branches, rooms, taxCodes, banks, accounts, employees, users, warehouses, fiscalYears, costCenters };
+}
