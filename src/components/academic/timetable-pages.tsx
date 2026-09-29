@@ -231,6 +231,7 @@ function Cell({ day, period, state, droppable, children }: { day: number; period
   return (
     <td
       ref={setNodeRef}
+      data-cell={`${day}-${period}`}
       className={cn(
         "h-16 p-1 align-top shadow-[inset_0_-1px_0_var(--border),inset_-1px_0_0_var(--border)] transition-colors",
         state === "ok" && "bg-teal-50",
@@ -245,19 +246,19 @@ function Cell({ day, period, state, droppable, children }: { day: number; period
 }
 
 function SlotCard({ slot, kind, draggable, editable, onLock, onRemove, conflict }: { slot: Slot; kind: Kind; draggable: boolean; editable: boolean; onLock: () => void; onRemove: () => void; conflict: boolean }) {
-  const prefs = usePrefs();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `slot:${slot.id}`, disabled: !draggable });
   const secondary = kind === "section" || kind === "student" ? shortName(slot.teacher) : slot.sectionLabel;
   const body = (
     <div
       ref={setNodeRef}
+      data-slot={slot.id}
       {...(draggable ? { ...attributes, ...listeners } : {})}
       className={cn("relative h-full rounded-md px-1.5 py-1 leading-tight", draggable && "cursor-grab active:cursor-grabbing", isDragging && "opacity-40", conflict && "ring-2 ring-danger-700")}
       style={tagStyle(slot.color)}
     >
       <span className="block truncate text-[12px] font-semibold">{slot.subject}</span>
       <span className="block truncate text-[11px] opacity-80">{secondary}</span>
-      {slot.room ? <span className="block truncate text-[10px] opacity-70">{applyDigits(slot.room, prefs.digits)}</span> : null}
+      {slot.room ? <span className="block truncate text-[10px] opacity-70">{slot.room}</span> : null}
       {slot.locked ? <Lock className="absolute end-1 top-1 size-3 opacity-70" aria-label="مثبّتة" /> : null}
     </div>
   );
@@ -600,20 +601,18 @@ function BellEditor({ branchId, bell }: { branchId: string; bell: { name: string
         </div>
       </section>
       <section className="rounded-lg bg-card p-4 shadow-card">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-[15px] font-semibold">توقيت الحصص</h2>
-          <Field label="" className="w-64">
-            <Input value={name} onChange={(e) => setName(e.target.value)} aria-label="اسم الجدول" />
-          </Field>
+          <Input className="w-full sm:w-64" value={name} onChange={(e) => setName(e.target.value)} aria-label="اسم الجدول" />
         </div>
         <ul className="space-y-2">
           {periods.map((p, i) => (
             <li key={i} className="flex items-center gap-2 text-[14px]">
-              <span className="w-20">الحصة {formatNumber(i + 1, prefs.digits)}</span>
-              <Input type="time" className="w-32" value={p.start} onChange={(e) => setPeriods(periods.map((x, j) => (j === i ? { ...x, start: e.target.value } : x)))} aria-label="البداية" />
+              <span className="w-16 shrink-0 sm:w-20">الحصة {formatNumber(i + 1, prefs.digits)}</span>
+              <Input type="time" className="w-[7.5rem] min-w-0 sm:w-32" value={p.start} onChange={(e) => setPeriods(periods.map((x, j) => (j === i ? { ...x, start: e.target.value } : x)))} aria-label="البداية" />
               <span className="text-fg-3">—</span>
-              <Input type="time" className="w-32" value={p.end} onChange={(e) => setPeriods(periods.map((x, j) => (j === i ? { ...x, end: e.target.value } : x)))} aria-label="النهاية" />
-              {i > 0 && periods[i - 1]!.end < p.start ? <span className="text-[12px] text-fg-3">فسحة قبلها</span> : null}
+              <Input type="time" className="w-[7.5rem] min-w-0 sm:w-32" value={p.end} onChange={(e) => setPeriods(periods.map((x, j) => (j === i ? { ...x, end: e.target.value } : x)))} aria-label="النهاية" />
+              {i > 0 && periods[i - 1]!.end < p.start ? <span className="hidden text-[12px] text-fg-3 sm:inline">فسحة قبلها</span> : null}
               <span className="flex-1" />
               {periods.length > 1 ? (
                 <Button size="icon-sm" variant="ghost" aria-label="حذف الحصة" onClick={() => setPeriods(periods.filter((_, j) => j !== i))}>

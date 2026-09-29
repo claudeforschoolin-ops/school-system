@@ -8,6 +8,7 @@ import { rootDb } from "../../src/server/db/client";
 import { hashPassword } from "../../src/server/auth/password";
 import { generateTimetable } from "../../src/lib/timetable/generator";
 import { toISODate } from "../../src/lib/dates";
+import { toArabicDigits } from "../../src/lib/numbers";
 import { DEMO_PASSWORD, fakePhone } from "./data/people";
 import type { Rng } from "./data/students-data";
 
@@ -224,7 +225,7 @@ export async function seedPhase2Academic(tenantId: string, r: Rng) {
     const own = sections.filter((s) => s.branchId === b.id).sort((x, y) => x.grade.stage.order - y.grade.stage.order || x.grade.order - y.grade.order);
     for (const [i, s] of own.entries()) {
       const code = `${100 * (s.grade.stage.order) + i + 1}`;
-      await rootDb.room.create({ data: { tenantId, branchId: b.id, code, name: `فصل ${code}`, kind: "CLASSROOM", capacity: 30, createdById: vpAcademic } });
+      await rootDb.room.create({ data: { tenantId, branchId: b.id, code, name: `فصل ${toArabicDigits(code)}`, kind: "CLASSROOM", capacity: 30, createdById: vpAcademic } });
       await rootDb.section.update({ where: { id: s.id }, data: { room: code } });
     }
     roomsByBranch.set(b.id, list);
@@ -259,7 +260,7 @@ export async function seedPhase2Academic(tenantId: string, r: Rng) {
       let week = 1;
       const units: Array<{ lessons: Array<{ id: string; week: number }> }> = [];
       for (const [ui, [title, lessons]] of syllabus.entries()) {
-        const unit = await rootDb.curriculumUnit.create({ data: { tenantId, gradeSubjectId: gs.id, title: `الوحدة ${ui + 1}: ${title}`, order: ui + 1, objectives: `أن يتمكن الطالب من مهارات «${title}» وتطبيقها في مواقف حياتية.` } });
+        const unit = await rootDb.curriculumUnit.create({ data: { tenantId, gradeSubjectId: gs.id, title: `الوحدة ${toArabicDigits(ui + 1)}: ${title}`, order: ui + 1, objectives: `أن يتمكن الطالب من مهارات «${title}» وتطبيقها في مواقف حياتية.` } });
         const created: Array<{ id: string; week: number }> = [];
         for (const [li, lt] of lessons.entries()) {
           const lesson = await rootDb.curriculumLesson.create({ data: { tenantId, unitId: unit.id, title: lt, order: li + 1, week, periods: Math.max(1, Math.round(periods / 2)) } });

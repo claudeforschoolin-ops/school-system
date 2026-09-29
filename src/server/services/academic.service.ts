@@ -443,10 +443,8 @@ export async function yearEndPreview(db: TenantDb, session: SessionData) {
     }),
     sections,
     teacherLoads: loads,
-    warnings: [
-      ...(openTransfers ? [`${openTransfers} طلب تحويل لم يُنفّذ بعد`] : []),
-      ...(pendingLeaves ? [`${pendingLeaves} طلب إجازة بانتظار الاعتماد`] : []),
-    ],
+    openTransfers,
+    pendingLeaves,
     endsInFuture: year.endDate.getTime() > Date.now(),
   };
 }

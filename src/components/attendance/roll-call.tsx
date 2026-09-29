@@ -179,7 +179,7 @@ function RollCallForm({ data }: { data: Roll }) {
               <div className="flex flex-wrap items-center gap-3">
                 <span className="w-6 shrink-0 text-center text-[12px] tabular text-fg-3">{formatNumber(i + 1, prefs.digits)}</span>
                 <Avatar name={s.fullName} src={s.photoUrl} size={30} />
-                <div className="min-w-0 flex-1">
+                <div className="min-w-[8rem] flex-1">
                   <Link href={`/students/${s.id}`} className="flex items-center gap-1.5 truncate text-[14px] font-medium hover:underline">
                     {s.fullName}
                     {s.criticalHealth ? (
@@ -242,7 +242,7 @@ function RollCallForm({ data }: { data: Roll }) {
 function StatusPicker({ value, onChange, disabled }: { value: AttendanceStatusKey | null; onChange: (v: AttendanceStatusKey) => void; disabled?: boolean }) {
   const id = useId();
   return (
-    <div role="radiogroup" aria-label="حالة الحضور" className="flex shrink-0 gap-0.5 rounded-lg bg-hover p-0.5">
+    <div role="radiogroup" aria-label="حالة الحضور" className="flex shrink-0 gap-0.5 rounded-lg bg-hover p-0.5 max-sm:w-full max-sm:justify-between">
       {ATTENDANCE_ORDER.map((k) => {
         const selected = value === k;
         const meta = ATTENDANCE_STATUS[k];

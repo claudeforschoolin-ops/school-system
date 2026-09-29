@@ -4,7 +4,8 @@
  */
 import type { ReactNode } from "react";
 import { MODULE_NAV, type ModuleNavItem } from "@/lib/modules-nav";
-import { formatNumber } from "@/lib/numbers";
+import { applyDigits, formatNumber } from "@/lib/numbers";
+import type { DigitsPreference } from "@/lib/numbers";
 import { cn } from "@/lib/utils";
 import { Segmented } from "@/components/ui/segmented";
 import { usePrefs } from "@/components/shell/app-context";
@@ -56,4 +57,14 @@ export function BranchSwitch({ branches, value, onChange }: { branches: Array<{ 
 /** لون الوسم كمتغيرات (لخلايا الجدول) */
 export function tagStyle(color: string) {
   return { background: `var(--tag-${color}-bg)`, color: `var(--tag-${color}-fg)` };
+}
+
+/** رمز (قاعة/فصل): الأرقام الخالصة تتبع تفضيل الأرقام، والرموز اللاتينية تبقى كما هي باتجاه يساري */
+export function Code({ value, digits }: { value: string; digits: DigitsPreference }) {
+  if (/^[0-9]+$/.test(value)) return <span className="tabular">{applyDigits(value, digits)}</span>;
+  return (
+    <bdi dir="ltr" className="tabular">
+      {value}
+    </bdi>
+  );
 }

@@ -26,7 +26,7 @@ import { toast } from "@/components/ui/toast";
 import { Tooltip } from "@/components/ui/tooltip";
 import { usePrefs } from "@/components/shell/app-context";
 import { ModuleShell, StatCard } from "@/components/modules/module-shell";
-import { BranchSwitch, CLASSES_TABS, CLASSES_TABS_ADMIN, Meter, academicNav } from "./common";
+import { BranchSwitch, CLASSES_TABS, CLASSES_TABS_ADMIN, Code, Meter, academicNav } from "./common";
 
 const NONE = "__none";
 
@@ -97,7 +97,7 @@ export function ClassesHome() {
                           {g.sections.map((s) => (
                             <li key={s.id}>
                               <button onClick={() => setEditing({ sectionId: s.id, branchId: branch.id, gradeId: g.id, gradeName: g.name })} className="block w-full rounded-md p-2.5 text-start shadow-[0_0_0_1px_var(--border)] transition-colors hover:bg-hover">
-                                <Meter value={s.occupied} max={s.capacity} label={<span className="font-medium text-fg">فصل {s.name}{s.room ? <span className="font-normal text-fg-3"> · قاعة {applyDigits(s.room, prefs.digits)}</span> : null}</span>} />
+                                <Meter value={s.occupied} max={s.capacity} label={<span className="font-medium text-fg">فصل {s.name}{s.room ? <span className="font-normal text-fg-3"> · قاعة <Code value={s.room} digits={prefs.digits} /></span> : null}</span>} />
                                 <div className="mt-2 flex items-center justify-between gap-2 text-[12px] text-fg-3">
                                   <span className="flex min-w-0 items-center gap-1.5">
                                     {s.homeroomName ? (
@@ -350,7 +350,7 @@ export function RoomsPage() {
                     const kind = kindLabel(r.kind);
                     return (
                       <tr key={r.id} className={cn("border-b border-line last:border-0", !r.isActive && "opacity-60")}>
-                        <td className="px-3 py-2 tabular">{applyDigits(r.code, prefs.digits)}</td>
+                        <td className="px-3 py-2"><Code value={r.code} digits={prefs.digits} /></td>
                         <td className="px-3 py-2 font-medium">
                           {applyDigits(r.name, prefs.digits)}
                           {!r.isActive ? <span className="ms-2 text-[11px] text-fg-3">(معطّلة)</span> : null}
@@ -498,9 +498,8 @@ export function YearEndPage() {
                 {formatDate(p.year.startDate, { digits: prefs.digits, calendar: "both" })} — {formatDate(p.year.endDate, { digits: prefs.digits, calendar: "both" })}
               </p>
               {p.endsInFuture ? <p className="mt-3 rounded-md bg-warning-50 px-3 py-2 text-[13px] text-warning-700">لم ينتهِ العام الدراسي بعد حسب تاريخه. يُنصح بتنفيذ الإغلاق بعد اعتماد النتائج النهائية.</p> : null}
-              {p.warnings.map((w) => (
-                <p key={w} className="mt-2 rounded-md bg-warning-50 px-3 py-2 text-[13px] text-warning-700">{w}</p>
-              ))}
+              {p.openTransfers ? <p className="mt-2 rounded-md bg-warning-50 px-3 py-2 text-[13px] text-warning-700">{formatNumber(p.openTransfers, prefs.digits)} طلب تحويل لم يُنفّذ بعد</p> : null}
+              {p.pendingLeaves ? <p className="mt-2 rounded-md bg-warning-50 px-3 py-2 text-[13px] text-warning-700">{formatNumber(p.pendingLeaves, prefs.digits)} طلب إجازة بانتظار الاعتماد</p> : null}
               <table className="mt-4 w-full text-[13px]">
                 <thead className="text-fg-3">
                   <tr className="border-b border-line">

@@ -275,8 +275,9 @@ export function SyllabusPage({ id }: { id: string }) {
           {data.sections.length ? (
             <section className="mb-5 flex flex-wrap gap-2">
               {data.sections.map((s) => (
-                <button key={s.id} onClick={() => setSection(s.id)} className={cn("w-44 rounded-md p-2.5 text-start shadow-[0_0_0_1px_var(--border)] transition-colors hover:bg-hover", s.id === sectionId && "bg-active shadow-[0_0_0_1.5px_var(--navy-600)]")}>
-                  <Meter value={s.completed} max={Math.max(1, data.totalLessons)} label={`فصل ${s.label}${data.sections.some((x) => x.branchName !== s.branchName) ? ` · ${s.branchName}` : ""}`} warnAt={2} />
+                <button key={s.id} onClick={() => setSection(s.id)} className={cn("w-56 rounded-md p-2.5 text-start shadow-[0_0_0_1px_var(--border)] transition-colors hover:bg-hover", s.id === sectionId && "bg-active shadow-[0_0_0_1.5px_var(--navy-600)]")}>
+                  {data.sections.some((x) => x.branchName !== s.branchName) ? <span className="mb-1 block truncate text-[11px] text-fg-3">{s.branchName}</span> : null}
+                  <Meter value={s.completed} max={Math.max(1, data.totalLessons)} label={<span className="font-medium text-fg">فصل {s.label}</span>} warnAt={2} />
                 </button>
               ))}
             </section>
