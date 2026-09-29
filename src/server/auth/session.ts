@@ -193,3 +193,24 @@ export async function revokeAllUserSessions(tenantId: string, userId: string, ex
   });
   return result.count;
 }
+
+/**
+ * جلسة نظام للمهام المجدولة (الإهلاك الشهري، الصيانة الوقائية…): تعمل بصلاحيات مالك المدرسة
+ * وتُنسب عملياتها إليه في سجل التدقيق. لا تُنشأ جلسة دخول فعلية.
+ */
+export async function systemSessionFor(tenantId: string): Promise<SessionData | null> {
+  const owner = await rootDb.user.findFirst({ where: { tenantId, status: "ACTIVE", deletedAt: null, roles: { some: { role: { key: "OWNER" } } } }, include: { tenant: true }, orderBy: { createdAt: "asc" } });
+  if (!owner) return null;
+  const { profile, roleKeys } = await loadAccessProfile(tenantId, owner.id);
+  const t = owner.tenant;
+  return {
+    sessionId: "system",
+    twoFactorVerified: true,
+    requires2faSetup: false,
+    requires2faChallenge: false,
+    user: { id: owner.id, tenantId, name: owner.name, email: owner.email, phone: owner.phone, jobTitle: owner.jobTitle, avatarUrl: owner.avatarUrl, avatarColor: owner.avatarColor, twoFactorEnabled: owner.twoFactorEnabled, preferences: (owner.preferences ?? {}) as UserPreferences },
+    tenant: { id: t.id, slug: t.slug, name: t.name, platformName: t.platformName, logoUrl: t.logoUrl, accentColor: t.accentColor, currency: t.currency, timezone: t.timezone, settings: (t.settings ?? {}) as Record<string, unknown>, isDemo: t.isDemo },
+    access: profile,
+    roleKeys,
+  };
+}

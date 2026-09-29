@@ -11,7 +11,7 @@ import { authedProcedure, permissionProcedure, router } from "../init";
 const id = z.string().min(1).max(64);
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "تاريخ غير صالح");
 const time = z.string().regex(/^\d{2}:\d{2}$/, "وقت غير صالح");
-const settingsKey = z.enum(["students", "admissions", "attendance", "finance", "assessment", "hr", "region", "messageTemplates"]);
+const settingsKey = z.enum(["students", "admissions", "attendance", "finance", "assessment", "hr", "library", "canteen", "transport", "procurement", "region", "messageTemplates"]);
 const roomKind = z.enum(["CLASSROOM", "LAB", "COMPUTER", "GYM", "LIBRARY", "ART", "HALL"]);
 const color = z.enum(["gray", "navy", "teal", "slate", "gold", "green", "orange", "red", "brown", "purple"]);
 const activityKind = z.enum(["CLUB", "COMMITTEE", "TRIP", "COMPETITION", "EVENT"]);

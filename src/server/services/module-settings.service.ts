@@ -59,6 +59,12 @@ export const MODULE_SETTINGS_SCHEMAS = {
     remindersEnabled: z.boolean(),
     /** نسبة التحصيل المستهدفة من المستحق (نقاط أساس) */
     collectionTargetBp: z.number().int().min(0).max(10000),
+    /** الرقابة على الموازنة عند الصرف: بلا، تنبيه، أو منع التجاوز */
+    budgetControl: z.enum(["NONE", "WARN", "BLOCK"]),
+    /** نسبة الاستهلاك التي يظهر عندها التنبيه البرتقالي */
+    budgetWarnBp: z.number().int().min(1000).max(10000),
+    /** مصدر الإهلاك: شهرياً تلقائياً من المهمة المجدولة أو يدوياً */
+    autoDepreciation: z.boolean(),
   }),
   assessment: z.object({
     /** رئيس القسم لكل مادة (مراجعة الدرجات قبل اعتماد الوكيل): {subjectId: userId} */
@@ -124,6 +130,48 @@ export const MODULE_SETTINGS_SCHEMAS = {
     /** معالجة الجزاءات: تخفيض مصروف الرواتب أو التزام لصندوق/جهة */
     penaltiesTreatment: z.enum(["REDUCE_EXPENSE", "LIABILITY"]),
   }),
+  library: z.object({
+    loanDays: z.number().int().min(1).max(120),
+    staffLoanDays: z.number().int().min(1).max(365),
+    maxLoans: z.number().int().min(1).max(30),
+    maxRenewals: z.number().int().min(0).max(10),
+    /** غرامة اليوم (بأصغر وحدة؛ 0 = بلا غرامات) */
+    finePerDayMinor: z.number().int().min(0),
+    fineCapMinor: z.number().int().min(0),
+    graceDays: z.number().int().min(0).max(30),
+    /** أيام الاحتفاظ بالكتاب المحجوز بعد توفره */
+    holdDays: z.number().int().min(1).max(30),
+    /** إضافة الغرامة لحساب الطالب تلقائياً عند الإرجاع */
+    autoInvoiceFines: z.boolean(),
+    /** منع الإعارة لمن عليه غرامة غير مسددة */
+    blockWithFines: z.boolean(),
+  }),
+  canteen: z.object({
+    defaultDailyLimitMinor: z.number().int().min(0),
+    lowBalanceMinor: z.number().int().min(0),
+    notifyPurchases: z.boolean(),
+    /** السماح بالشحن من رصيد ولي الأمر الدائن */
+    allowTopupFromCredit: z.boolean(),
+  }),
+  transport: z.object({
+    /** فوترة رسوم النقل تلقائياً عند التسكين */
+    autoInvoice: z.boolean(),
+    /** احتساب الرسوم بنسبة الأشهر المتبقية من العام */
+    prorate: z.boolean(),
+    /** نسبة رسوم الاتجاه الواحد من الرسوم الكاملة */
+    oneWayBp: z.number().int().min(0).max(10000),
+    /** إشعار أولياء الأمور عند اقتراب الحافلة */
+    notifyApproach: z.boolean(),
+    expiryAlertDays: z.number().int().min(7).max(180),
+  }),
+  procurement: z.object({
+    /** طلبات الشراء فوق هذا المبلغ تحتاج اعتماد المدير بعد المسؤول المالي */
+    principalApprovalAboveMinor: z.number().int().min(0),
+    /** نسبة فرق السعر المسموحة بين فاتورة المورد وأمر الشراء (نقاط أساس) */
+    priceToleranceBp: z.number().int().min(0).max(5000),
+    /** منع صرف ما يتجاوز الرصيد */
+    blockNegativeStock: z.boolean(),
+  }),
   region: z.object({
     country: z.string().regex(/^[A-Z]{2}$|^INTL$/),
     citizenIdLabel: z.string().trim().min(2).max(40),
@@ -160,6 +208,9 @@ export const MODULE_SETTINGS_DEFAULTS = {
     blockReenrollment: false,
     remindersEnabled: true,
     collectionTargetBp: 9000,
+    budgetControl: "WARN",
+    budgetWarnBp: 8000,
+    autoDepreciation: true,
   },
   assessment: { subjectHeads: {}, withholdOnDebt: true, withholdMinOverdueMinor: 0, progressVisibleToParents: true, atRiskBp: 6000, reportCardFooter: "" },
   hr: {
@@ -192,12 +243,16 @@ export const MODULE_SETTINGS_DEFAULTS = {
     loanMaxSalaries: 3,
     leaveEncashmentBasis: "FULL",
   },
+  library: { loanDays: 14, staffLoanDays: 30, maxLoans: 3, maxRenewals: 2, finePerDayMinor: 100, fineCapMinor: 3000, graceDays: 0, holdDays: 3, autoInvoiceFines: true, blockWithFines: true },
+  canteen: { defaultDailyLimitMinor: 2000, lowBalanceMinor: 1000, notifyPurchases: true, allowTopupFromCredit: true },
+  transport: { autoInvoice: true, prorate: true, oneWayBp: 6000, notifyApproach: true, expiryAlertDays: 45 },
+  procurement: { principalApprovalAboveMinor: 1000000, priceToleranceBp: 200, blockNegativeStock: true },
   region: presetRegion("SA"),
   messageTemplates: {},
 } as const;
 
 /** الوحدة التي تحكم كل مجموعة إعدادات */
-const OWNER_MODULE: Record<ModuleSettingsKey, string> = { students: "students", admissions: "admissions", attendance: "attendance", finance: "accounting", assessment: "grade_entry", hr: "employees", region: "settings", messageTemplates: "settings" };
+const OWNER_MODULE: Record<ModuleSettingsKey, string> = { students: "students", admissions: "admissions", attendance: "attendance", finance: "accounting", assessment: "grade_entry", hr: "employees", library: "library", canteen: "canteen", transport: "transport", procurement: "inventory", region: "settings", messageTemplates: "settings" };
 
 export function readModuleSettings<K extends ModuleSettingsKey>(tenantSettings: unknown, key: K): z.infer<(typeof MODULE_SETTINGS_SCHEMAS)[K]> {
   if (key === "region") return readRegion(tenantSettings) as z.infer<(typeof MODULE_SETTINGS_SCHEMAS)[K]>;

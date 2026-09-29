@@ -15,7 +15,7 @@ const feeKind = z.enum(["TUITION", "REGISTRATION", "TRANSPORT", "ACTIVITY", "BOO
 const draftLine = z.object({ feeItemId: id.nullable(), description: z.string().trim().max(200), unitMinor: minor, quantity: z.number().int().min(1).max(1000).optional() });
 const range = z.object({ from: isoDate, to: isoDate });
 const fileValue = z.object({ id: z.string().max(64), name: z.string().max(255), url: z.string().max(500), size: z.number().optional(), mime: z.string().max(120).optional() });
-const journalSource = z.enum(["MANUAL", "OPENING", "INVOICE", "CREDIT_NOTE", "RECEIPT", "RECEIPT_VOID", "CREDIT_APPLICATION", "REFUND", "PAYMENT_VOUCHER", "REVENUE_RECOGNITION", "CHEQUE", "CASH_SESSION", "BANK_TRANSFER", "WRITE_OFF", "CLOSING", "REVERSAL", "PAYROLL", "PAYROLL_PAYMENT", "STAFF_LOAN", "END_OF_SERVICE"]);
+const journalSource = z.enum(["MANUAL", "OPENING", "INVOICE", "CREDIT_NOTE", "RECEIPT", "RECEIPT_VOID", "CREDIT_APPLICATION", "REFUND", "PAYMENT_VOUCHER", "REVENUE_RECOGNITION", "CHEQUE", "CASH_SESSION", "BANK_TRANSFER", "WRITE_OFF", "CLOSING", "REVERSAL", "PAYROLL", "PAYROLL_PAYMENT", "STAFF_LOAN", "END_OF_SERVICE", "FIXED_ASSET", "DEPRECIATION", "INVENTORY", "GOODS_RECEIPT", "SUPPLIER_BILL", "SUPPLIER_PAYMENT", "SALE", "WALLET", "OPERATING_EXPENSE"]);
 const bulk = z.object({ academicYearId: id, branchId: id.nullish(), gradeIds: z.array(id).max(40).optional(), sectionId: id.nullish(), feeItemIds: z.array(id).min(1).max(20), planId: id.nullable(), issueDate: isoDate, applyDiscounts: z.boolean() });
 
 const setupRouter = router({

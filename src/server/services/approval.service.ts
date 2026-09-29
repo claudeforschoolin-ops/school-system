@@ -41,6 +41,8 @@ const APPROVAL_HOOKS: Record<string, () => Promise<ApprovalHook>> = {
   payroll_run: () => import("./hr/payroll.service").then((m) => m.onPayrollApproval),
   employee_loan: () => import("./hr/payroll.service").then((m) => m.onLoanApproval),
   end_of_service: () => import("./hr/eos.service").then((m) => m.onEosApproval),
+  budget: () => import("./finance/budget.service").then((m) => m.onBudgetApproval),
+  purchase_request: () => import("./ops/procurement.service").then((m) => m.onPurchaseRequestApproval),
 };
 
 async function runApprovalHook(db: TenantDb, session: SessionData, request: { id: string; entityType: string | null; entityId: string | null; type: string }, event: ApprovalHookEvent) {

@@ -64,6 +64,8 @@ const commonStaff = merge(
   // الخدمة الذاتية للموظف: تسجيل حضوره وطلب إجازته وقسائم راتبه
   grant(["hr_attendance"], { view: "OWN", create: "OWN" }),
   grant(["payroll", "performance"], VIEW("OWN")),
+  // بلاغات الصيانة وحجز المرافق لكل موظف (سجلاته)، وطلبات الشراء تمر عبر المسؤول
+  grant(["maintenance"], { view: "OWN", create: "OWN" }),
 );
 
 export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
@@ -162,7 +164,9 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
       commonStaff,
       grant(modulesOfGroup("finance"), MANAGE("ALL")),
       grant(["students"], VIEW("ALL")),
-      grant(["approvals"], { view: "ALL" }),
+      // مراجعة طلبات الشراء والموازنة ضمن الموافقات، والاطلاع على المخزون والمشتريات
+      grant(["approvals"], { view: "ALL", approve: "ALL" }),
+      grant(["inventory"], { ...READ("ALL"), approve: "ALL" }),
     ),
   },
   {
@@ -176,6 +180,8 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
       grant(["collections"], { view: "OWN", create: "OWN", print: "OWN" }),
       grant(["invoices"], VIEW("ALL")),
       grant(["students"], VIEW("ALL")),
+      // شحن محافظ المقصف نقداً
+      grant(["canteen"], { view: "ALL", create: "ALL" }),
     ),
   },
   {
@@ -208,7 +214,7 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
     description: "طلبات الصيانة وحجز المرافق",
     requires2fa: false,
     color: "slate",
-    grants: merge(commonStaff, grant(["maintenance"], FULL("BRANCH"))),
+    grants: merge(commonStaff, grant(["maintenance"], FULL("BRANCH")), grant(["inventory"], { view: "ALL", create: "ALL" })),
   },
   {
     key: "PROCUREMENT",
@@ -235,13 +241,31 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
     grants: merge(commonStaff, grant(["safety"], { view: "BRANCH", create: "BRANCH" }), grant(["students"], VIEW("BRANCH"))),
   },
   {
+    key: "NURSE",
+    name: "ممرض/ممرضة المدرسة",
+    description: "العيادة والأدوية والبيانات الصحية للطلاب",
+    requires2fa: true,
+    color: "slate",
+    grants: merge(commonStaff, grant(["clinic"], FULL("BRANCH")), grant(["students"], VIEW("BRANCH")), grant(["safety"], { view: "BRANCH", create: "BRANCH" })),
+  },
+  {
+    key: "CANTEEN",
+    name: "مسؤول المقصف",
+    description: "نقطة بيع المقصف ومحافظ الطلاب وأصنافه",
+    requires2fa: false,
+    color: "slate",
+    grants: merge(commonStaff, grant(["canteen"], FULL("BRANCH")), grant(["inventory"], { view: "ALL", create: "ALL" }), grant(["students"], VIEW("BRANCH"))),
+  },
+  {
     key: "PARENT",
     name: "ولي أمر",
     description: "يرى أبناءه فقط: الحضور والدرجات والفواتير والتواصل",
     requires2fa: false,
     color: "slate",
     grants: merge(
-      grant(["students", "attendance", "report_cards", "invoices", "transport", "timetable"], VIEW("ASSIGNED")),
+      grant(["students", "attendance", "report_cards", "invoices", "transport", "timetable", "library", "safety"], VIEW("ASSIGNED")),
+      // محافظ المقصف للأبناء: الاطلاع وضبط الحدود والشحن من الرصيد الدائن
+      grant(["canteen"], { view: "ASSIGNED", update: "ASSIGNED" }),
       // سندات أسرته فقط؛ لا تسجيل مدفوعات (الدفع الإلكتروني غير مفعّل)
       grant(["collections"], VIEW("ASSIGNED")),
       grant(["transfers"], { view: "ASSIGNED", create: "ASSIGNED" }),
@@ -258,6 +282,7 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
     grants: merge(
       grant(["timetable", "report_cards", "attendance"], VIEW("OWN")),
       grant(["announcements", "events", "library"], VIEW("ALL")),
+      grant(["canteen", "transport"], VIEW("OWN")),
     ),
   },
   {

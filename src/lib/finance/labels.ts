@@ -84,6 +84,15 @@ export const JOURNAL_SOURCE = {
   PAYROLL_PAYMENT: { label: "صرف رواتب", color: "purple" },
   STAFF_LOAN: { label: "سلفة موظف", color: "brown" },
   END_OF_SERVICE: { label: "نهاية خدمة", color: "slate" },
+  FIXED_ASSET: { label: "أصل ثابت", color: "brown" },
+  DEPRECIATION: { label: "إهلاك", color: "brown" },
+  INVENTORY: { label: "مخزون", color: "orange" },
+  GOODS_RECEIPT: { label: "استلام مشتريات", color: "orange" },
+  SUPPLIER_BILL: { label: "فاتورة مورد", color: "purple" },
+  SUPPLIER_PAYMENT: { label: "سداد مورد", color: "purple" },
+  SALE: { label: "مبيعات", color: "green" },
+  WALLET: { label: "محفظة طالب", color: "teal" },
+  OPERATING_EXPENSE: { label: "مصروف تشغيلي", color: "gold" },
 } as const satisfies Labeled<string>;
 export type JournalSourceKey = keyof typeof JOURNAL_SOURCE;
 

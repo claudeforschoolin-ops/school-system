@@ -129,6 +129,7 @@ export const MODULE_GROUPS: readonly ModuleGroup[] = [
       { key: "transport", label: "المواصلات", section: 33, phase: 5 },
       { key: "library", label: "المكتبة والموارد", section: 34, phase: 5 },
       { key: "safety", label: "الأمن والسلامة", section: 35, phase: 5 },
+      { key: "clinic", label: "العيادة المدرسية", section: 35, phase: 5 },
       { key: "canteen", label: "المقصف", section: 36, phase: 5 },
     ],
   },
