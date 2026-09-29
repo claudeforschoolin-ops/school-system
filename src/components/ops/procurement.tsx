@@ -542,29 +542,32 @@ export function BillDialog({ supplierId, order, onClose }: { supplierId?: string
   );
 }
 
-function RateDialog({ supplierId, orderId, onClose }: { supplierId: string; orderId?: string; onClose: () => void }) {
-  const utils = trpc.useUtils();
-  const [v, setV] = useState({ quality: 4, delivery: 4, price: 4, comment: "" });
-  const m = trpc.procurement.rate.useMutation({ onSuccess: () => (toast.success("سُجل التقييم"), void utils.procurement.invalidate(), onClose()), onError: (e) => toast.error(e.message) });
-  const Stars = ({ k, label }: { k: "quality" | "delivery" | "price"; label: string }) => (
+function StarsInput({ label, value, onChange }: { label: string; value: number; onChange: (n: number) => void }) {
+  return (
     <div className="flex items-center justify-between">
       <span className="text-[14px]">{label}</span>
       <span className="flex gap-1" role="radiogroup" aria-label={label}>
         {[1, 2, 3, 4, 5].map((n) => (
-          <button key={n} type="button" role="radio" aria-checked={v[k] === n} aria-label={`${n}`} onClick={() => setV({ ...v, [k]: n })}>
-            <Star className={cn("size-5", n <= v[k] ? "fill-[var(--tag-gold-dot)] text-[var(--tag-gold-dot)]" : "text-fg-4")} />
+          <button key={n} type="button" role="radio" aria-checked={value === n} aria-label={`${n}`} onClick={() => onChange(n)}>
+            <Star className={cn("size-5", n <= value ? "fill-[var(--tag-gold-dot)] text-[var(--tag-gold-dot)]" : "text-fg-4")} />
           </button>
         ))}
       </span>
     </div>
   );
+}
+
+function RateDialog({ supplierId, orderId, onClose }: { supplierId: string; orderId?: string; onClose: () => void }) {
+  const utils = trpc.useUtils();
+  const [v, setV] = useState({ quality: 4, delivery: 4, price: 4, comment: "" });
+  const m = trpc.procurement.rate.useMutation({ onSuccess: () => (toast.success("سُجل التقييم"), void utils.procurement.invalidate(), onClose()), onError: (e) => toast.error(e.message) });
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent title="تقييم المورد" width={420}>
         <div className="space-y-3 px-5 pb-4">
-          <Stars k="quality" label="الجودة" />
-          <Stars k="delivery" label="الالتزام بالتوريد" />
-          <Stars k="price" label="السعر" />
+          <StarsInput label="الجودة" value={v.quality} onChange={(quality) => setV({ ...v, quality })} />
+          <StarsInput label="الالتزام بالتوريد" value={v.delivery} onChange={(delivery) => setV({ ...v, delivery })} />
+          <StarsInput label="السعر" value={v.price} onChange={(price) => setV({ ...v, price })} />
           <Field label="ملاحظة"><Textarea rows={2} value={v.comment} onChange={(e) => setV({ ...v, comment: e.target.value })} /></Field>
         </div>
         <DialogFooter>

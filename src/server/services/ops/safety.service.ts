@@ -71,7 +71,7 @@ export async function registerVisitor(db: TenantDb, session: SessionData, input:
       createdById: session.user.id,
     },
   });
-  if (input.checkInNow && input.hostUserId) await notify(db, { tenantId: session.tenant.id, userIds: [input.hostUserId], type: "SYSTEM", title: `زائر لك في الاستقبال: ${v.fullName}`, body: v.purpose, link: "/safety/visitors", actorId: session.user.id, entityType: "Visitor", entityId: v.id });
+  if (input.checkInNow && input.hostUserId) await notify(db, { tenantId: session.tenant.id, userIds: [input.hostUserId], type: "SYSTEM", title: `زائر لك في الاستقبال: ${v.fullName}`, body: v.purpose, link: "/safety", actorId: session.user.id, entityType: "Visitor", entityId: v.id });
   return v;
 }
 
@@ -83,7 +83,7 @@ export async function scanVisitor(db: TenantDb, session: SessionData, code: stri
   if (v.checkOutAt) throw badRequest("البطاقة مستخدمة وانتهت الزيارة");
   if (!v.checkInAt) {
     const u = await db.visitor.update({ where: { id: v.id }, data: { checkInAt: new Date() } });
-    if (v.hostUserId) await notify(db, { tenantId: session.tenant.id, userIds: [v.hostUserId], type: "SYSTEM", title: `وصل زائرك: ${v.fullName}`, link: "/safety/visitors", actorId: session.user.id, entityType: "Visitor", entityId: v.id });
+    if (v.hostUserId) await notify(db, { tenantId: session.tenant.id, userIds: [v.hostUserId], type: "SYSTEM", title: `وصل زائرك: ${v.fullName}`, link: "/safety", actorId: session.user.id, entityType: "Visitor", entityId: v.id });
     return { action: "IN" as const, visitor: u };
   }
   return { action: "OUT" as const, visitor: await db.visitor.update({ where: { id: v.id }, data: { checkOutAt: new Date() } }) };
