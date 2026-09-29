@@ -43,6 +43,8 @@ export const NOT_AUDITED_MODELS = new Set([
   "PageVersion",
   "Message",
   "ConversationMember",
+  // عدّادات الترقيم: تتغير مع كل سجل جديد ويظهر أثرها في سجل الكيان نفسه
+  "Sequence",
 ]);
 
 const READ_OPS = new Set([
@@ -107,6 +109,21 @@ export function scopeArgs(model: string, operation: string, args: unknown, tenan
     assertNoTenantChange(a.data, tenantId);
   }
   return a;
+}
+
+/**
+ * يحوّل شرط «فريد» (قد يتضمن مفتاحاً مركّباً مثل tenantId_key: {tenantId, key}) إلى شرط يقبله findFirst،
+ * لالتقاط الحالة «قبل» التعديل في سجل التدقيق.
+ */
+export function uniqueToFilter(where: AnyArgs | undefined): AnyArgs {
+  const out: AnyArgs = {};
+  for (const [k, v] of Object.entries(where ?? {})) {
+    const parts = k.split("_");
+    if (parts.length > 1 && v && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date) && Object.keys(v).every((f) => parts.includes(f))) {
+      Object.assign(out, v);
+    } else out[k] = v;
+  }
+  return out;
 }
 
 function labelOf(record: Record<string, unknown> | null | undefined): string | null {
@@ -191,7 +208,7 @@ export function createTenantDb(ctx: TenantContext) {
             }
             case "update":
             case "upsert": {
-              const before = await delegateOf(model).findFirst({ where: scoped.where as AnyArgs });
+              const before = await delegateOf(model).findFirst({ where: uniqueToFilter(scoped.where as AnyArgs) });
               const result = (await run(scoped)) as Record<string, unknown>;
               const id = (before?.id ?? result?.id) as string | undefined;
               const after = hasSelect && id ? await delegateOf(model).findFirst({ where: { id } }) : result;
@@ -222,7 +239,7 @@ export function createTenantDb(ctx: TenantContext) {
               return result;
             }
             case "delete": {
-              const before = await delegateOf(model).findFirst({ where: scoped.where as AnyArgs });
+              const before = await delegateOf(model).findFirst({ where: uniqueToFilter(scoped.where as AnyArgs) });
               const result = await run(scoped);
               await writeAudit(ctx, {
                 action: "DELETE",

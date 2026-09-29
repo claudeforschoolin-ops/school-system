@@ -23,6 +23,7 @@ import { toast } from "@/components/ui/toast";
 import { useApp } from "@/components/shell/app-context";
 import { PageTopbar } from "@/components/shell/page-topbar";
 import { useTabMeta } from "@/components/shell/tabs-bar";
+import { shiftDay } from "@/components/attendance/roll-call";
 import { BlockEditor } from "@/components/editor/block-editor";
 import { SaveStatus, useAutosave } from "@/components/database/row-view";
 
@@ -456,7 +457,7 @@ export function CaseDetail({ id }: { id: string }) {
         </div>
       </div>
       {adding ? <AddSessionDialog caseId={id} onClose={() => setAdding(false)} onDone={refresh} /> : null}
-      {summoning ? <SummonDialog onClose={() => setSummoning(false)} onConfirm={(date) => (summon.mutate({ caseId: id, date }), setSummoning(false))} defaultDate={toISODate(new Date(Date.now() + 86_400_000), tenant.timezone)} /> : null}
+      {summoning ? <SummonDialog onClose={() => setSummoning(false)} onConfirm={(date) => (summon.mutate({ caseId: id, date }), setSummoning(false))} defaultDate={shiftDay(toISODate(new Date(), tenant.timezone), 1)} /> : null}
     </Shell>
   );
 }

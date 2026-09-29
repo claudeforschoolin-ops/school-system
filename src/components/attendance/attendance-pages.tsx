@@ -11,7 +11,6 @@ import { ATTENDANCE_ORDER, ATTENDANCE_STATUS, type AttendanceStatusKey } from "@
 import { formatDate, toISODate } from "@/lib/dates";
 import { formatNumber, formatPercent } from "@/lib/numbers";
 import { trpc } from "@/lib/trpc/client";
-import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -75,7 +74,7 @@ export function AttendanceHome() {
   const prefs = usePrefs();
   const d = useDateParam();
   const sections = trpc.attendance.sections.useQuery({ date: d.date });
-  const list = sections.data ?? [];
+  const list = useMemo(() => sections.data ?? [], [sections.data]);
   const totals = useMemo(() => {
     const t = { students: 0, recorded: 0, absent: 0, late: 0, taken: 0 };
     for (const s of list) {

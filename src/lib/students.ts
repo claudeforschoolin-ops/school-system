@@ -148,6 +148,26 @@ export const ACTIVITY_STATUS = {
   CANCELLED: { label: "ملغى", color: "red" },
 } as const satisfies Labeled<string>;
 
+export const REGISTRATION_STATUS = {
+  REGISTERED: { label: "مسجّل", color: "teal" },
+  WAITLIST: { label: "قائمة انتظار", color: "gold" },
+  ATTENDED: { label: "شارك", color: "green" },
+  CANCELLED: { label: "ملغى", color: "gray" },
+} as const satisfies Labeled<string>;
+
+export const CONSENT_STATUS = {
+  NOT_REQUIRED: { label: "لا تلزم", color: "gray" },
+  PENDING: { label: "بانتظار الموافقة", color: "gold" },
+  GRANTED: { label: "موافق", color: "green" },
+  DENIED: { label: "غير موافق", color: "red" },
+} as const satisfies Labeled<string>;
+
+export const SUBSTITUTION_STATUS = {
+  PENDING: { label: "بلا بديل", color: "orange" },
+  ASSIGNED: { label: "أُسند بديل", color: "green" },
+  CANCELLED: { label: "ملغاة", color: "gray" },
+} as const satisfies Labeled<string>;
+
 export const DOCUMENT_TYPES: Array<{ id: string; label: string; required: boolean }> = [
   { id: "BIRTH_CERTIFICATE", label: "شهادة الميلاد", required: true },
   { id: "ID_COPY", label: "صورة الهوية/الإقامة", required: true },

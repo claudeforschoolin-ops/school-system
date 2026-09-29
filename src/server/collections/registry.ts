@@ -1,6 +1,7 @@
 /**
  * سجل المجموعات النظامية المتاحة.
  */
+import { activitiesCollection } from "./activities";
 import { admissionsCollection } from "./admissions";
 import { behaviorCollection, counselingCollection } from "./behavior";
 import { leavesCollection, transfersCollection } from "./requests";
@@ -14,6 +15,7 @@ export const COLLECTIONS: Record<string, SystemCollection> = {
   [transfersCollection.source]: transfersCollection,
   [behaviorCollection.source]: behaviorCollection,
   [counselingCollection.source]: counselingCollection,
+  [activitiesCollection.source]: activitiesCollection,
 };
 
 export const COLLECTION_SOURCES = Object.keys(COLLECTIONS);

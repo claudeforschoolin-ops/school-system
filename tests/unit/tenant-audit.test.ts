@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { diffRecords, redact } from "@/server/db/audit-utils";
-import { scopeArgs } from "@/server/db/tenant";
+import { scopeArgs, uniqueToFilter } from "@/server/db/tenant";
+
+describe("لقطة «قبل» التدقيق للشروط الفريدة المركّبة", () => {
+  it("يفكّ المفتاح المركّب إلى حقوله ويُبقي غيره", () => {
+    expect(uniqueToFilter({ tenantId_key: { tenantId: "T1", key: "activity" }, tenantId: "T1" })).toEqual({ tenantId: "T1", key: "activity" });
+    expect(uniqueToFilter({ id: "x", tenantId: "T1" })).toEqual({ id: "x", tenantId: "T1" });
+    // حقل عادي فيه شرطة سفلية وقيمته كائن شرط لا يُفك
+    expect(uniqueToFilter({ created_at: { gte: 1 } })).toEqual({ created_at: { gte: 1 } });
+  });
+});
 
 describe("عزل المستأجرين في وسائط الاستعلام", () => {
   it("يضيف tenantId لكل قراءة وتعديل وحذف", () => {

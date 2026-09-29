@@ -18,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { PageSkeleton } from "@/components/ui/skeleton";
-import { Tag } from "@/components/ui/tag";
 import { toast } from "@/components/ui/toast";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useApp } from "@/components/shell/app-context";

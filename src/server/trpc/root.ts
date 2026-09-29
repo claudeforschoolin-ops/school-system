@@ -3,7 +3,7 @@
  */
 import { createCallerFactory, router } from "./init";
 import { admissionsRouter, studentsRouter } from "./routers/students";
-import { academicRouter, moduleSettingsRouter } from "./routers/academic";
+import { academicRouter, activitiesRouter, assignmentsRouter, curriculumRouter, moduleSettingsRouter, timetableRouter } from "./routers/academic";
 import { attendanceRouter, behaviorRouter, leavesRouter, transfersRouter } from "./routers/student-ops";
 import { accountRouter } from "./routers/account";
 import { auditRouter, orgRouter, rolesRouter, usersRouter } from "./routers/admin";
@@ -36,6 +36,10 @@ export const appRouter = router({
   leaves: leavesRouter,
   transfers: transfersRouter,
   behavior: behaviorRouter,
+  curriculum: curriculumRouter,
+  assignments: assignmentsRouter,
+  timetable: timetableRouter,
+  activities: activitiesRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -291,7 +291,7 @@ function Column({
             onClick={onAdd}
             className="mt-2 flex h-8 w-full items-center gap-1.5 rounded-lg border border-dashed border-line-strong/70 px-2.5 text-[13px] text-fg-3 transition-colors duration-[120ms] hover:border-line-strong hover:bg-card/60 hover:text-fg-2"
           >
-            <Plus className="size-3.5" /> صفحة جديدة
+            <Plus className="size-3.5" /> {api.system?.createLabel ?? "صفحة جديدة"}
           </button>
         ) : null}
       </div>

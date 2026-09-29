@@ -27,7 +27,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { useStoredValue } from "@/lib/hooks/use-stored-value";
 import { AGENTS } from "@/lib/agents";
-import { MODULE_NAV } from "@/lib/modules-nav";
+import { MODULE_GROUP_LABELS, MODULE_NAV } from "@/lib/modules-nav";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { PageIcon } from "@/components/ui/icon";
@@ -246,28 +246,36 @@ function NavLink({ href, icon, children }: { href: string; icon: React.ReactNode
   );
 }
 
-/** الوحدات المبنية (حسب الصلاحية) */
+/** الوحدات المبنية (حسب الصلاحية)، مجمّعة: شؤون الطلاب ثم الشؤون الأكاديمية */
 function ModulesGroup() {
   const { can } = useApp();
   const pathname = usePathname();
   const items = MODULE_NAV.filter((m) => can(m.module, "view"));
   if (!items.length) return null;
   return (
-    <SidebarGroup id="modules" title="الوحدات">
-      {items.map((m) => {
-        const active = pathname === m.href || pathname.startsWith(`${m.href}/`);
+    <>
+      {(Object.keys(MODULE_GROUP_LABELS) as Array<keyof typeof MODULE_GROUP_LABELS>).map((group) => {
+        const list = items.filter((m) => m.group === group);
+        if (!list.length) return null;
         return (
-          <Link
-            key={m.key}
-            href={m.href}
-            className={cn("flex h-7 items-center gap-2 rounded-md px-2 text-[14px] font-medium text-fg-2 transition-colors duration-[120ms] hover:bg-hover", active && "bg-active text-fg")}
-          >
-            <PageIcon icon={m.icon} size={16} className="text-fg-3" />
-            <span className="truncate">{m.label}</span>
-          </Link>
+          <SidebarGroup key={group} id={`modules-${group}`} title={MODULE_GROUP_LABELS[group]}>
+            {list.map((m) => {
+              const active = pathname === m.href || pathname.startsWith(`${m.href}/`);
+              return (
+                <Link
+                  key={m.key}
+                  href={m.href}
+                  className={cn("flex h-7 items-center gap-2 rounded-md px-2 text-[14px] font-medium text-fg-2 transition-colors duration-[120ms] hover:bg-hover", active && "bg-active text-fg")}
+                >
+                  <PageIcon icon={m.icon} size={16} className="text-fg-3" />
+                  <span className="truncate">{m.label}</span>
+                </Link>
+              );
+            })}
+          </SidebarGroup>
         );
       })}
-    </SidebarGroup>
+    </>
   );
 }
 

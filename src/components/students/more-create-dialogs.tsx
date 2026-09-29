@@ -18,12 +18,14 @@ import { toast } from "@/components/ui/toast";
 import { useApp } from "@/components/shell/app-context";
 import type { CreateDialogProps } from "./create-dialogs";
 import { StudentPicker, type PickedStudent } from "./student-picker";
+import { NewActivityDialog } from "@/components/activities/activity-form";
 
 export function SchoolCreateDialogs({ source, ...props }: CreateDialogProps & { source: string }) {
   if (source === "leaves") return <NewLeaveDialog {...props} />;
   if (source === "transfers") return <NewTransferDialog {...props} />;
   if (source === "behavior") return <NewBehaviorDialog {...props} />;
   if (source === "counseling") return <NewCaseDialog {...props} />;
+  if (source === "activities") return <NewActivityDialog {...props} />;
   return null;
 }
 
