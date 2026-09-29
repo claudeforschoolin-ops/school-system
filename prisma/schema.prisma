@@ -438,22 +438,26 @@ enum ApprovalStatus {
 }
 
 model ApprovalRequest {
-  id            String         @id @default(cuid())
-  tenantId      String
+  id              String         @id @default(cuid())
+  tenantId        String
   /// نوع الطلب (مفتاح مسار الموافقة): discount_exception, expense, leave...
-  type          String
-  title         String
-  description   String?
-  entityType    String?
-  entityId      String?
-  link          String?
-  payload       Json           @default("{}")
-  requestedById String
-  status        ApprovalStatus @default(PENDING)
-  currentStep   Int            @default(1)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  decidedAt     DateTime?
+  type            String
+  title           String
+  description     String?
+  entityType      String?
+  entityId        String?
+  link            String?
+  payload         Json           @default("{}")
+  requestedById   String
+  status          ApprovalStatus @default(PENDING)
+  currentStep     Int            @default(1)
+  /// المبلغ الذي تُقيَّم عليه شروط المسار (إن وُجد)
+  amountMinor     Int?
+  /// إصدار مسار الموافقة المطبّق وقت الإنشاء (فارغ = المسار الافتراضي)
+  workflowVersion Int?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  decidedAt       DateTime?
 
   steps ApprovalStep[]
 
@@ -461,21 +465,29 @@ model ApprovalRequest {
 }
 
 model ApprovalStep {
-  id             String          @id @default(cuid())
-  tenantId       String
-  requestId      String
-  request        ApprovalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  order          Int
-  name           String
+  id               String          @id @default(cuid())
+  tenantId         String
+  requestId        String
+  request          ApprovalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  order            Int
+  name             String
   /// المعتمد: دور أو مستخدم محدد
-  approverRoleId String?
-  approverUserId String?
-  status         ApprovalStatus  @default(PENDING)
-  decidedById    String?
-  decidedAt      DateTime?
-  comment        String?
+  approverRoleId   String?
+  approverUserId   String?
+  status           ApprovalStatus  @default(PENDING)
+  decidedById      String?
+  decidedAt        DateTime?
+  comment          String?
   /// مهلة التصعيد بالساعات (اختياري)
-  dueHours       Int?
+  dueHours         Int?
+  /// متى صارت الخطوة هي الحالية (بداية احتساب المهلة)
+  activatedAt      DateTime?
+  /// جهة التصعيد عند تجاوز المهلة: دور أو مستخدم
+  escalateToRoleId String?
+  escalateToUserId String?
+  escalatedAt      DateTime?
+  /// تذكير المعتمد قبل انقضاء المهلة
+  remindedAt       DateTime?
 
   @@unique([requestId, order])
   @@index([tenantId, status])
@@ -4318,4 +4330,470 @@ model ClinicDispense {
   medicineId String
   medicine   ClinicMedicine @relation(fields: [medicineId], references: [id])
   quantity   Int
+}
+
+// =====================================================================
+// المرحلة ٧: التحليلات والأتمتة والامتثال
+// =====================================================================
+
+// ---------------------------------------------------------------- التقارير والتحليلات
+
+/// لقطة شهرية لمؤشر (تُحسب آلياً عند إقفال الشهر، أو تُستورد تاريخياً) — أساس الاتجاهات والمقارنات
+model MetricSnapshot {
+  id        String   @id @default(cuid())
+  tenantId  String
+  metric    String
+  /// YYYY-MM
+  period    String
+  /// "ALL" أو معرّف الفرع
+  branchKey String   @default("ALL")
+  value     BigInt
+  /// COMPUTED | IMPORTED
+  source    String   @default("COMPUTED")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, metric, period, branchKey])
+  @@index([tenantId, metric, period])
+}
+
+model SavedReport {
+  id              String      @id @default(cuid())
+  tenantId        String
+  name            String
+  description     String?
+  /// مفتاح مجموعة البيانات (students, invoices, ...)
+  dataset         String
+  /// الأعمدة والتصفية والتجميع والفرز والرسم
+  config          Json
+  /// PRIVATE | ROLES | ALL
+  visibility      String      @default("PRIVATE")
+  sharedRoleIds   String[]    @default([])
+  ownerId         String
+  isPinned        Boolean     @default(false)
+  /// { frequency, time, weekday, monthDay, format, userIds, emails }
+  schedule        Json?
+  scheduleEnabled Boolean     @default(false)
+  nextRunAt       DateTime?
+  lastRunAt       DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
+  runs            ReportRun[]
+
+  @@index([tenantId, ownerId])
+  @@index([tenantId, scheduleEnabled, nextRunAt])
+}
+
+model ReportRun {
+  id         String      @id @default(cuid())
+  tenantId   String
+  reportId   String
+  report     SavedReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  /// MANUAL | SCHEDULE
+  trigger    String
+  /// SUCCESS | FAILED
+  status     String
+  format     String
+  rowCount   Int         @default(0)
+  fileId     String?
+  recipients Int         @default(0)
+  error      String?
+  runById    String?
+  createdAt  DateTime    @default(now())
+
+  @@index([tenantId, reportId, createdAt])
+}
+
+// ---------------------------------------------------------------- مسارات الموافقة والأتمتة
+
+/// مسار موافقة مخصص لنوع طلب (يحل محل المسار الافتراضي في الكود عند تفعيله)
+model ApprovalWorkflow {
+  id          String   @id @default(cuid())
+  tenantId    String
+  /// نوع الطلب: purchase_request, staff_leave, ...
+  type        String
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  /// [{ key, name, approver: { kind: ROLE|USER|MANAGER, roleKey?, userId? }, dueHours?, escalate?: { kind, roleKey?, userId? }, minAmountMinor?, maxAmountMinor? }]
+  steps       Json
+  version     Int      @default(1)
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, type])
+}
+
+/// قاعدة أتمتة على بيانات النظام: شرط على مجموعة بيانات ← إجراءات
+model AutomationRule {
+  id           String              @id @default(cuid())
+  tenantId     String
+  name         String
+  description  String?
+  isEnabled    Boolean             @default(true)
+  dataset      String
+  /// شروط التصفية بنفس صيغة منشئ التقارير
+  filters      Json                @default("[]")
+  /// DAILY | WEEKLY | HOURLY
+  frequency    String              @default("DAILY")
+  /// EACH_ROW (لكل سجل مطابق) | SUMMARY (ملخص واحد إذا تجاوز العدد الحد)
+  mode         String              @default("EACH_ROW")
+  threshold    Int                 @default(1)
+  /// لا يتكرر الإجراء على السجل نفسه قبل مرور هذه الأيام
+  cooldownDays Int                 @default(7)
+  /// [{ type: NOTIFY_ROLE|NOTIFY_USERS|NOTIFY_GUARDIANS|NOTIFY_ASSIGNEE|CREATE_TASK|EMAIL, ... }]
+  actions      Json
+  runCount     Int                 @default(0)
+  lastRunAt    DateTime?
+  nextRunAt    DateTime?
+  createdById  String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  deletedAt    DateTime?
+  runs         AutomationRuleRun[]
+  hits         AutomationRuleHit[]
+
+  @@index([tenantId, isEnabled, nextRunAt])
+}
+
+model AutomationRuleRun {
+  id        String         @id @default(cuid())
+  tenantId  String
+  ruleId    String
+  rule      AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  /// SCHEDULE | MANUAL | DRY_RUN
+  trigger   String
+  status    String
+  matched   Int            @default(0)
+  acted     Int            @default(0)
+  message   String?
+  createdAt DateTime       @default(now())
+
+  @@index([tenantId, ruleId, createdAt])
+}
+
+model AutomationRuleHit {
+  id        String         @id @default(cuid())
+  tenantId  String
+  ruleId    String
+  rule      AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  rowKey    String
+  lastHitAt DateTime       @default(now())
+  hits      Int            @default(1)
+
+  @@unique([ruleId, rowKey])
+}
+
+// ---------------------------------------------------------------- الامتثال والخصوصية
+
+model PrivacyPolicy {
+  id                String             @id @default(cuid())
+  tenantId          String
+  version           Int
+  title             String
+  body              String
+  /// ملخص التغييرات عن الإصدار السابق
+  changes           String?
+  /// ALL | GUARDIANS | STAFF
+  audience          String             @default("ALL")
+  requireAcceptance Boolean            @default(true)
+  /// DRAFT | PUBLISHED | ARCHIVED
+  status            String             @default("DRAFT")
+  publishedAt       DateTime?
+  createdById       String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  acceptances       PolicyAcceptance[]
+
+  @@unique([tenantId, version])
+}
+
+model PolicyAcceptance {
+  id         String        @id @default(cuid())
+  tenantId   String
+  policyId   String
+  policy     PrivacyPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  userId     String
+  acceptedAt DateTime      @default(now())
+  ip         String?
+  userAgent  String?
+
+  @@unique([policyId, userId])
+  @@index([tenantId, userId])
+}
+
+/// نوع موافقة (تصوير الطالب، الرحلات، مشاركة البيانات، العلاج الإسعافي...)
+model ConsentType {
+  id          String          @id @default(cuid())
+  tenantId    String
+  key         String
+  name        String
+  description String
+  /// STUDENT (يمنحها ولي الأمر لكل ابن) | STAFF (يمنحها الموظف عن نفسه)
+  subject     String          @default("STUDENT")
+  isRequired  Boolean         @default(false)
+  isActive    Boolean         @default(true)
+  sortOrder   Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  records     ConsentRecord[]
+
+  @@unique([tenantId, key])
+}
+
+/// سجل موافقة (إلحاقي فقط: كل تغيير سجل جديد، والحالة الحالية هي الأحدث)
+model ConsentRecord {
+  id            String      @id @default(cuid())
+  tenantId      String
+  consentTypeId String
+  consentType   ConsentType @relation(fields: [consentTypeId], references: [id], onDelete: Cascade)
+  studentId     String?
+  employeeId    String?
+  /// من منح/سحب (ولي الأمر أو الموظف أو من أدخلها نيابة)
+  givenById     String?
+  givenByName   String
+  /// GRANTED | WITHDRAWN | DENIED
+  status        String
+  /// PORTAL | PAPER | STAFF_ENTRY
+  method        String      @default("PORTAL")
+  policyVersion Int?
+  note          String?
+  ip            String?
+  userAgent     String?
+  createdAt     DateTime    @default(now())
+
+  @@index([tenantId, consentTypeId, studentId, createdAt])
+  @@index([tenantId, consentTypeId, employeeId, createdAt])
+}
+
+/// مدة الاحتفاظ لكل فئة بيانات
+model RetentionPolicy {
+  id           String    @id @default(cuid())
+  tenantId     String
+  category     String
+  retainDays   Int
+  /// DELETE | ANONYMIZE
+  action       String    @default("DELETE")
+  isEnabled    Boolean   @default(false)
+  lastRunAt    DateTime?
+  lastAffected Int       @default(0)
+  updatedById  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([tenantId, category])
+}
+
+model RetentionRun {
+  id            String   @id @default(cuid())
+  tenantId      String
+  category      String
+  dryRun        Boolean
+  affected      Int
+  cutoff        DateTime
+  triggeredById String?
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+}
+
+/// طلب صاحب بيانات: اطلاع، تصحيح، حذف، نقل، اعتراض
+model DataRequest {
+  id               String    @id @default(cuid())
+  tenantId         String
+  number           Int
+  /// ACCESS | CORRECTION | DELETION | PORTABILITY | OBJECTION
+  kind             String
+  /// GUARDIAN | STUDENT | EMPLOYEE | USER
+  subjectType      String
+  subjectId        String
+  subjectName      String
+  requesterUserId  String?
+  requesterName    String
+  requesterContact String?
+  description      String
+  /// RECEIVED | VERIFYING | IN_PROGRESS | COMPLETED | REJECTED
+  status           String    @default("RECEIVED")
+  dueDate          DateTime  @db.Date
+  assigneeId       String?
+  resolution       String?
+  exportFileId     String?
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+}
+
+// ---------------------------------------------------------------- التوثيق الإلكتروني
+
+model EDocument {
+  id           String            @id @default(cuid())
+  tenantId     String
+  number       Int
+  title        String
+  /// CONTRACT | ACKNOWLEDGMENT | POLICY | FORM | OTHER
+  kind         String            @default("ACKNOWLEDGMENT")
+  body         String
+  /// SHA-256 للنص (والملف المرفق) وقت الإرسال — أي تعديل بعده يُكتشف
+  contentHash  String?
+  fileId       String?
+  /// نص مطبّع للبحث (العنوان + المحتوى + الوسوم)
+  searchText   String            @default("")
+  tags         String[]          @default([])
+  /// DRAFT | SENT | COMPLETED | DECLINED | CANCELLED
+  status       String            @default("DRAFT")
+  /// SEQUENTIAL (بالترتيب) | PARALLEL (معاً)
+  signingOrder String            @default("PARALLEL")
+  dueDate      DateTime?         @db.Date
+  verifyCode   String            @unique
+  entityType   String?
+  entityId     String?
+  createdById  String
+  sentAt       DateTime?
+  completedAt  DateTime?
+  archivedAt   DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  signers      EDocumentSigner[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+}
+
+model EDocumentSigner {
+  id            String    @id @default(cuid())
+  tenantId      String
+  documentId    String
+  document      EDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  order         Int
+  userId        String?
+  name          String
+  roleLabel     String?
+  /// PENDING | SIGNED | DECLINED
+  status        String    @default("PENDING")
+  /// DRAW | TYPE
+  method        String?
+  /// صورة التوقيع المرسوم (PNG data URL صغيرة) أو الاسم المكتوب
+  signatureData String?
+  typedName     String?
+  /// SHA-256(contentHash + الموقّع + الوقت) — بصمة التوقيع
+  signatureHash String?
+  signedAt      DateTime?
+  declineReason String?
+  ip            String?
+  userAgent     String?
+  remindedAt    DateTime?
+
+  @@unique([documentId, order])
+  @@index([tenantId, userId, status])
+}
+
+// ---------------------------------------------------------------- الدعم الفني والمعرفة
+
+model SupportTicket {
+  id              String               @id @default(cuid())
+  tenantId        String
+  number          Int
+  title           String
+  description     String
+  /// TECHNICAL | ACCOUNT | DATA | TRAINING | FEATURE | OTHER
+  category        String               @default("TECHNICAL")
+  /// LOW | MEDIUM | HIGH | URGENT
+  priority        String               @default("MEDIUM")
+  /// OPEN | IN_PROGRESS | WAITING | RESOLVED | CLOSED
+  status          String               @default("OPEN")
+  requesterId     String
+  assigneeId      String?
+  pageUrl         String?
+  resolution      String?
+  satisfaction    Int?
+  firstResponseAt DateTime?
+  resolvedAt      DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  replies         SupportTicketReply[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+  @@index([tenantId, requesterId])
+}
+
+model SupportTicketReply {
+  id         String        @id @default(cuid())
+  tenantId   String
+  ticketId   String
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId   String
+  body       String
+  /// ملاحظة داخلية لا يراها مقدّم التذكرة
+  isInternal Boolean       @default(false)
+  createdAt  DateTime      @default(now())
+}
+
+model KnowledgeArticle {
+  id          String   @id @default(cuid())
+  tenantId    String
+  slug        String
+  title       String
+  category    String
+  summary     String?
+  body        String
+  searchText  String   @default("")
+  isPublished Boolean  @default(true)
+  views       Int      @default(0)
+  helpfulYes  Int      @default(0)
+  helpfulNo   Int      @default(0)
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+}
+
+// ---------------------------------------------------------------- النسخ الاحتياطية
+
+model BackupRun {
+  id          String    @id @default(cuid())
+  tenantId    String
+  number      Int
+  /// AUTO | MANUAL
+  kind        String
+  /// RUNNING | SUCCESS | FAILED
+  status      String    @default("RUNNING")
+  storageKey  String?
+  sizeBytes   Int?
+  tables      Int       @default(0)
+  rows        Int       @default(0)
+  /// SHA-256 للمحتوى قبل التشفير
+  checksum    String?
+  /// معرّف مفتاح التشفير (بصمته) للتحقق عند الاسترجاع
+  keyId       String?
+  durationMs  Int?
+  error       String?
+  verifiedAt  DateTime?
+  expiresAt   DateTime?
+  deletedAt   DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+
+  @@unique([tenantId, number])
+  @@index([tenantId, createdAt])
+}
+
+model RestoreRun {
+  id             String   @id @default(cuid())
+  tenantId       String
+  backupId       String
+  targetTenantId String?
+  targetSlug     String
+  /// SUCCESS | FAILED
+  status         String
+  rows           Int      @default(0)
+  error          String?
+  createdById    String?
+  createdAt      DateTime @default(now())
 }
