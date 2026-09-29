@@ -1885,6 +1885,24 @@ enum JournalSource {
   STAFF_LOAN
   /// تصفية نهاية الخدمة
   END_OF_SERVICE
+  /// اقتناء أصل ثابت أو استبعاده
+  FIXED_ASSET
+  /// الإهلاك الشهري
+  DEPRECIATION
+  /// حركات المخزون (صرف، جرد، تسوية)
+  INVENTORY
+  /// استلام بضاعة من مورد
+  GOODS_RECEIPT
+  /// فاتورة مورد
+  SUPPLIER_BILL
+  /// سداد مورد
+  SUPPLIER_PAYMENT
+  /// مبيعات نقطة البيع (الزي والكتب والمقصف)
+  SALE
+  /// شحن محفظة الطالب وتسويتها
+  WALLET
+  /// مصروفات تشغيلية (صيانة، حافلات)
+  OPERATING_EXPENSE
 }
 
 /// القيد اليومي — لا يُعدَّل بعد الترحيل (يُعكس بقيد)؛ التوازن مفروض بمشغّل في قاعدة البيانات
@@ -3278,4 +3296,1026 @@ model PerformanceReview {
   updatedAt          DateTime    @updatedAt
 
   @@unique([cycleId, employeeId])
+}
+
+// =====================================================================
+// المرحلة ٥: العمليات — الموازنة، الأصول الثابتة، المخزون والمشتريات، نقطة البيع،
+// الصيانة وحجز المرافق، المواصلات، المكتبة، الأمن والسلامة والعيادة، المقصف والمحافظ
+// =====================================================================
+
+/// الموازنة السنوية: حساب × مركز تكلفة × شهر، باعتماد
+model Budget {
+  id                String       @id @default(cuid())
+  tenantId          String
+  fiscalYearId      String
+  name              String
+  /// DRAFT | PENDING | APPROVED | REJECTED
+  status            String       @default("DRAFT")
+  approvalRequestId String?
+  approvedAt        DateTime?
+  notes             String?
+  createdById       String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  lines             BudgetLine[]
+
+  @@unique([tenantId, fiscalYearId, name])
+}
+
+model BudgetLine {
+  id           String  @id @default(cuid())
+  tenantId     String
+  budgetId     String
+  budget       Budget  @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  accountId    String
+  costCenterId String?
+  /// YYYY-MM
+  month        String
+  amountMinor  Int
+
+  @@index([tenantId, accountId, month])
+  @@index([budgetId])
+}
+
+/// فئة أصول: حساباتها وطريقة إهلاكها الافتراضية
+model AssetCategory {
+  id               String       @id @default(cuid())
+  tenantId         String
+  code             String
+  name             String
+  assetAccountId   String
+  accumAccountId   String
+  expenseAccountId String
+  /// STRAIGHT_LINE | DECLINING
+  method           String       @default("STRAIGHT_LINE")
+  usefulLifeMonths Int
+  /// نسبة القسط المتناقص السنوية (نقاط أساس)
+  decliningRateBp  Int?
+  isActive         Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  assets           FixedAsset[]
+
+  @@unique([tenantId, code])
+}
+
+/// أصل ثابت
+model FixedAsset {
+  id                    String          @id @default(cuid())
+  tenantId              String
+  number                Int
+  /// رقم الملصق/الباركود
+  tag                   String
+  name                  String
+  categoryId            String
+  category              AssetCategory   @relation(fields: [categoryId], references: [id])
+  branchId              String?
+  roomId                String?
+  location              String?
+  serialNumber          String?
+  supplierId            String?
+  custodianId           String?
+  costCenterId          String?
+  purchaseDate          DateTime        @db.Date
+  inServiceDate         DateTime        @db.Date
+  costMinor             Int
+  salvageMinor          Int             @default(0)
+  usefulLifeMonths      Int
+  method                String          @default("STRAIGHT_LINE")
+  decliningRateBp       Int?
+  /// مجمع الإهلاك حتى آخر شهر مرحّل (يشمل الافتتاحي)
+  accumulatedMinor      Int             @default(0)
+  /// آخر شهر أُهلك YYYY-MM
+  lastDepreciatedMonth  String?
+  /// ACTIVE | FULLY_DEPRECIATED | DISPOSED
+  status                String          @default("ACTIVE")
+  acquisitionEntryId    String?
+  disposalEntryId       String?
+  disposedAt            DateTime?       @db.Date
+  disposalProceedsMinor Int?
+  disposalGainMinor     Int?
+  notes                 String?
+  attachments           Json            @default("[]")
+  createdById           String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  deletedAt             DateTime?
+  movements             AssetMovement[]
+
+  @@unique([tenantId, number])
+  @@unique([tenantId, tag])
+  @@index([tenantId, status])
+}
+
+model AssetMovement {
+  id          String     @id @default(cuid())
+  tenantId    String
+  assetId     String
+  asset       FixedAsset @relation(fields: [assetId], references: [id])
+  /// ACQUISITION | TRANSFER | DISPOSAL | DEPRECIATION_COMPLETE
+  kind        String
+  date        DateTime   @db.Date
+  fromText    String?
+  toText      String?
+  notes       String?
+  createdById String?
+  createdAt   DateTime   @default(now())
+}
+
+/// إهلاك شهر: قيد واحد لكل الأصول
+model DepreciationRun {
+  id             String             @id @default(cuid())
+  tenantId       String
+  month          String
+  totalMinor     Int
+  assets         Int
+  journalEntryId String?
+  createdById    String?
+  createdAt      DateTime           @default(now())
+  lines          DepreciationLine[]
+
+  @@unique([tenantId, month])
+}
+
+model DepreciationLine {
+  id             String          @id @default(cuid())
+  tenantId       String
+  runId          String
+  run            DepreciationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  assetId        String
+  amountMinor    Int
+  bookValueMinor Int
+}
+
+// ---------------------------------------------------------------------
+// المخزون والمشتريات
+// ---------------------------------------------------------------------
+
+model Warehouse {
+  id        String       @id @default(cuid())
+  tenantId  String
+  code      String
+  name      String
+  branchId  String?
+  /// STORE (زي وكتب) | SUPPLIES | CANTEEN | MAINTENANCE | CLINIC
+  kind      String       @default("SUPPLIES")
+  keeperId  String?
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  levels    StockLevel[]
+
+  @@unique([tenantId, code])
+}
+
+/// صنف مخزون (تكلفة بالمتوسط المرجّح على مستوى الصنف)
+model InventoryItem {
+  id                 String       @id @default(cuid())
+  tenantId           String
+  sku                String
+  barcode            String?
+  name               String
+  /// UNIFORM | BOOK | SUPPLY | CANTEEN | SPARE_PART | MEDICAL | OTHER
+  category           String       @default("SUPPLY")
+  unit               String       @default("حبة")
+  minQty             Int          @default(0)
+  reorderQty         Int          @default(0)
+  /// الكمية الكلية وقيمتها (المتوسط = القيمة ÷ الكمية)
+  onHandQty          Int          @default(0)
+  stockValueMinor    Int          @default(0)
+  sellable           Boolean      @default(false)
+  salePriceMinor     Int?
+  taxCodeId          String?
+  inventoryAccountId String
+  cogsAccountId      String?
+  revenueAccountId   String?
+  /// حساب المصروف عند الصرف للأقسام
+  expenseAccountId   String?
+  imageUrl           String?
+  isActive           Boolean      @default(true)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  deletedAt          DateTime?
+  levels             StockLevel[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId, category])
+}
+
+model StockLevel {
+  id          String        @id @default(cuid())
+  tenantId    String
+  itemId      String
+  item        InventoryItem @relation(fields: [itemId], references: [id])
+  warehouseId String
+  warehouse   Warehouse     @relation(fields: [warehouseId], references: [id])
+  quantity    Int           @default(0)
+
+  @@unique([itemId, warehouseId])
+}
+
+model StockMovement {
+  id             String   @id @default(cuid())
+  tenantId       String
+  number         Int
+  itemId         String
+  warehouseId    String
+  /// OPENING | RECEIPT | ISSUE | SALE | SALE_RETURN | ADJUSTMENT | TRANSFER_IN | TRANSFER_OUT
+  kind           String
+  /// موجبة للوارد وسالبة للصادر
+  quantity       Int
+  unitCostMinor  Int
+  valueMinor     Int
+  date           DateTime @db.Date
+  reference      String?
+  sourceType     String?
+  sourceId       String?
+  costCenterId   String?
+  journalEntryId String?
+  notes          String?
+  createdById    String?
+  createdAt      DateTime @default(now())
+
+  @@unique([tenantId, number])
+  @@index([tenantId, itemId, date])
+}
+
+model Supplier {
+  id               String           @id @default(cuid())
+  tenantId         String
+  number           Int
+  name             String
+  taxNumber        String?
+  crNumber         String?
+  contactName      String?
+  phone            String?
+  email            String?
+  address          String?
+  iban             String?
+  paymentTermsDays Int              @default(30)
+  category         String?
+  notes            String?
+  isActive         Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  deletedAt        DateTime?
+  ratings          SupplierRating[]
+
+  @@unique([tenantId, number])
+}
+
+model SupplierRating {
+  id          String   @id @default(cuid())
+  tenantId    String
+  supplierId  String
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  orderId     String?
+  quality     Int
+  delivery    Int
+  price       Int
+  comment     String?
+  createdById String?
+  createdAt   DateTime @default(now())
+}
+
+model PurchaseRequest {
+  id                  String                @id @default(cuid())
+  tenantId            String
+  number              Int
+  title               String
+  branchId            String?
+  costCenterId        String?
+  requestedById       String
+  neededBy            DateTime?             @db.Date
+  justification       String?
+  /// DRAFT | PENDING | APPROVED | REJECTED | ORDERED | CANCELLED
+  status              String                @default("DRAFT")
+  approvalRequestId   String?
+  estimatedTotalMinor Int                   @default(0)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  lines               PurchaseRequestLine[]
+
+  @@unique([tenantId, number])
+}
+
+model PurchaseRequestLine {
+  id           String          @id @default(cuid())
+  tenantId     String
+  requestId    String
+  request      PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  itemId       String?
+  description  String
+  quantity     Int
+  estUnitMinor Int             @default(0)
+}
+
+model PurchaseOrder {
+  id            String              @id @default(cuid())
+  tenantId      String
+  number        Int
+  supplierId    String
+  requestId     String?
+  warehouseId   String
+  orderDate     DateTime            @db.Date
+  expectedDate  DateTime?           @db.Date
+  /// DRAFT | ISSUED | PARTIAL | RECEIVED | CLOSED | CANCELLED
+  status        String              @default("DRAFT")
+  subtotalMinor Int                 @default(0)
+  taxMinor      Int                 @default(0)
+  totalMinor    Int                 @default(0)
+  costCenterId  String?
+  notes         String?
+  createdById   String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  lines         PurchaseOrderLine[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+}
+
+model PurchaseOrderLine {
+  id               String        @id @default(cuid())
+  tenantId         String
+  orderId          String
+  order            PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /// صنف مخزني أو (عند غيابه) خدمة/مصروف مباشر على حساب
+  itemId           String?
+  expenseAccountId String?
+  description      String
+  quantity         Int
+  unitMinor        Int
+  taxBp            Int           @default(0)
+  receivedQty      Int           @default(0)
+  billedQty        Int           @default(0)
+}
+
+model GoodsReceipt {
+  id             String             @id @default(cuid())
+  tenantId       String
+  number         Int
+  orderId        String
+  warehouseId    String
+  date           DateTime           @db.Date
+  notes          String?
+  journalEntryId String?
+  createdById    String?
+  createdAt      DateTime           @default(now())
+  lines          GoodsReceiptLine[]
+
+  @@unique([tenantId, number])
+}
+
+model GoodsReceiptLine {
+  id          String       @id @default(cuid())
+  tenantId    String
+  receiptId   String
+  receipt     GoodsReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  orderLineId String
+  quantity    Int
+  unitMinor   Int
+}
+
+/// فاتورة مورد مطابقة ثلاثياً مع أمر الشراء والاستلام
+model SupplierBill {
+  id             String             @id @default(cuid())
+  tenantId       String
+  number         Int
+  supplierId     String
+  orderId        String?
+  supplierRef    String
+  billDate       DateTime           @db.Date
+  dueDate        DateTime           @db.Date
+  subtotalMinor  Int
+  taxMinor       Int
+  totalMinor     Int
+  paidMinor      Int                @default(0)
+  /// OPEN | PARTIAL | PAID | CANCELLED
+  status         String             @default("OPEN")
+  /// MATCHED | PRICE_VARIANCE | DIRECT
+  matchStatus    String             @default("MATCHED")
+  varianceMinor  Int                @default(0)
+  journalEntryId String?
+  attachments    Json               @default("[]")
+  createdById    String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  lines          SupplierBillLine[]
+
+  @@unique([tenantId, number])
+  @@unique([tenantId, supplierId, supplierRef])
+}
+
+model SupplierBillLine {
+  id          String       @id @default(cuid())
+  tenantId    String
+  billId      String
+  bill        SupplierBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  orderLineId String?
+  accountId   String?
+  description String
+  quantity    Int
+  unitMinor   Int
+  taxBp       Int          @default(0)
+}
+
+model SupplierPayment {
+  id             String   @id @default(cuid())
+  tenantId       String
+  number         Int
+  supplierId     String
+  billId         String?
+  date           DateTime @db.Date
+  amountMinor    Int
+  /// CASH | BANK_TRANSFER | CHEQUE
+  method         String
+  bankAccountId  String?
+  reference      String?
+  journalEntryId String?
+  createdById    String?
+  createdAt      DateTime @default(now())
+
+  @@unique([tenantId, number])
+}
+
+model StockCount {
+  id             String           @id @default(cuid())
+  tenantId       String
+  number         Int
+  warehouseId    String
+  date           DateTime         @db.Date
+  /// OPEN | POSTED
+  status         String           @default("OPEN")
+  notes          String?
+  varianceMinor  Int              @default(0)
+  journalEntryId String?
+  createdById    String?
+  createdAt      DateTime         @default(now())
+  lines          StockCountLine[]
+
+  @@unique([tenantId, number])
+}
+
+model StockCountLine {
+  id         String     @id @default(cuid())
+  tenantId   String
+  countId    String
+  count      StockCount @relation(fields: [countId], references: [id], onDelete: Cascade)
+  itemId     String
+  systemQty  Int
+  countedQty Int?
+}
+
+/// عملية بيع (متجر الزي والكتب أو المقصف)
+model Sale {
+  id             String     @id @default(cuid())
+  tenantId       String
+  number         Int
+  /// STORE | CANTEEN
+  kind           String
+  date           DateTime   @default(now())
+  warehouseId    String
+  branchId       String?
+  studentId      String?
+  customerName   String?
+  /// CASH | CARD | STUDENT_ACCOUNT | WALLET
+  paymentMethod  String
+  subtotalMinor  Int
+  taxMinor       Int
+  totalMinor     Int
+  costMinor      Int        @default(0)
+  invoiceId      String?
+  journalEntryId String?
+  /// COMPLETED | VOIDED
+  status         String     @default("COMPLETED")
+  cashierId      String?
+  createdAt      DateTime   @default(now())
+  lines          SaleLine[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, kind, date])
+}
+
+model SaleLine {
+  id         String @id @default(cuid())
+  tenantId   String
+  saleId     String
+  sale       Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  itemId     String
+  name       String
+  quantity   Int
+  unitMinor  Int
+  taxBp      Int    @default(0)
+  taxMinor   Int    @default(0)
+  totalMinor Int
+  costMinor  Int    @default(0)
+}
+
+/// محفظة الطالب المدفوعة مسبقاً للمقصف (الرصيد لا يكون سالباً — مشغّل قاعدة البيانات)
+model StudentWallet {
+  id                String              @id @default(cuid())
+  tenantId          String
+  studentId         String
+  balanceMinor      Int                 @default(0)
+  dailyLimitMinor   Int?
+  lowBalanceMinor   Int?
+  notifyPurchases   Boolean             @default(true)
+  /// فئات أصناف ممنوعة على الطالب (مثل المشروبات الغازية)
+  blockedCategories Json                @default("[]")
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  transactions      WalletTransaction[]
+
+  @@unique([tenantId, studentId])
+}
+
+model WalletTransaction {
+  id                String        @id @default(cuid())
+  tenantId          String
+  walletId          String
+  wallet            StudentWallet @relation(fields: [walletId], references: [id])
+  /// TOPUP | FROM_CREDIT | PURCHASE | REFUND | ADJUSTMENT | WITHDRAWAL
+  kind              String
+  amountMinor       Int
+  balanceAfterMinor Int
+  method            String?
+  saleId            String?
+  journalEntryId    String?
+  note              String?
+  createdById       String?
+  createdAt         DateTime      @default(now())
+
+  @@index([tenantId, walletId, createdAt])
+}
+
+// ---------------------------------------------------------------------
+// المرافق والصيانة
+// ---------------------------------------------------------------------
+
+model MaintenanceRequest {
+  id                String    @id @default(cuid())
+  tenantId          String
+  number            Int
+  title             String
+  description       String?
+  /// ELECTRICAL | PLUMBING | HVAC | CARPENTRY | IT | CLEANING | SAFETY | VEHICLE | OTHER
+  category          String    @default("OTHER")
+  /// LOW | MEDIUM | HIGH | URGENT
+  priority          String    @default("MEDIUM")
+  /// NEW | IN_PROGRESS | WAITING_PARTS | DONE | CANCELLED
+  status            String    @default("NEW")
+  branchId          String?
+  roomId            String?
+  location          String?
+  assetId           String?
+  busId             String?
+  reportedById      String?
+  assigneeId        String?
+  dueDate           DateTime? @db.Date
+  startedAt         DateTime?
+  completedAt       DateTime?
+  beforePhotos      Json      @default("[]")
+  afterPhotos       Json      @default("[]")
+  partsCostMinor    Int       @default(0)
+  externalCostMinor Int       @default(0)
+  vendorName        String?
+  journalEntryId    String?
+  scheduleId        String?
+  resolution        String?
+  position          Float     @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+}
+
+/// صيانة وقائية دورية تولّد طلبات تلقائياً
+model MaintenanceSchedule {
+  id            String    @id @default(cuid())
+  tenantId      String
+  title         String
+  description   String?
+  category      String    @default("OTHER")
+  branchId      String?
+  roomId        String?
+  assetId       String?
+  busId         String?
+  assigneeId    String?
+  frequencyDays Int
+  nextDue       DateTime  @db.Date
+  isActive      Boolean   @default(true)
+  lastRunAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+/// حجز القاعات والملاعب والمختبرات
+model RoomBooking {
+  id         String   @id @default(cuid())
+  tenantId   String
+  roomId     String
+  title      String
+  date       DateTime @db.Date
+  startTime  String
+  endTime    String
+  /// CONFIRMED | CANCELLED
+  status     String   @default("CONFIRMED")
+  notes      String?
+  bookedById String?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, roomId, date])
+}
+
+// ---------------------------------------------------------------------
+// المواصلات
+// ---------------------------------------------------------------------
+
+model Bus {
+  id               String           @id @default(cuid())
+  tenantId         String
+  code             String
+  plateNumber      String
+  model            String?
+  year             Int?
+  capacity         Int
+  branchId         String?
+  driverId         String?
+  supervisorId     String?
+  assetId          String?
+  insuranceExpiry  DateTime?        @db.Date
+  licenseExpiry    DateTime?        @db.Date
+  inspectionExpiry DateTime?        @db.Date
+  /// ACTIVE | MAINTENANCE | RETIRED
+  status           String           @default("ACTIVE")
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  routes           TransportRoute[]
+  logs             BusLog[]
+
+  @@unique([tenantId, code])
+}
+
+model TransportRoute {
+  id             String                @id @default(cuid())
+  tenantId       String
+  code           String
+  name           String
+  busId          String?
+  bus            Bus?                  @relation(fields: [busId], references: [id])
+  branchId       String?
+  /// رسوم العام الكاملة للخط (تُفوتر بنسبة المدة المتبقية عند التسكين حسب الإعدادات)
+  annualFeeMinor Int                   @default(0)
+  isActive       Boolean               @default(true)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  stops          TransportStop[]
+  assignments    TransportAssignment[]
+
+  @@unique([tenantId, code])
+}
+
+model TransportStop {
+  id            String         @id @default(cuid())
+  tenantId      String
+  routeId       String
+  route         TransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  name          String
+  order         Int
+  lat           Float?
+  lng           Float?
+  morningTime   String?
+  afternoonTime String?
+}
+
+model TransportAssignment {
+  id          String         @id @default(cuid())
+  tenantId    String
+  studentId   String
+  routeId     String
+  route       TransportRoute @relation(fields: [routeId], references: [id])
+  stopId      String?
+  /// BOTH | MORNING | AFTERNOON
+  direction   String         @default("BOTH")
+  startDate   DateTime       @db.Date
+  endDate     DateTime?      @db.Date
+  /// ACTIVE | ENDED
+  status      String         @default("ACTIVE")
+  invoiceId   String?
+  createdById String?
+  createdAt   DateTime       @default(now())
+
+  @@index([tenantId, studentId, status])
+}
+
+model BusLog {
+  id             String   @id @default(cuid())
+  tenantId       String
+  busId          String
+  bus            Bus      @relation(fields: [busId], references: [id])
+  /// MAINTENANCE | FUEL | INSPECTION | INSURANCE | ACCIDENT
+  kind           String
+  date           DateTime @db.Date
+  odometer       Int?
+  costMinor      Int      @default(0)
+  description    String
+  journalEntryId String?
+  createdById    String?
+  createdAt      DateTime @default(now())
+}
+
+/// رحلة يومية (بدء المشرفة للرحلة وتحديث المحطة يرسل إشعار الاقتراب)
+model BusTrip {
+  id            String    @id @default(cuid())
+  tenantId      String
+  busId         String
+  routeId       String
+  date          DateTime  @db.Date
+  /// MORNING | AFTERNOON
+  shift         String
+  /// STARTED | COMPLETED
+  status        String    @default("STARTED")
+  currentStopId String?
+  boarded       Json      @default("[]")
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  createdById   String?
+
+  @@unique([tenantId, routeId, date, shift])
+}
+
+// ---------------------------------------------------------------------
+// المكتبة
+// ---------------------------------------------------------------------
+
+model LibraryBook {
+  id           String               @id @default(cuid())
+  tenantId     String
+  isbn         String?
+  title        String
+  author       String?
+  publisher    String?
+  year         Int?
+  category     String?
+  language     String               @default("ar")
+  callNumber   String?
+  description  String?
+  coverUrl     String?
+  /// مورد رقمي (رابط أو ملف) بدل النسخ الورقية
+  isDigital    Boolean              @default(false)
+  digitalUrl   String?
+  branchId     String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  deletedAt    DateTime?
+  copies       LibraryCopy[]
+  reservations LibraryReservation[]
+
+  @@index([tenantId, isbn])
+}
+
+model LibraryCopy {
+  id         String        @id @default(cuid())
+  tenantId   String
+  bookId     String
+  book       LibraryBook   @relation(fields: [bookId], references: [id])
+  barcode    String
+  shelf      String?
+  /// AVAILABLE | ON_LOAN | ON_HOLD | LOST | DAMAGED | WITHDRAWN
+  status     String        @default("AVAILABLE")
+  acquiredAt DateTime?     @db.Date
+  priceMinor Int?
+  lastSeenAt DateTime?
+  createdAt  DateTime      @default(now())
+  loans      LibraryLoan[]
+
+  @@unique([tenantId, barcode])
+}
+
+model LibraryLoan {
+  id            String      @id @default(cuid())
+  tenantId      String
+  copyId        String
+  copy          LibraryCopy @relation(fields: [copyId], references: [id])
+  studentId     String?
+  userId        String?
+  borrowerName  String
+  loanedAt      DateTime    @default(now())
+  dueDate       DateTime    @db.Date
+  returnedAt    DateTime?
+  renewals      Int         @default(0)
+  fineMinor     Int         @default(0)
+  /// NONE | INVOICED | WAIVED
+  fineStatus    String      @default("NONE")
+  fineInvoiceId String?
+  issuedById    String?
+  notes         String?
+
+  @@index([tenantId, returnedAt])
+}
+
+model LibraryReservation {
+  id         String      @id @default(cuid())
+  tenantId   String
+  bookId     String
+  book       LibraryBook @relation(fields: [bookId], references: [id])
+  studentId  String?
+  userId     String?
+  name       String
+  /// WAITING | READY | FULFILLED | CANCELLED | EXPIRED
+  status     String      @default("WAITING")
+  copyId     String?
+  readyUntil DateTime?   @db.Date
+  createdAt  DateTime    @default(now())
+}
+
+/// جرد المكتبة بالمسح
+model LibraryStockTake {
+  id          String    @id @default(cuid())
+  tenantId    String
+  branchId    String?
+  startedAt   DateTime  @default(now())
+  closedAt    DateTime?
+  scanned     Json      @default("[]")
+  missing     Int?
+  createdById String?
+}
+
+// ---------------------------------------------------------------------
+// الأمن والسلامة والعيادة
+// ---------------------------------------------------------------------
+
+model Visitor {
+  id           String    @id @default(cuid())
+  tenantId     String
+  number       Int
+  fullName     String
+  idLast4      String?
+  idHash       String?
+  phone        String?
+  company      String?
+  purpose      String
+  hostName     String?
+  hostUserId   String?
+  branchId     String?
+  /// رمز البطاقة/QR للدخول
+  badgeCode    String
+  expectedAt   DateTime?
+  checkInAt    DateTime?
+  checkOutAt   DateTime?
+  vehiclePlate String?
+  notes        String?
+  createdById  String?
+  createdAt    DateTime  @default(now())
+
+  @@unique([tenantId, number])
+  @@unique([tenantId, badgeCode])
+  @@index([tenantId, checkInAt])
+}
+
+/// مفوَّض باستلام الطالب (غير ولي الأمر)
+model AuthorizedPickup {
+  id          String    @id @default(cuid())
+  tenantId    String
+  studentId   String
+  name        String
+  relation    String
+  idLast4     String?
+  idHash      String?
+  phone       String?
+  photoUrl    String?
+  validUntil  DateTime? @db.Date
+  isActive    Boolean   @default(true)
+  createdById String?
+  createdAt   DateTime  @default(now())
+}
+
+model StudentPickup {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  studentId          String
+  guardianId         String?
+  authorizedPickupId String?
+  pickedByName       String
+  relation           String
+  /// ID_CHECK | PHOTO | CODE
+  verification       String
+  early              Boolean  @default(false)
+  reason             String?
+  at                 DateTime @default(now())
+  recordedById       String?
+  notes              String?
+
+  @@index([tenantId, at])
+}
+
+model SafetyIncident {
+  id                String    @id @default(cuid())
+  tenantId          String
+  number            Int
+  /// INJURY | FIGHT | FIRE | PROPERTY | SECURITY | HEALTH | BUS | OTHER
+  kind              String
+  /// LOW | MEDIUM | HIGH | CRITICAL
+  severity          String    @default("LOW")
+  occurredAt        DateTime
+  branchId          String?
+  location          String
+  description       String
+  involved          Json      @default("[]")
+  actionsTaken      String?
+  /// OPEN | INVESTIGATING | CLOSED
+  status            String    @default("OPEN")
+  guardiansNotified Boolean   @default(false)
+  attachments       Json      @default("[]")
+  reportedById      String?
+  closedAt          DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([tenantId, number])
+}
+
+model SafetyDrill {
+  id              String    @id @default(cuid())
+  tenantId        String
+  /// FIRE | EVACUATION | EARTHQUAKE | LOCKDOWN | EQUIPMENT_CHECK
+  kind            String
+  branchId        String?
+  scheduledAt     DateTime
+  conductedAt     DateTime?
+  durationSeconds Int?
+  participants    Int?
+  result          String?
+  issues          String?
+  /// SCHEDULED | DONE | MISSED
+  status          String    @default("SCHEDULED")
+  createdById     String?
+  createdAt       DateTime  @default(now())
+}
+
+model EvacuationPlan {
+  id             String    @id @default(cuid())
+  tenantId       String
+  branchId       String?
+  title          String
+  assemblyPoints String?
+  description    String?
+  fileUrl        String?
+  reviewedAt     DateTime? @db.Date
+  nextReview     DateTime? @db.Date
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+/// زيارة العيادة — الشكوى والملاحظات مشفّرة (بيانات صحية)
+model ClinicVisit {
+  id                String           @id @default(cuid())
+  tenantId          String
+  number            Int
+  studentId         String?
+  employeeId        String?
+  patientName       String
+  visitAt           DateTime         @default(now())
+  complaintEnc      String
+  notesEnc          String?
+  temperatureTenths Int?
+  /// RETURNED_TO_CLASS | RESTED | SENT_HOME | REFERRED | AMBULANCE
+  outcome           String           @default("RETURNED_TO_CLASS")
+  guardianNotified  Boolean          @default(false)
+  nurseId           String?
+  createdAt         DateTime         @default(now())
+  dispenses         ClinicDispense[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, studentId])
+}
+
+model ClinicMedicine {
+  id         String           @id @default(cuid())
+  tenantId   String
+  name       String
+  form       String?
+  unit       String           @default("قرص")
+  quantity   Int              @default(0)
+  minQty     Int              @default(0)
+  expiryDate DateTime?        @db.Date
+  isActive   Boolean          @default(true)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  dispenses  ClinicDispense[]
+}
+
+model ClinicDispense {
+  id         String         @id @default(cuid())
+  tenantId   String
+  visitId    String
+  visit      ClinicVisit    @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  medicineId String
+  medicine   ClinicMedicine @relation(fields: [medicineId], references: [id])
+  quantity   Int
 }
