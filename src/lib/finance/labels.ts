@@ -80,6 +80,10 @@ export const JOURNAL_SOURCE = {
   WRITE_OFF: { label: "شطب دين", color: "red" },
   CLOSING: { label: "إقفال", color: "slate" },
   REVERSAL: { label: "قيد عكسي", color: "red" },
+  PAYROLL: { label: "مسير رواتب", color: "purple" },
+  PAYROLL_PAYMENT: { label: "صرف رواتب", color: "purple" },
+  STAFF_LOAN: { label: "سلفة موظف", color: "brown" },
+  END_OF_SERVICE: { label: "نهاية خدمة", color: "slate" },
 } as const satisfies Labeled<string>;
 export type JournalSourceKey = keyof typeof JOURNAL_SOURCE;
 

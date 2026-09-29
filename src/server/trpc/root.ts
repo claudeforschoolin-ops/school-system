@@ -8,6 +8,7 @@ import { attendanceRouter, behaviorRouter, leavesRouter, transfersRouter } from 
 import { accountRouter } from "./routers/account";
 import { financeRouter } from "./routers/finance";
 import { assessmentRouter } from "./routers/assessment";
+import { hrRouter } from "./routers/hr";
 import { auditRouter, orgRouter, rolesRouter, usersRouter } from "./routers/admin";
 import { authRouter } from "./routers/auth";
 import { approvalRouter, calendarRouter, chatRouter, commentRouter, notificationRouter } from "./routers/collaboration";
@@ -44,6 +45,7 @@ export const appRouter = router({
   activities: activitiesRouter,
   finance: financeRouter,
   assessment: assessmentRouter,
+  hr: hrRouter,
 });
 
 export type AppRouter = typeof appRouter;

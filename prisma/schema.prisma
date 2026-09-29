@@ -1877,6 +1877,14 @@ enum JournalSource {
   WRITE_OFF
   CLOSING
   REVERSAL
+  /// اعتماد مسير الرواتب
+  PAYROLL
+  /// صرف الرواتب من البنك
+  PAYROLL_PAYMENT
+  /// صرف سلفة موظف
+  STAFF_LOAN
+  /// تصفية نهاية الخدمة
+  END_OF_SERVICE
 }
 
 /// القيد اليومي — لا يُعدَّل بعد الترحيل (يُعكس بقيد)؛ التوازن مفروض بمشغّل في قاعدة البيانات

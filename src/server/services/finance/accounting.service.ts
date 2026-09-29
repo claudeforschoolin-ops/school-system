@@ -249,6 +249,12 @@ export function sourceLink(sourceType: string | null, sourceId: string | null): 
       return `/finance/vouchers/${sourceId}`;
     case "Guardian":
       return `/finance/families/${sourceId}`;
+    case "PayrollRun":
+      return `/hr/payroll/${sourceId}`;
+    case "EndOfService":
+      return `/hr/end-of-service/${sourceId}`;
+    case "EmployeeLoan":
+      return `/hr/payroll/loans`;
     default:
       return null;
   }
