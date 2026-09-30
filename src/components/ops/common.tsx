@@ -283,14 +283,14 @@ export function PhotoList({ value, onChange, disabled, label }: { value: Array<{
 }
 
 /** نموذج إعدادات وحدة عام: يحمّل القيم ويحفظها عبر إعدادات الوحدات */
-export function ModuleSettingsForm<T extends Record<string, unknown>>({ settingsKey, title, description, children }: { settingsKey: "library" | "canteen" | "transport" | "procurement" | "finance"; title: string; description?: string; children: (v: T, set: (patch: Partial<T>) => void, canEdit: boolean) => ReactNode }) {
+export function ModuleSettingsForm<T extends Record<string, unknown>>({ settingsKey, title, description, children }: { settingsKey: "library" | "canteen" | "transport" | "procurement" | "finance" | "compliance" | "security" | "backups" | "analytics"; title: string; description?: string; children: (v: T, set: (patch: Partial<T>) => void, canEdit: boolean) => ReactNode }) {
   const q = trpc.moduleSettings.get.useQuery({ key: settingsKey });
   if (q.error) return <EmptyState illustration="lock" title="لا يمكن عرض الإعدادات" description={q.error.message} />;
   if (!q.data) return <SkeletonLines lines={8} />;
   return <SettingsInner key={JSON.stringify(q.data.values)} settingsKey={settingsKey} title={title} description={description} initial={q.data.values as unknown as T} canEdit={q.data.canEdit}>{children}</SettingsInner>;
 }
 
-function SettingsInner<T extends Record<string, unknown>>({ settingsKey, title, description, initial, canEdit, children }: { settingsKey: "library" | "canteen" | "transport" | "procurement" | "finance"; title: string; description?: string; initial: T; canEdit: boolean; children: (v: T, set: (patch: Partial<T>) => void, canEdit: boolean) => ReactNode }) {
+function SettingsInner<T extends Record<string, unknown>>({ settingsKey, title, description, initial, canEdit, children }: { settingsKey: "library" | "canteen" | "transport" | "procurement" | "finance" | "compliance" | "security" | "backups" | "analytics"; title: string; description?: string; initial: T; canEdit: boolean; children: (v: T, set: (patch: Partial<T>) => void, canEdit: boolean) => ReactNode }) {
   const utils = trpc.useUtils();
   const [v, setV] = useState(initial);
   const save = trpc.moduleSettings.update.useMutation({ onSuccess: async () => (await Promise.all([utils.moduleSettings.get.invalidate({ key: settingsKey }), utils.account.context.invalidate()]), toast.success("حُفظت الإعدادات")), onError: (e) => toast.error(e.message) });
