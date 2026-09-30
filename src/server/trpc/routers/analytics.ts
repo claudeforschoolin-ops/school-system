@@ -16,6 +16,7 @@ const branch = z.object({ branchId: id.nullish() });
 export const reportsRouter = router({
   datasets: p.query(({ ctx }) => availableDatasets(ctx.session)),
   list: p.query(({ ctx }) => reports.listReports(ctx.db, ctx.session)),
+  shareTargets: p.query(({ ctx }) => reports.shareTargets(ctx.db, ctx.session)),
   get: p.input(z.object({ id })).query(({ ctx, input }) => reports.getReport(ctx.db, ctx.session, input.id)),
   run: p.input(z.object({ dataset: z.string().max(60), config: reports.configSchema })).query(({ ctx, input }) => reports.runAdhoc(ctx.db, ctx.session, { dataset: input.dataset, config: input.config })),
   runSaved: p.input(z.object({ id })).query(({ ctx, input }) => reports.runSaved(ctx.db, ctx.session, input.id)),

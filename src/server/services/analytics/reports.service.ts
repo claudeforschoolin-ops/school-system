@@ -123,6 +123,16 @@ export async function deleteReport(db: TenantDb, session: SessionData, id: strin
   return { ok: true };
 }
 
+/** الأدوار والمستخدمون للمشاركة وقائمة مستلمي الجدولة (موظفون نشطون) */
+export async function shareTargets(db: TenantDb, session: SessionData) {
+  requireReports(session);
+  const [roles, users] = await Promise.all([
+    db.role.findMany({ where: { key: { notIn: ["PARENT", "STUDENT"] } }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    db.user.findMany({ where: { deletedAt: null, status: "ACTIVE", roles: { some: { role: { key: { notIn: ["PARENT", "STUDENT"] } } } } }, select: { id: true, name: true, jobTitle: true }, orderBy: { name: "asc" } }),
+  ]);
+  return { roles, users };
+}
+
 // ---------------------------------------------------------------------
 // التشغيل
 // ---------------------------------------------------------------------
