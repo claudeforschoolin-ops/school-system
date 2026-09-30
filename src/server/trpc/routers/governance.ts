@@ -8,6 +8,7 @@ import * as rules from "@/server/services/automation-rules.service";
 import * as backups from "@/server/services/backup.service";
 import * as compliance from "@/server/services/compliance.service";
 import * as documents from "@/server/services/documents.service";
+import * as projects from "@/server/services/projects.service";
 import * as support from "@/server/services/support.service";
 import * as workflows from "@/server/services/workflows.service";
 import { configSchema } from "@/server/services/analytics/reports.service";
@@ -107,4 +108,10 @@ export const backupsRouter = router({
   create: p.mutation(({ ctx }) => backups.backupNow(ctx.db, ctx.session)),
   verify: p.input(z.object({ id })).mutation(({ ctx, input }) => backups.verifyBackup(ctx.db, ctx.session, input.id)),
   restore: p.input(z.object({ id, slug: z.string().max(40), name: z.string().max(160) })).mutation(({ ctx, input }) => backups.restoreBackup(ctx.db, ctx.session, input)),
+});
+
+export const projectsRouter = router({
+  options: p.query(({ ctx }) => projects.projectOptions(ctx.db, ctx.session)),
+  list: p.query(({ ctx }) => projects.listProjects(ctx.db, ctx.session)),
+  create: p.input(z.object({ title: z.string().max(160), description: z.string().max(500).nullish(), icon: z.string().max(80).nullish(), teamspaceId: id, templateKey: z.string().max(40), startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), assigneeIds: z.array(id).max(20).optional() })).mutation(({ ctx, input }) => projects.createProject(ctx.db, ctx.session, input)),
 });

@@ -70,6 +70,8 @@ const commonStaff = merge(
   grant(["support"], { view: "OWN", create: "OWN" }),
   grant(["e_documents"], VIEW("OWN")),
   grant(["compliance"], { view: "OWN", create: "OWN" }),
+  // المشاريع: الوحدة تفتح الواجهة، والرؤية الفعلية من صلاحية مساحة الفريق
+  grant(["projects"], { view: "ALL", create: "ALL" }),
 );
 /** أدوات التحليل لمن يدير وحدة على مستوى المدرسة أو الفرع */
 const analyst = (scope: Scope) => merge(grant(["dashboards"], READ(scope)), grant(["custom_reports"], { view: scope, create: scope, export: scope }));
