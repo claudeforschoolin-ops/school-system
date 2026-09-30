@@ -33,7 +33,7 @@ import { Field, Input, Textarea } from "@/components/ui/input";
 import { Segmented } from "@/components/ui/segmented";
 import { Select } from "@/components/ui/select";
 import { SkeletonLines } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
+import { SwitchRow } from "@/components/ui/switch";
 import { Tag } from "@/components/ui/tag";
 import { toast } from "@/components/ui/toast";
 import { FilterEditor, isNumeric, useCellFormat } from "./common";
@@ -447,7 +447,7 @@ function SaveDialog({ report, dataset, config, defaultName, onClose, onSaved }: 
               ))}
             </div>
           ) : null}
-          <Switch checked={v.isPinned} onChange={(isPinned) => setV({ ...v, isPinned })} label="تثبيت في أعلى القائمة" />
+          <SwitchRow checked={v.isPinned} onChange={(isPinned) => setV({ ...v, isPinned })} label="تثبيت في أعلى القائمة" />
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>إلغاء</Button>
@@ -501,7 +501,7 @@ function ScheduleDialog({ report, runs, onClose }: { report: SavedReport; runs: 
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent title="الإرسال المجدول" description="يُشغَّل التقرير بصلاحيات مالكه ويُرسل لمستلمين يملكون صلاحية بياناته فقط، مع رابط تنزيل آمن." width={640}>
         <div className="space-y-3 px-5 pb-4">
-          <Switch checked={enabled} onChange={setEnabled} label="تفعيل الإرسال المجدول" />
+          <SwitchRow checked={enabled} onChange={setEnabled} label="تفعيل الإرسال المجدول" />
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="التكرار"><Segmented value={s.frequency} onChange={(f) => setS({ ...s, frequency: f as ReportSchedule["frequency"] })} options={(Object.keys(FREQUENCY_LABEL) as ReportSchedule["frequency"][]).map((f) => ({ value: f, label: FREQUENCY_LABEL[f] }))} /></Field>
             <Field label="الوقت (بتوقيت المدرسة)"><Input type="time" value={s.time} onChange={(e) => setS({ ...s, time: e.target.value })} /></Field>

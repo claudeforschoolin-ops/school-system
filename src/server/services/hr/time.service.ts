@@ -325,7 +325,7 @@ export async function requestLeave(db: TenantDb, session: SessionData, input: { 
   const steps = [];
   if (e.manager?.userId && e.manager.userId !== session.user.id) steps.push({ name: "موافقة المدير المباشر", approverUserId: e.manager.userId });
   steps.push({ name: "اعتماد الموارد البشرية", approverRoleKey: "HR_MANAGER" });
-  const approval = await createApprovalRequest(db, session, { type: "staff_leave", title: `${type.name} — ${e.fullName}: ${days} أيام من ${input.startDate}`, description: input.reason ?? undefined, entityType: "StaffLeaveRequest", entityId: req.id, link: "/hr/attendance/leaves", steps });
+  const approval = await createApprovalRequest(db, session, { type: "staff_leave", title: `${type.name} — ${e.fullName}: ${days} أيام من ${input.startDate}`, description: input.reason ?? undefined, entityType: "StaffLeaveRequest", entityId: req.id, link: "/hr/attendance/leaves", managerUserId: e.manager?.userId ?? null, steps });
   return db.staffLeaveRequest.update({ where: { id: req.id }, data: { approvalRequestId: approval.id } });
 }
 

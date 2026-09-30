@@ -120,6 +120,7 @@ export async function createSettlement(db: TenantDb, session: SessionData, input
     entityType: "EndOfService",
     entityId: eos.id,
     link: `/hr/end-of-service/${eos.id}`,
+    amountMinor: p.netMinor,
     steps: [
       { name: "مراجعة مدير الموارد البشرية", approverRoleKey: "HR_MANAGER" },
       { name: "اعتماد مدير المدرسة", approverRoleKey: "PRINCIPAL" },

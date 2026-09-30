@@ -200,6 +200,7 @@ export async function submitRun(db: TenantDb, session: SessionData, id: string) 
     entityType: "PayrollRun",
     entityId: run.id,
     link: `/hr/payroll/${run.id}`,
+    amountMinor: run.grossMinor,
     steps: [
       { name: "مراجعة الموارد البشرية", approverRoleKey: "HR_MANAGER" },
       { name: "اعتماد مدير المدرسة", approverRoleKey: "PRINCIPAL" },
@@ -392,7 +393,7 @@ export async function requestLoan(db: TenantDb, session: SessionData, input: { e
   if (maxSalaries > 0 && input.amountMinor > basic * maxSalaries) throw badRequest(`السلفة لا تتجاوز ${maxSalaries} رواتب أساسية (إعدادات الرواتب)`);
   if (await db.employeeLoan.findFirst({ where: { employeeId: e.id, status: { in: ["PENDING", "ACTIVE"] } } })) throw badRequest("لدى الموظف سلفة قائمة");
   const loan = await db.employeeLoan.create({ data: { tenantId: session.tenant.id, number: await nextNumber(db, session.tenant.id, "loan"), employeeId: e.id, amountMinor: input.amountMinor, installmentMinor: input.installmentMinor, startMonth: input.startMonth, reason: input.reason.trim(), createdById: session.user.id } });
-  const approval = await createApprovalRequest(db, session, { type: "employee_loan", title: `سلفة ${e.fullName}: ${money(session, input.amountMinor)} على ${Math.ceil(input.amountMinor / input.installmentMinor)} أقساط`, description: input.reason, entityType: "EmployeeLoan", entityId: loan.id, link: "/hr/payroll/loans", steps: [{ name: "اعتماد مدير الموارد البشرية", approverRoleKey: "HR_MANAGER" }] });
+  const approval = await createApprovalRequest(db, session, { type: "employee_loan", title: `سلفة ${e.fullName}: ${money(session, input.amountMinor)} على ${Math.ceil(input.amountMinor / input.installmentMinor)} أقساط`, description: input.reason, entityType: "EmployeeLoan", entityId: loan.id, link: "/hr/payroll/loans", amountMinor: input.amountMinor, managerUserId: e.managerId ? ((await db.employee.findFirst({ where: { id: e.managerId }, select: { userId: true } }))?.userId ?? null) : null, steps: [{ name: "اعتماد مدير الموارد البشرية", approverRoleKey: "HR_MANAGER" }] });
   return db.employeeLoan.update({ where: { id: loan.id }, data: { approvalRequestId: approval.id } });
 }
 

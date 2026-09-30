@@ -39,3 +39,16 @@ export function Switch({
     </button>
   );
 }
+
+/** مفتاح بتسمية ظاهرة (والنقر على النص يبدّل المفتاح) */
+export function SwitchRow({ checked, onChange, label, hint, disabled, size = "md" }: { checked: boolean; onChange: (checked: boolean) => void; label: string; hint?: string; disabled?: boolean; size?: "sm" | "md" }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <Switch checked={checked} onChange={onChange} label={label} disabled={disabled} size={size} />
+      <button type="button" disabled={disabled} onClick={() => onChange(!checked)} className="text-start text-[13px] leading-5 text-fg disabled:opacity-50" tabIndex={-1} aria-hidden>
+        {label}
+        {hint ? <span className="block text-[12px] text-fg-3">{hint}</span> : null}
+      </button>
+    </div>
+  );
+}

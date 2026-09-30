@@ -298,6 +298,7 @@ export async function grantStudentDiscount(
       entityType: "StudentDiscount",
       entityId: sd.id,
       link: `/students/${student.id}?tab=finance`,
+      amountMinor: amount,
       steps: [{ name: "اعتماد مدير المدرسة", approverRoleKey: "PRINCIPAL" }],
     });
     await db.studentDiscount.update({ where: { id: sd.id }, data: { approvalRequestId: req.id } });

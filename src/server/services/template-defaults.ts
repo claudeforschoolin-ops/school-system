@@ -20,5 +20,7 @@ export const DEFAULT_TEMPLATES = {
   reminder_due: "يستحق اليوم قسط {student} بمبلغ {amount}. نشكر مبادرتكم بالسداد — {school}",
   reminder_overdue: "نفيدكم بتأخر سداد {amount} لـ{student} منذ {days} يوماً. نأمل السداد أو التواصل مع المحاسبة — {school}",
   reminder_final: "إشعار أخير: مستحقات {student} المتأخرة {amount} منذ {days} يوماً. قد تُطبَّق سياسة المديونية — {school}",
+  automation_notice: "{message} — {school}",
+  document_to_sign: "لديكم {document} بانتظار التوقيع الإلكتروني من {school}. ادخلوا إلى حسابكم للاطلاع والتوقيع.",
 } as const;
 export type TemplateKey = keyof typeof DEFAULT_TEMPLATES;

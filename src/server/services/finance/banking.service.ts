@@ -492,6 +492,7 @@ export async function createVoucher(db: TenantDb, session: SessionData, input: V
       entityType: "PaymentVoucher",
       entityId: v.id,
       link: `/finance/vouchers/${v.id}`,
+      amountMinor: total,
       steps: [{ name: "اعتماد مدير المدرسة", approverRoleKey: "PRINCIPAL" }],
     });
     return db.paymentVoucher.update({ where: { id: v.id }, data: { approvalRequestId: req.id } });

@@ -145,6 +145,7 @@ export async function submitRequest(db: TenantDb, session: SessionData, id: stri
     entityType: "PurchaseRequest",
     entityId: r.id,
     link: `/inventory/purchasing/requests/${r.id}`,
+    amountMinor: r.estimatedTotalMinor,
     steps: [{ name: "مراجعة المحاسب", approverRoleKey: "ACCOUNTANT" }, ...(above ? [{ name: "اعتماد مدير المدرسة", approverRoleKey: "PRINCIPAL" }] : [])],
   });
   return db.purchaseRequest.update({ where: { id: r.id }, data: { status: "PENDING", approvalRequestId: req.id } });

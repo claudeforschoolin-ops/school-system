@@ -186,6 +186,7 @@ export async function submitBudget(db: TenantDb, session: SessionData, id: strin
     entityType: "Budget",
     entityId: b.id,
     link: `/finance/budget/${b.id}`,
+    amountMinor: total,
     steps: [{ name: "مراجعة المدير المالي", approverRoleKey: "ACCOUNTANT" }, { name: "اعتماد مدير المدرسة", approverRoleKey: "PRINCIPAL" }],
   });
   return db.budget.update({ where: { id: b.id }, data: { status: "PENDING", approvalRequestId: req.id } });

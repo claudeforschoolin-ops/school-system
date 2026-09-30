@@ -802,6 +802,7 @@ export async function requestRefund(
     entityType: "Refund",
     entityId: refund.id,
     link: `/finance/families/${guardian.id}`,
+    amountMinor: input.amountMinor,
     steps: [{ name: "اعتماد مدير المدرسة", approverRoleKey: "PRINCIPAL" }],
   });
   return db.refund.update({ where: { id: refund.id }, data: { approvalRequestId: req.id } });

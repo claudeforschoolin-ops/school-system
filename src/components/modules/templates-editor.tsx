@@ -28,6 +28,8 @@ const LABELS: Record<TemplateKey, string> = {
   reminder_due: "تذكير يوم الاستحقاق",
   reminder_overdue: "تذكير بالتأخر",
   reminder_final: "إشعار أخير بالمديونية",
+  automation_notice: "تنبيه من قاعدة أتمتة",
+  document_to_sign: "مستند بانتظار التوقيع",
 };
 
 export function TemplatesEditor({ keys }: { keys: TemplateKey[] }) {
