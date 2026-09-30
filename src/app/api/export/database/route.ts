@@ -4,6 +4,7 @@
  */
 import ExcelJS from "exceljs";
 import { getCurrentSession } from "@/server/auth/current";
+import { NETWORK_BLOCKED_MESSAGE, requestNetworkAllowed } from "@/server/auth/network";
 import { createTenantDb, writeAudit } from "@/server/db/tenant";
 import { getDatabaseBundle, listRows } from "@/server/services/database.service";
 import { applyView, displayText, orderedProperties, type EngineContext } from "@/lib/database/engine";
@@ -13,6 +14,7 @@ import type { RowRecord } from "@/lib/database/types";
 export async function GET(req: Request) {
   const session = await getCurrentSession();
   if (!session || session.requires2faChallenge) return new Response("غير مصرح", { status: 401 });
+  if (!(await requestNetworkAllowed(session))) return new Response(NETWORK_BLOCKED_MESSAGE, { status: 403 });
   const url = new URL(req.url);
   const databaseId = url.searchParams.get("databaseId") ?? "";
   const viewId = url.searchParams.get("viewId");

@@ -2,6 +2,7 @@
  * تنزيل/عرض ملف: متاح لمستخدمي المستأجر نفسه فقط.
  */
 import { getCurrentSession } from "@/server/auth/current";
+import { NETWORK_BLOCKED_MESSAGE, requestNetworkAllowed } from "@/server/auth/network";
 import { rootDb } from "@/server/db/client";
 import { storage } from "@/server/storage";
 
@@ -10,6 +11,7 @@ const INLINE = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "a
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const session = await getCurrentSession();
   if (!session) return new Response("غير مصرح", { status: 401 });
+  if (!(await requestNetworkAllowed(session))) return new Response(NETWORK_BLOCKED_MESSAGE, { status: 403 });
   const { id } = await ctx.params;
   const file = await rootDb.fileObject.findFirst({ where: { id, tenantId: session.tenant.id } });
   if (!file) return new Response("غير موجود", { status: 404 });

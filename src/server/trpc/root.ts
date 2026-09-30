@@ -11,7 +11,7 @@ import { assessmentRouter } from "./routers/assessment";
 import { hrRouter } from "./routers/hr";
 import { opsRouter, assetsRouter, budgetRouter, clinicRouter, inventoryRouter, libraryRouter, maintenanceRouter, posRouter, procurementRouter, safetyRouter, transportRouter } from "./routers/ops";
 import { analyticsRouter, dashboardsRouter, reportsRouter } from "./routers/analytics";
-import { automationRouter, backupsRouter, complianceRouter, documentsRouter, projectsRouter, supportRouter, workflowsRouter } from "./routers/governance";
+import { automationRouter, backupsRouter, complianceRouter, documentsRouter, projectsRouter, securityRouter, supportRouter, workflowsRouter } from "./routers/governance";
 import { auditRouter, orgRouter, rolesRouter, usersRouter } from "./routers/admin";
 import { authRouter } from "./routers/auth";
 import { approvalRouter, calendarRouter, chatRouter, commentRouter, notificationRouter } from "./routers/collaboration";
@@ -70,6 +70,7 @@ export const appRouter = router({
   support: supportRouter,
   backups: backupsRouter,
   projects: projectsRouter,
+  security: securityRouter,
 });
 
 export type AppRouter = typeof appRouter;

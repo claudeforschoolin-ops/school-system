@@ -3,6 +3,7 @@
  * يتطلب صلاحية audit:export، والتصدير نفسه يُسجَّل في السجل.
  */
 import { getCurrentSession } from "@/server/auth/current";
+import { NETWORK_BLOCKED_MESSAGE, requestNetworkAllowed } from "@/server/auth/network";
 import { createTenantDb, writeAudit } from "@/server/db/tenant";
 import { auditWhere } from "@/server/services/admin/audit.service";
 import { ACTION_LABELS, ENTITY_LABELS } from "@/server/db/audit-utils";
@@ -27,6 +28,7 @@ function parseDate(value: string | null): Date | null {
 export async function GET(req: Request) {
   const session = await getCurrentSession();
   if (!session || session.requires2faChallenge) return new Response("غير مصرح", { status: 401 });
+  if (!(await requestNetworkAllowed(session))) return new Response(NETWORK_BLOCKED_MESSAGE, { status: 403 });
   if (!can(session.access, "audit", "export")) return new Response("لا تملك صلاحية تصدير سجل التدقيق", { status: 403 });
 
   const url = new URL(req.url);

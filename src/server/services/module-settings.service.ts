@@ -2,6 +2,7 @@
  * إعدادات الوحدات (تُحفظ في إعدادات المدرسة): المستندات المطلوبة، ترقيم الطلاب، نموذج القبول العام،
  * قواعد الحضور، وقوالب رسائل أولياء الأمور. التعديل يتطلب صلاحية الوحدة على مستوى المدرسة كلها.
  */
+import { ipAllowed } from "@/lib/ip";
 import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import { DOCUMENT_TYPES } from "@/lib/students";
@@ -300,7 +301,7 @@ export async function getModuleSettings(db: TenantDb, session: SessionData, key:
   return { values: readModuleSettings(tenant.settings, key), canEdit: canEditModuleSettings(session, key) };
 }
 
-export async function updateModuleSettings(db: TenantDb, session: SessionData, key: ModuleSettingsKey, patch: unknown) {
+export async function updateModuleSettings(db: TenantDb, session: SessionData, key: ModuleSettingsKey, patch: unknown, meta?: { ip: string | null }) {
   if (!canEditModuleSettings(session, key)) throw forbidden("تعديل إعدادات الوحدة يتطلب صلاحيتها على مستوى المدرسة كاملة");
   const tenant = await db.tenant.findFirstOrThrow({ where: { id: session.tenant.id }, select: { settings: true } });
   let current: object = readModuleSettings(tenant.settings, key);
@@ -311,6 +312,12 @@ export async function updateModuleSettings(db: TenantDb, session: SessionData, k
   if (key === "finance") {
     const region = readRegion(tenant.settings);
     if (!validTaxNumber((parsed as { vatNumber: string }).vatNumber, region)) throw badRequest(`${region.taxNumberLabel}: الصيغة غير صحيحة لإعدادات الدولة`);
+  }
+  if (key === "security" && meta) {
+    // منع قفل المدير لنفسه: إن كان القيد سيشمله ولا يسمح بعنوانه الحالي
+    const sec = parsed as { ipRestrictionEnabled: boolean; ipAllowlist: string[]; ipScope: "SENSITIVE" | "ALL_STAFF" };
+    const applies = sec.ipScope === "ALL_STAFF" ? session.roleKeys.some((k) => k !== "PARENT" && k !== "STUDENT") : Boolean(session.sensitive);
+    if (sec.ipRestrictionEnabled && sec.ipAllowlist.length && applies && !ipAllowed(meta.ip, sec.ipAllowlist)) throw badRequest(`عنوانك الحالي (${meta.ip ?? "غير معروف"}) ليس ضمن القائمة؛ أضفه أولاً حتى لا يُقفل حسابك`);
   }
   const settings = { ...((tenant.settings ?? {}) as Record<string, unknown>), [key]: parsed };
   await db.tenant.update({ where: { id: session.tenant.id }, data: { settings: settings as Prisma.InputJsonValue } });

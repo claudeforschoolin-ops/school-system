@@ -3,6 +3,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { getCurrentSession } from "@/server/auth/current";
+import { NETWORK_BLOCKED_MESSAGE, requestNetworkAllowed } from "@/server/auth/network";
 import { createTenantDb } from "@/server/db/tenant";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { ALLOWED_MIME, MAX_UPLOAD_BYTES, sniffMatches, storage } from "@/server/storage";
@@ -14,6 +15,7 @@ function json(body: unknown, status = 200) {
 export async function POST(req: Request) {
   const session = await getCurrentSession();
   if (!session || session.requires2faChallenge) return json({ error: "يجب تسجيل الدخول أولاً" }, 401);
+  if (!(await requestNetworkAllowed(session))) return json({ error: NETWORK_BLOCKED_MESSAGE }, 403);
   if (!rateLimit(`upload:${session.user.id}`, 60, 10 * 60 * 1000).allowed) return json({ error: "رفع كثير خلال وقت قصير" }, 429);
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");

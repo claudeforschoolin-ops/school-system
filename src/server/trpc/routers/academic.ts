@@ -186,5 +186,5 @@ export const moduleSettingsRouter = router({
   get: authedProcedure.input(z.object({ key: settingsKey })).query(({ ctx, input }) => getModuleSettings(ctx.db, ctx.session, input.key as ModuleSettingsKey)),
   update: authedProcedure
     .input(z.object({ key: settingsKey, patch: z.record(z.string(), z.unknown()) }))
-    .mutation(({ ctx, input }) => updateModuleSettings(ctx.db, ctx.session, input.key as ModuleSettingsKey, input.patch)),
+    .mutation(({ ctx, input }) => updateModuleSettings(ctx.db, ctx.session, input.key as ModuleSettingsKey, input.patch, { ip: ctx.ip })),
 });

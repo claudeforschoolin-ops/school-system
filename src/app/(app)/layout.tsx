@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { flattenPermissions } from "@/lib/rbac/access";
 import { getCurrentSession } from "@/server/auth/current";
+import { requestNetworkAllowed } from "@/server/auth/network";
 import { AppShell } from "@/components/shell/app-shell";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -8,6 +9,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!session) redirect("/login");
   if (session.requires2faChallenge) redirect("/two-factor");
   if (session.requires2faSetup) redirect("/setup-2fa");
+  if (!(await requestNetworkAllowed(session))) redirect("/network-blocked");
   const initial = {
     user: session.user,
     tenant: session.tenant,

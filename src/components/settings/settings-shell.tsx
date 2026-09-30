@@ -1,6 +1,6 @@
 "use client";
 /** إطار الإعدادات: تنقل جانبي حسب الصلاحيات + محتوى القسم */
-import { Building2, FileClock, GitBranch, KeyRound, Mail, Network, Palette, ShieldCheck, UserRound, Users } from "lucide-react";
+import { Building2, DatabaseBackup, FileClock, GitBranch, Globe, KeyRound, Mail, Network, Palette, ShieldCheck, UserRound, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -26,6 +26,8 @@ export function SettingsShell({ title, description, children, actions }: { title
     can("roles", "view") && { href: "/settings/roles", label: "الأدوار والصلاحيات", icon: ShieldCheck },
     can("audit", "view") && { href: "/settings/audit", label: "سجل التدقيق", icon: FileClock },
     can("settings", "view") && { href: "/settings/outbox", label: "صندوق الإرسال", icon: Mail },
+    can("security", "view") && { href: "/settings/access-policy", label: "سياسة الوصول", icon: Globe },
+    can("backups", "view") && { href: "/settings/backups", label: "النسخ الاحتياطي", icon: DatabaseBackup },
   ].filter(Boolean) as Array<{ href: string; label: string; icon: typeof Users }>;
 
   const link = (item: { href: string; label: string; icon: typeof Users }) => (

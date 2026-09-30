@@ -23,7 +23,10 @@ import { Select } from "@/components/ui/select";
 import { SkeletonLines } from "@/components/ui/skeleton";
 import { Tag } from "@/components/ui/tag";
 import { toast } from "@/components/ui/toast";
+import { ModuleSettingsForm } from "@/components/ops/common";
 import { navOf } from "./dashboards";
+
+const MONTH_NAMES = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 
 function useMetricFormat() {
   const prefs = usePrefs();
@@ -96,6 +99,17 @@ export function AnalyticsPage() {
           </FinTable>
         ) : null}
       </section>
+      {can("analytics", "update") && !overview.error ? (
+        <section className="mt-8 max-w-[640px]">
+          <ModuleSettingsForm<{ yearStartMonth: number }> settingsKey="analytics" title="إعدادات التحليل" description="يحدد بداية «العام الدراسي» في المقارنات والتوقعات (مثلاً سبتمبر في أغلب الدول، ويناير في بعضها).">
+            {(v, set, canEdit) => (
+              <Field label="شهر بداية العام الدراسي">
+                <Select value={String(v.yearStartMonth)} disabled={!canEdit} onChange={(m) => set({ yearStartMonth: Number(m) })} options={MONTH_NAMES.map((label, i) => ({ value: String(i + 1), label }))} />
+              </Field>
+            )}
+          </ModuleSettingsForm>
+        </section>
+      ) : null}
       {importing ? <ImportDialog onClose={() => setImporting(false)} /> : null}
     </ModuleShell>
   );

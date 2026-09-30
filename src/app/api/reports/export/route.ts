@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 import { getCurrentSession } from "@/server/auth/current";
+import { NETWORK_BLOCKED_MESSAGE, requestNetworkAllowed } from "@/server/auth/network";
 import { createTenantDb } from "@/server/db/tenant";
 import { configSchema, exportReport } from "@/server/services/analytics/reports.service";
 
@@ -12,6 +13,7 @@ const body = z.object({ id: z.string().max(64).nullish(), dataset: z.string().ma
 export async function POST(req: Request) {
   const session = await getCurrentSession();
   if (!session || session.requires2faChallenge) return new Response("غير مصرح", { status: 401 });
+  if (!(await requestNetworkAllowed(session))) return new Response(NETWORK_BLOCKED_MESSAGE, { status: 403 });
   const parsed = body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return new Response("طلب غير صالح", { status: 400 });
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? null;

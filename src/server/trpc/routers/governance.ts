@@ -4,6 +4,7 @@
  * الصلاحيات تُفحص في الخدمات.
  */
 import { z } from "zod";
+import { normalizeIp } from "@/lib/ip";
 import * as rules from "@/server/services/automation-rules.service";
 import * as backups from "@/server/services/backup.service";
 import * as compliance from "@/server/services/compliance.service";
@@ -114,4 +115,9 @@ export const projectsRouter = router({
   options: p.query(({ ctx }) => projects.projectOptions(ctx.db, ctx.session)),
   list: p.query(({ ctx }) => projects.listProjects(ctx.db, ctx.session)),
   create: p.input(z.object({ title: z.string().max(160), description: z.string().max(500).nullish(), icon: z.string().max(80).nullish(), teamspaceId: id, templateKey: z.string().max(40), startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), assigneeIds: z.array(id).max(20).optional() })).mutation(({ ctx, input }) => projects.createProject(ctx.db, ctx.session, input)),
+});
+
+export const securityRouter = router({
+  /** عنوان الاتصال الحالي وهل تشمله قيود الشبكة (لصفحة سياسة الوصول) */
+  status: p.query(({ ctx }) => ({ ip: normalizeIp(ctx.ip), sensitive: Boolean(ctx.session.sensitive), staff: ctx.session.roleKeys.some((k) => k !== "PARENT" && k !== "STUDENT") })),
 });
