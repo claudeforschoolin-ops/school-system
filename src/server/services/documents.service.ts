@@ -88,12 +88,14 @@ export async function getDocument(db: TenantDb, session: SessionData, id: string
   const file = d.fileId ? await db.fileObject.findFirst({ where: { id: d.fileId }, select: { id: true, name: true, mime: true, size: true } }) : null;
   const creator = await db.user.findFirst({ where: { id: d.createdById }, select: { name: true } });
   const integrity = d.contentHash ? (await contentHashOf(session.tenant.id, d.body, d.fileId)) === d.contentHash : null;
+  const manager = d.createdById === session.user.id || canSeeAll(session);
   return {
-    doc: { ...d, signers: d.signers.map((s) => ({ ...s, signatureData: s.status === "SIGNED" ? s.signatureData : null })) },
+    // عنوان IP ووكيل المتصفح للموقّعين يراهما منشئ المستند ومن يملك الاطلاع الكامل فقط
+    doc: { ...d, signers: d.signers.map((s) => ({ ...s, signatureData: s.status === "SIGNED" ? s.signatureData : null, ip: manager || s.userId === session.user.id ? s.ip : null, userAgent: manager || s.userId === session.user.id ? s.userAgent : null })) },
     file,
     creator: creator?.name ?? "—",
     canEdit: d.status === "DRAFT" && d.createdById === session.user.id,
-    canManage: d.createdById === session.user.id || canSeeAll(session),
+    canManage: manager,
     mySigner: me ? { id: me.id, canSignNow: Boolean(turn) } : null,
     integrity,
   };

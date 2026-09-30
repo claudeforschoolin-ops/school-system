@@ -71,7 +71,8 @@ export const MODULE_NAV: readonly ModuleNavItem[] = [
   { key: "reports", label: "منشئ التقارير", href: "/reports", icon: "lucide:table-2", module: "custom_reports", description: "تقارير مخصصة بالسحب: الأعمدة والتصفية والتجميع والرسم، مع الحفظ والمشاركة والإرسال المجدول", group: "analytics" },
   { key: "analytics", label: "تحليل البيانات", href: "/analytics", icon: "lucide:chart-line", module: "analytics", description: "الاتجاهات والمقارنة بين الأعوام وتوقعات التحصيل والتسجيل", group: "analytics" },
   { key: "workflows", label: "سير العمل والموافقات", href: "/workflows", icon: "lucide:workflow", module: "workflows", description: "محرر مسارات الموافقة بالمهل والتصعيد، ومراقبة الطلبات المتأخرة، وقواعد الأتمتة على بيانات النظام", group: "governance" },
-  { key: "compliance", label: "الخصوصية والامتثال", href: "/compliance", icon: "lucide:shield-check", module: "compliance", scopes: ["ALL"], description: "سياسة الخصوصية وإصداراتها، وموافقات أولياء الأمور، وفترات الاحتفاظ بالبيانات، وطلبات أصحاب البيانات", group: "governance" },
+  { key: "documents", label: "المستندات والتوقيع", href: "/documents", icon: "lucide:signature", module: "e_documents", description: "عقود وإقرارات ونماذج تُرسل للتوقيع الإلكتروني بالرسم أو بالاسم، مع بصمة للمحتوى وأرشيف وبحث نصي ورابط تحقق عام", group: "governance" },
+  { key: "compliance", label: "الخصوصية والامتثال", href: "/compliance", icon: "lucide:shield-half", module: "compliance", scopes: ["ALL"], description: "سياسة الخصوصية وإصداراتها، وموافقات أولياء الأمور، وفترات الاحتفاظ بالبيانات، وطلبات أصحاب البيانات", group: "governance" },
 ];
 
 export const MODULE_GROUP_LABELS = { analytics: "التقارير والتحليلات", students: "شؤون الطلاب", academic: "الشؤون الأكاديمية", assessment: "التقييم والدرجات", hr: "الموارد البشرية", finance: "المالية والمحاسبة", operations: "العمليات والخدمات", governance: "الأتمتة والامتثال" } as const;

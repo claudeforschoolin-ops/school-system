@@ -53,6 +53,10 @@
   --chart-1: #2a78d6;
   --chart-2: #1baf7a;
   --chart-grid: #ececea;
+  /* ورق المستند والتوقيع: يبقى فاتحاً في الوضعين كالورقة المطبوعة */
+  --paper: #ffffff;
+  --paper-fg: #1f2937;
+  --signature-ink: #16306b;
   --bg-inverse: #1f1f1f;
   --inverse-success: #7ccf9f;
   --inverse-danger: #f07186;
@@ -136,6 +140,9 @@
   --chart-1: #3987e5;
   --chart-2: #199e70;
   --chart-grid: #333331;
+  --paper: #f6f5f1;
+  --paper-fg: #1f2937;
+  --signature-ink: #16306b;
   --bg-inverse: #363636;
   --text-secondary: #b4b4b0;
   --text-muted: #7a7a76;
@@ -230,6 +237,9 @@
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-grid: var(--chart-grid);
+  --color-paper: var(--paper);
+  --color-paper-fg: var(--paper-fg);
+  --color-signature-ink: var(--signature-ink);
   --color-inverse: var(--bg-inverse);
   --color-inverse-success: var(--inverse-success);
   --color-inverse-danger: var(--inverse-danger);
