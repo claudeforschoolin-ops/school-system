@@ -13,7 +13,7 @@ export interface ModuleNavItem {
   /** الإجراء المطلوب لإظهار الرابط (افتراضياً «عرض») */
   action?: "view" | "create" | "update";
   description: string;
-  group: "students" | "academic" | "assessment" | "hr" | "finance" | "operations";
+  group: "analytics" | "students" | "academic" | "assessment" | "hr" | "finance" | "operations" | "governance";
   /** يظهر فقط لهذه النطاقات (مثل روابط الأسرة أو الخدمة الذاتية) */
   scopes?: readonly Scope[];
   /** يُعدّ نشطاً عند تطابق المسار كاملاً فقط (للوحة الرئيسية لمجموعة) */
@@ -67,7 +67,10 @@ export const MODULE_NAV: readonly ModuleNavItem[] = [
   { key: "safety", label: "الأمن والسلامة", href: "/safety", icon: "lucide:shield-check", module: "safety", scopes: ["ALL", "BRANCH", "STAGE"], description: "الزوار، واستلام الطلاب، والحوادث، وتمارين الإخلاء", group: "operations" },
   { key: "my-pickups", label: "المفوضون بالاستلام", href: "/safety/my-pickups", icon: "lucide:user-check", module: "safety", scopes: ["ASSIGNED"], description: "من يحق له استلام أبنائك من المدرسة", group: "operations" },
   { key: "clinic", label: "العيادة المدرسية", href: "/clinic", icon: "lucide:stethoscope", module: "clinic", description: "زيارات العيادة والأدوية وإشعار أولياء الأمور", group: "operations" },
+  { key: "dashboards", label: "لوحات التحكم", href: "/dashboards", icon: "lucide:layout-dashboard", module: "dashboards", description: "مؤشرات مدير المدرسة والمالية والأكاديمية والموارد البشرية والعمليات مقارنةً بالفترة السابقة", group: "analytics" },
+  { key: "reports", label: "منشئ التقارير", href: "/reports", icon: "lucide:table-2", module: "custom_reports", description: "تقارير مخصصة بالسحب: الأعمدة والتصفية والتجميع والرسم، مع الحفظ والمشاركة والإرسال المجدول", group: "analytics" },
+  { key: "analytics", label: "تحليل البيانات", href: "/analytics", icon: "lucide:chart-line", module: "analytics", description: "الاتجاهات والمقارنة بين الأعوام وتوقعات التحصيل والتسجيل", group: "analytics" },
 ];
 
-export const MODULE_GROUP_LABELS = { students: "شؤون الطلاب", academic: "الشؤون الأكاديمية", assessment: "التقييم والدرجات", hr: "الموارد البشرية", finance: "المالية والمحاسبة", operations: "العمليات والخدمات" } as const;
-export const MODULE_GROUP_ICONS = { students: "lucide:users", academic: "lucide:graduation-cap", assessment: "lucide:award", hr: "lucide:id-card", finance: "lucide:wallet", operations: "lucide:building" } as const;
+export const MODULE_GROUP_LABELS = { analytics: "التقارير والتحليلات", students: "شؤون الطلاب", academic: "الشؤون الأكاديمية", assessment: "التقييم والدرجات", hr: "الموارد البشرية", finance: "المالية والمحاسبة", operations: "العمليات والخدمات", governance: "الأتمتة والامتثال" } as const;
+export const MODULE_GROUP_ICONS = { analytics: "lucide:chart-column", students: "lucide:users", academic: "lucide:graduation-cap", assessment: "lucide:award", hr: "lucide:id-card", finance: "lucide:wallet", operations: "lucide:building", governance: "lucide:shield-check" } as const;

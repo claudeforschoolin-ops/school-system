@@ -199,7 +199,13 @@ export async function revokeAllUserSessions(tenantId: string, userId: string, ex
  * وتُنسب عملياتها إليه في سجل التدقيق. لا تُنشأ جلسة دخول فعلية.
  */
 export async function systemSessionFor(tenantId: string): Promise<SessionData | null> {
-  const owner = await rootDb.user.findFirst({ where: { tenantId, status: "ACTIVE", deletedAt: null, roles: { some: { role: { key: "OWNER" } } } }, include: { tenant: true }, orderBy: { createdAt: "asc" } });
+  const owner = await rootDb.user.findFirst({ where: { tenantId, status: "ACTIVE", deletedAt: null, roles: { some: { role: { key: "OWNER" } } } }, orderBy: { createdAt: "asc" } });
+  return owner ? sessionForUser(tenantId, owner.id) : null;
+}
+
+/** جلسة خادمية بصلاحيات مستخدم محدد (لتشغيل تقاريره المجدولة بنطاقه هو لا أوسع) */
+export async function sessionForUser(tenantId: string, userId: string): Promise<SessionData | null> {
+  const owner = await rootDb.user.findFirst({ where: { id: userId, tenantId, status: "ACTIVE", deletedAt: null }, include: { tenant: true } });
   if (!owner) return null;
   const { profile, roleKeys } = await loadAccessProfile(tenantId, owner.id);
   const t = owner.tenant;

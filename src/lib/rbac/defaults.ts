@@ -66,7 +66,13 @@ const commonStaff = merge(
   grant(["payroll", "performance"], VIEW("OWN")),
   // بلاغات الصيانة وحجز المرافق لكل موظف (سجلاته)، وطلبات الشراء تمر عبر المسؤول
   grant(["maintenance"], { view: "OWN", create: "OWN" }),
+  // المرحلة ٧: تذاكر الدعم، والمستندات المرسلة لتوقيعه، وخصوصيته وطلبات بياناته
+  grant(["support"], { view: "OWN", create: "OWN" }),
+  grant(["e_documents"], VIEW("OWN")),
+  grant(["compliance"], { view: "OWN", create: "OWN" }),
 );
+/** أدوات التحليل لمن يدير وحدة على مستوى المدرسة أو الفرع */
+const analyst = (scope: Scope) => merge(grant(["dashboards"], READ(scope)), grant(["custom_reports"], { view: scope, create: scope, export: scope }));
 
 export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
   {
@@ -102,6 +108,7 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
       grant(["events", "announcements"], MANAGE("BRANCH")),
       grant(["approvals"], { view: "BRANCH", approve: "BRANCH" }),
       grant(["management"], VIEW("ALL")),
+      analyst("BRANCH"),
     ),
   },
   {
@@ -117,6 +124,7 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
       grant(["students", "attendance"], READ("BRANCH")),
       grant(["approvals"], { view: "BRANCH", approve: "BRANCH" }),
       grant(["management"], VIEW("ALL")),
+      analyst("BRANCH"),
     ),
   },
   {
@@ -143,6 +151,7 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
     grants: merge(
       commonStaff,
       grant(["counseling"], FULL("BRANCH")),
+      grant(["custom_reports"], { view: "BRANCH", create: "BRANCH", export: "BRANCH" }),
       grant(["students", "attendance"], READ("BRANCH")),
     ),
   },
@@ -167,6 +176,8 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
       // مراجعة طلبات الشراء والموازنة ضمن الموافقات، والاطلاع على المخزون والمشتريات
       grant(["approvals"], { view: "ALL", approve: "ALL" }),
       grant(["inventory"], { ...READ("ALL"), approve: "ALL" }),
+      analyst("ALL"),
+      grant(["analytics", "data_export"], READ("ALL")),
     ),
   },
   {
@@ -190,7 +201,7 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
     description: "شؤون الموظفين والرواتب واعتمادها",
     requires2fa: true,
     color: "teal",
-    grants: merge(commonStaff, grant(modulesOfGroup("hr"), FULL("ALL")), grant(["approvals"], { view: "ALL", approve: "ALL" })),
+    grants: merge(commonStaff, grant(modulesOfGroup("hr"), FULL("ALL")), grant(["approvals"], { view: "ALL", approve: "ALL" }), analyst("ALL"), grant(["analytics"], READ("ALL")), grant(["e_documents"], FULL("ALL"))),
   },
   {
     key: "HR_OFFICER",
@@ -198,7 +209,7 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
     description: "إدخال بيانات الموظفين والحضور دون اعتماد",
     requires2fa: false,
     color: "slate",
-    grants: merge(commonStaff, grant(modulesOfGroup("hr"), MANAGE("ALL"))),
+    grants: merge(commonStaff, grant(modulesOfGroup("hr"), MANAGE("ALL")), grant(["custom_reports"], { view: "ALL", create: "ALL", export: "ALL" }), grant(["e_documents"], MANAGE("ALL"))),
   },
   {
     key: "LIBRARIAN",
@@ -271,6 +282,10 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
       grant(["transfers"], { view: "ASSIGNED", create: "ASSIGNED" }),
       grant(["messages"], { view: "OWN", create: "OWN" }),
       grant(["announcements", "events"], VIEW("ALL")),
+      // الخصوصية: موافقات الأبناء وطلبات البيانات، والإقرارات المرسلة للتوقيع، والدعم
+      grant(["compliance"], { view: "ASSIGNED", create: "ASSIGNED", update: "ASSIGNED" }),
+      grant(["e_documents"], VIEW("OWN")),
+      grant(["support"], { view: "OWN", create: "OWN" }),
     ),
   },
   {
@@ -283,7 +298,24 @@ export const SYSTEM_ROLES: readonly SystemRoleDef[] = [
       grant(["timetable", "report_cards", "attendance"], VIEW("OWN")),
       grant(["announcements", "events", "library"], VIEW("ALL")),
       grant(["canteen", "transport"], VIEW("OWN")),
+      grant(["compliance"], VIEW("OWN")),
     ),
+  },
+  {
+    key: "DPO",
+    name: "مسؤول حماية البيانات",
+    description: "سياسة الخصوصية والموافقات ومدد الاحتفاظ وطلبات أصحاب البيانات، مع الاطلاع على سجل التدقيق",
+    requires2fa: true,
+    color: "purple",
+    grants: merge(commonStaff, grant(["compliance"], FULL("ALL")), grant(["audit"], READ("ALL")), grant(["e_documents"], MANAGE("ALL")), grant(["students", "employees"], VIEW("ALL")), grant(["backups"], VIEW("ALL"))),
+  },
+  {
+    key: "IT_SUPPORT",
+    name: "الدعم الفني",
+    description: "تذاكر الدعم وقاعدة المعرفة والجولات الإرشادية، والنسخ الاحتياطية والمستخدمين",
+    requires2fa: true,
+    color: "slate",
+    grants: merge(commonStaff, grant(["support"], FULL("ALL")), grant(["backups"], { view: "ALL", create: "ALL" }), grant(["users"], { view: "ALL", update: "ALL" }), grant(["security", "audit"], VIEW("ALL")), grant(["projects"], MANAGE("ALL"))),
   },
   {
     key: "AUDITOR",

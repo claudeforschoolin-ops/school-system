@@ -76,6 +76,13 @@ export function useMoney() {
     },
     /** نص عشري دقيق للتصدير */
     dec: (minor: number) => minorToDecimalString(minor, currency),
+    /** مختصر للمؤشرات (١٫٢ مليون) — عرض فقط، من الجزء الصحيح دون حسابات عشرية على المبلغ */
+    compact: (minor: number) => {
+      const [int] = minorToDecimalString(minor, currency).split(".");
+      const major = Number(int);
+      if (Math.abs(major) < 100_000) return `${formatNumber(major, prefs.digits)} ${currencySymbol(currency)}`;
+      return `${new Intl.NumberFormat(prefs.digits === "arab" ? "ar-SA-u-nu-arab" : "ar-SA-u-nu-latn", { notation: "compact", maximumFractionDigits: 1 }).format(major)} ${currencySymbol(currency)}`;
+    },
   };
 }
 
