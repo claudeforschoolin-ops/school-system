@@ -189,6 +189,31 @@ export const MODULE_SETTINGS_SCHEMAS = {
     taxNumberPattern: REGEX,
     weekendDays: z.array(z.number().int().min(0).max(6)).max(3),
   }),
+  compliance: z.object({
+    /** مهلة الرد على طلبات أصحاب البيانات (أيام) */
+    dataRequestDays: z.number().int().min(5).max(90),
+    dpoName: z.string().trim().max(120),
+    dpoEmail: z.string().trim().max(200),
+    /** نسبة القبول المستهدفة لسياسة الخصوصية قبل التذكير (نقاط أساس) */
+    policyReminderDays: z.number().int().min(1).max(60),
+  }),
+  security: z.object({
+    ipRestrictionEnabled: z.boolean(),
+    /** عناوين أو نطاقات CIDR مسموحة (IPv4) */
+    ipAllowlist: z.array(z.string().trim().regex(/^(\d{1,3}\.){3}\d{1,3}(\/(3[0-2]|[12]?\d))?$/, "صيغة العنوان: 10.0.0.5 أو 10.0.0.0/24")).max(50),
+    /** على من يُطبَّق القيد: الأدوار الحساسة (التي تتطلب التحقق بخطوتين) أو كل الموظفين */
+    ipScope: z.enum(["SENSITIVE", "ALL_STAFF"]),
+  }),
+  backups: z.object({
+    enabled: z.boolean(),
+    /** ساعة النسخ اليومي بتوقيت المدرسة */
+    hour: z.number().int().min(0).max(23),
+    retentionDays: z.number().int().min(7).max(365),
+  }),
+  analytics: z.object({
+    /** شهر بداية العام الدراسي في التحليلات والمقارنات */
+    yearStartMonth: z.number().int().min(1).max(12),
+  }),
   messageTemplates: z.object(Object.fromEntries(Object.keys(DEFAULT_TEMPLATES).map((k) => [k, z.string().trim().max(500).optional()])) as Record<keyof typeof DEFAULT_TEMPLATES, z.ZodOptional<z.ZodString>>),
 } as const;
 export type ModuleSettingsKey = keyof typeof MODULE_SETTINGS_SCHEMAS;
@@ -248,11 +273,15 @@ export const MODULE_SETTINGS_DEFAULTS = {
   transport: { autoInvoice: true, prorate: true, oneWayBp: 6000, notifyApproach: true, expiryAlertDays: 45 },
   procurement: { principalApprovalAboveMinor: 1000000, priceToleranceBp: 200, blockNegativeStock: true },
   region: presetRegion("SA"),
+  compliance: { dataRequestDays: 30, dpoName: "", dpoEmail: "", policyReminderDays: 7 },
+  security: { ipRestrictionEnabled: false, ipAllowlist: [] as string[], ipScope: "SENSITIVE" },
+  backups: { enabled: true, hour: 2, retentionDays: 30 },
+  analytics: { yearStartMonth: 9 },
   messageTemplates: {},
 } as const;
 
 /** الوحدة التي تحكم كل مجموعة إعدادات */
-const OWNER_MODULE: Record<ModuleSettingsKey, string> = { students: "students", admissions: "admissions", attendance: "attendance", finance: "accounting", assessment: "grade_entry", hr: "employees", library: "library", canteen: "canteen", transport: "transport", procurement: "inventory", region: "settings", messageTemplates: "settings" };
+const OWNER_MODULE: Record<ModuleSettingsKey, string> = { students: "students", admissions: "admissions", attendance: "attendance", finance: "accounting", assessment: "grade_entry", hr: "employees", library: "library", canteen: "canteen", transport: "transport", procurement: "inventory", region: "settings", compliance: "compliance", security: "security", backups: "backups", analytics: "analytics", messageTemplates: "settings" };
 
 export function readModuleSettings<K extends ModuleSettingsKey>(tenantSettings: unknown, key: K): z.infer<(typeof MODULE_SETTINGS_SCHEMAS)[K]> {
   if (key === "region") return readRegion(tenantSettings) as z.infer<(typeof MODULE_SETTINGS_SCHEMAS)[K]>;

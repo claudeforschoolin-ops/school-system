@@ -65,6 +65,8 @@ export interface SessionData {
   tenant: SessionTenant;
   access: AccessProfile;
   roleKeys: string[];
+  /** أحد أدوار المستخدم حساس (يتطلب التحقق بخطوتين) — لقيود الشبكة */
+  sensitive?: boolean;
 }
 
 export function cookieOptions(maxAgeSeconds: number) {
@@ -179,6 +181,7 @@ export async function validateSessionToken(token: string | undefined | null): Pr
     },
     access: profile,
     roleKeys,
+    sensitive: requires2fa,
   };
 }
 

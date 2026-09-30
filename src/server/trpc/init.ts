@@ -11,6 +11,8 @@ import { TenantIsolationError, type TenantDb } from "@/server/db/tenant";
 import { AppError } from "@/server/errors";
 import type { SessionData } from "@/server/auth/session";
 import type { Context } from "./context";
+import { ipAllowed } from "@/lib/ip";
+import { readModuleSettings } from "@/server/services/module-settings.service";
 
 export interface Meta {
   /** يسمح بالإجراء قبل إكمال المصادقة الثنائية (إعدادها أو التحقق منها) */
@@ -84,8 +86,17 @@ export const authedProcedure = publicProcedure.use(async ({ ctx, meta, next }) =
       message: ctx.session.requires2faChallenge ? "أكمل التحقق بخطوتين للمتابعة" : "يجب تفعيل المصادقة الثنائية لدورك قبل المتابعة",
     });
   }
+  if (!networkAllowed(ctx.session, ctx.ip)) throw new TRPCError({ code: "FORBIDDEN", message: "حسابك مقيّد بشبكة المدرسة؛ اتصل من داخل المدرسة أو تواصل مع مسؤول النظام" });
   return next({ ctx: { ...ctx, session: ctx.session, db: ctx.db } as AuthedContext });
 });
+
+/** قيد الشبكة من إعدادات الأمان (للأدوار الحساسة أو لكل الموظفين) */
+export function networkAllowed(session: SessionData, ip: string | null | undefined) {
+  const sec = readModuleSettings(session.tenant.settings, "security");
+  if (!sec.ipRestrictionEnabled || !sec.ipAllowlist.length) return true;
+  const applies = sec.ipScope === "ALL_STAFF" ? session.roleKeys.some((k) => k !== "PARENT" && k !== "STUDENT") : Boolean(session.sensitive);
+  return !applies || ipAllowed(ip, sec.ipAllowlist);
+}
 
 /** إجراء محمي بصلاحية (وحدة × إجراء) ويضيف نطاق البيانات إلى السياق */
 export function permissionProcedure(module: string, action: Action) {

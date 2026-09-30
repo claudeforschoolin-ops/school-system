@@ -1,7 +1,8 @@
 /**
  * المهام الدورية للمنصة لكل المدارس (تُستدعى كل ساعة):
  * تصعيد الموافقات المتجاوزة لمهلها وتذكير المعتمدين، قواعد الأتمتة المستحقة، التقارير المجدولة،
- * ولقطة مؤشرات الشهر المنقضي (مرة واحدة لكل شهر).
+ * ولقطة مؤشرات الشهر المنقضي (مرة واحدة لكل شهر)، والنسخة الاحتياطية اليومية في ساعتها،
+ * ومدد الاحتفاظ المفعّلة (مرة يومياً مع النسخة).
  * الترويسة: Authorization: Bearer <CRON_SECRET>
  */
 import { timingSafeEqual } from "node:crypto";
@@ -12,6 +13,8 @@ import { runDueReports } from "@/server/services/analytics/reports.service";
 import { snapshotPreviousMonth } from "@/server/services/analytics/metrics.service";
 import { runDueRules } from "@/server/services/automation-rules.service";
 import { runEscalations } from "@/server/services/workflows.service";
+import { runScheduledBackup } from "@/server/services/backup.service";
+import { runEnabledRetention } from "@/server/services/compliance.service";
 
 function authorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
@@ -39,6 +42,12 @@ export async function POST(req: Request) {
     await step("automations", () => runDueRules(t.id));
     await step("reports", () => runDueReports(t.id));
     await step("snapshots", () => snapshotPreviousMonth(db, t.id, toISODate(new Date(), t.timezone)));
+    await step("backup", async () => {
+      const b = await runScheduledBackup(t.id);
+      // الاحتفاظ يُنفَّذ مرة يومياً مع النسخة التلقائية (بعدها، لتبقى النسخة شاملة)
+      if ("number" in b) return { ...b, retention: await runEnabledRetention(t.id) };
+      return b;
+    });
     results.push(r);
   }
   return Response.json({ ok: true, results });

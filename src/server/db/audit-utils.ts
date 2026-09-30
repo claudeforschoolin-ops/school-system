@@ -11,10 +11,13 @@ export const REDACTED_FIELDS = new Set([
   "twoFactorBackup",
   "tokenHash",
   "codeHash",
+  // بيانات صحية وتوقيعات: البصمة تكفي للتدقيق
+  "complaintEnc",
+  "notesEnc",
 ]);
 
 /** حقول كبيرة يُكتفى بتلخيصها (المحتوى النصي محفوظ في نسخ الصفحات) */
-export const SUMMARIZED_FIELDS = new Set(["content"]);
+export const SUMMARIZED_FIELDS = new Set(["content", "body", "signatureData", "searchText", "config", "steps", "filters", "actions"]);
 
 /** حقول تقنية لا معنى لتسجيل تغيّرها */
 export const IGNORED_DIFF_FIELDS = new Set(["updatedAt", "updatedById", "lastActiveAt", "rowCounter", "nextValue"]);

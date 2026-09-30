@@ -2,6 +2,8 @@
  * خدمات المصادقة: الدخول بكلمة المرور، الدخول برمز لمرة واحدة، المصادقة الثنائية،
  * استعادة كلمة المرور، قبول الدعوات، وقفل الحساب بعد المحاولات الفاشلة.
  */
+import { ipAllowed } from "@/lib/ip";
+import { readModuleSettings } from "./module-settings.service";
 import QRCode from "qrcode";
 import { Prisma } from "@/generated/prisma/client";
 import { rootDb } from "@/server/db/client";
@@ -97,8 +99,17 @@ export async function login(
     throw new AppError("UNAUTHORIZED", GENERIC_LOGIN_ERROR);
   }
 
+  const { requires2fa, roleKeys } = await loadAccessProfile(user.tenantId, user.id);
+  // قيد الشبكة (إعدادات الأمان): يُرفض الدخول من خارج العناوين المسموحة لمن يشملهم القيد
+  const sec = readModuleSettings(user.tenant.settings, "security");
+  if (sec.ipRestrictionEnabled && sec.ipAllowlist.length) {
+    const applies = sec.ipScope === "ALL_STAFF" ? roleKeys.some((k) => k !== "PARENT" && k !== "STUDENT") : requires2fa;
+    if (applies && !ipAllowed(meta.ip, sec.ipAllowlist)) {
+      await writeAudit(auditCtx, { action: "LOGIN_BLOCKED", entityType: "Auth", entityId: user.id, summary: `${user.email} — من خارج شبكة المدرسة (${meta.ip ?? "?"})` });
+      throw new AppError("FORBIDDEN", "الدخول لهذا الحساب مسموح من شبكة المدرسة فقط");
+    }
+  }
   await rootDb.user.update({ where: { id: user.id }, data: { failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() } });
-  const { requires2fa } = await loadAccessProfile(user.tenantId, user.id);
   const { token } = await createSession({
     tenantId: user.tenantId,
     userId: user.id,
