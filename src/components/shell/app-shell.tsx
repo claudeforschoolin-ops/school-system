@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { AppProvider, useApp, type AppContextData } from "./app-context";
 import { CommandPalette, toggleCommandPalette } from "./command-palette";
+import { PolicyGate } from "@/components/governance/privacy";
 import { FloatingHelp, ShortcutsDialog } from "./floating-help";
 import { Sidebar } from "./sidebar/sidebar";
 import { TabsBar } from "./tabs-bar";
@@ -60,6 +61,7 @@ function ShellLayout({ children }: { children: ReactNode }) {
       <CommandPalette />
       <FloatingHelp onShortcuts={() => setShortcutsOpen(true)} />
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      <PolicyGate />
     </div>
   );
 }

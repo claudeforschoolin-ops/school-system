@@ -1,6 +1,6 @@
 "use client";
 /** رأس الشريط الجانبي: شعار المدرسة واسمها + قائمة الحساب */
-import { ChevronsUpDown, LogOut, Monitor, Moon, Settings, Sun, UserRound } from "lucide-react";
+import { ChevronsUpDown, LogOut, Monitor, Moon, Settings, ShieldCheck, Sun, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { Avatar } from "@/components/ui/avatar";
@@ -47,6 +47,9 @@ export function WorkspaceMenu() {
         <MenuSeparator />
         <MenuItem icon={<UserRound className="size-4" />} onSelect={() => router.push("/settings/profile")}>
           الملف الشخصي
+        </MenuItem>
+        <MenuItem icon={<ShieldCheck className="size-4" />} onSelect={() => router.push("/privacy")}>
+          خصوصيتي
         </MenuItem>
         <MenuItem icon={<Settings className="size-4" />} onSelect={() => router.push("/settings")}>
           الإعدادات

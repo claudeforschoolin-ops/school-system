@@ -90,10 +90,12 @@ export async function publishPolicy(db: TenantDb, session: SessionData, id: stri
 /** السياسة السارية لهذا المستخدم، وهل عليه قبولها */
 export async function currentPolicy(db: TenantDb, session: SessionData) {
   const audience = audienceOf(session);
+  const cfg = readModuleSettings(session.tenant.settings, "compliance");
+  const dpo = { name: cfg.dpoName, email: cfg.dpoEmail, days: cfg.dataRequestDays };
   const p = await db.privacyPolicy.findFirst({ where: { status: "PUBLISHED", audience: { in: ["ALL", audience] } }, orderBy: { version: "desc" } });
-  if (!p) return { policy: null, needsAcceptance: false, acceptedAt: null };
+  if (!p) return { policy: null, needsAcceptance: false, acceptedAt: null, dpo };
   const acc = await db.policyAcceptance.findFirst({ where: { policyId: p.id, userId: session.user.id } });
-  return { policy: { id: p.id, version: p.version, title: p.title, body: p.body, changes: p.changes, publishedAt: p.publishedAt, requireAcceptance: p.requireAcceptance }, needsAcceptance: p.requireAcceptance && !acc, acceptedAt: acc?.acceptedAt ?? null };
+  return { policy: { id: p.id, version: p.version, title: p.title, body: p.body, changes: p.changes, publishedAt: p.publishedAt, requireAcceptance: p.requireAcceptance }, needsAcceptance: p.requireAcceptance && !acc, acceptedAt: acc?.acceptedAt ?? null, dpo };
 }
 
 export async function acceptPolicy(db: TenantDb, session: SessionData, input: { policyId: string }, meta: { ip: string | null; userAgent: string | null }) {
@@ -157,6 +159,7 @@ export async function myConsents(db: TenantDb, session: SessionData) {
   requireAny(session);
   const children = await childrenOf(db, session.user.id);
   const employee = await db.employee.findFirst({ where: { userId: session.user.id, deletedAt: null }, select: { id: true, fullName: true } });
+  const guardian = await db.guardian.findFirst({ where: { userId: session.user.id, deletedAt: null }, select: { id: true } });
   const types = await db.consentType.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } });
   const history = await db.consentRecord.findMany({ where: { OR: [{ studentId: { in: children.map((c) => c.id) } }, ...(employee ? [{ employeeId: employee.id }] : [])] }, orderBy: { createdAt: "desc" }, take: 100, include: { consentType: { select: { name: true } } } });
   const latest = await latestConsents(db, { studentIds: children.map((c) => c.id), employeeIds: employee ? [employee.id] : [] });
@@ -164,6 +167,7 @@ export async function myConsents(db: TenantDb, session: SessionData) {
     students: children.map((c) => ({ id: c.id, name: c.fullName, grade: c.grade.name, consents: types.filter((t) => t.subject === "STUDENT").map((t) => ({ typeId: t.id, name: t.name, description: t.description, isRequired: t.isRequired, status: (latest.get(`${t.id}|${c.id}`)?.status ?? null) as Status | null, at: latest.get(`${t.id}|${c.id}`)?.createdAt ?? null })) })),
     staff: employee ? types.filter((t) => t.subject === "STAFF").map((t) => ({ typeId: t.id, name: t.name, description: t.description, isRequired: t.isRequired, status: (latest.get(`${t.id}|${employee.id}`)?.status ?? null) as Status | null, at: latest.get(`${t.id}|${employee.id}`)?.createdAt ?? null })) : [],
     employeeId: employee?.id ?? null,
+    guardianId: guardian?.id ?? null,
     history: history.map((h) => ({ id: h.id, type: h.consentType.name, status: h.status, by: h.givenByName, method: h.method, at: h.createdAt, studentId: h.studentId })),
   };
 }
