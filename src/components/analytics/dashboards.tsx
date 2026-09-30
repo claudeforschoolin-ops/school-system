@@ -52,7 +52,7 @@ export function DashboardsPage() {
   const active = tabs.some((t) => t.key === tab) ? tab : (tabs[0]?.key ?? "principal");
   return (
     <ModuleShell nav={navOf("dashboards")} wide>
-      <div className="mb-5 flex flex-wrap items-center gap-3">
+      <div className="mb-5 flex flex-wrap items-center gap-3" data-tour="dash-tabs">
         {tabs.length > 1 ? <Segmented value={active} onChange={(v) => set("tab", v)} options={tabs.map((t) => ({ value: t.key, label: t.label }))} /> : null}
         {meta.data && meta.data.branches.length > 1 ? (
           <Select size="sm" className="w-48" value={branchId || "ALL"} onChange={(v) => set("branch", v === "ALL" ? "" : v)} options={[...(meta.data.allBranches ? [{ value: "ALL", label: "كل الفروع" }] : []), ...meta.data.branches.map((b) => ({ value: b.id, label: b.name }))]} />

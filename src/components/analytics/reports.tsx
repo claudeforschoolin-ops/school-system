@@ -242,7 +242,7 @@ function Builder({ datasets, initial }: { datasets: Dataset[]; initial: { datase
       title={title}
       crumbs={[{ title }]}
       actions={
-        <div className="no-print flex flex-wrap items-center gap-1.5">
+        <div className="no-print flex flex-wrap items-center gap-1.5" data-tour="report-actions">
           {initial.canEdit && can("custom_reports", initial.report ? "view" : "create") ? <Button size="sm" variant="primary" icon={<Save className="size-3.5" />} onClick={() => setDialog("save")}>{initial.report ? "حفظ التعديلات" : "حفظ التقرير"}</Button> : null}
           <Button size="sm" icon={<FileSpreadsheet className="size-3.5" />} loading={exporting} disabled={!ds} onClick={() => exportAs("XLSX")}>Excel</Button>
           <Button size="sm" icon={<Download className="size-3.5" />} disabled={!ds || exporting} onClick={() => exportAs("CSV")}>CSV</Button>
@@ -264,7 +264,7 @@ function Builder({ datasets, initial }: { datasets: Dataset[]; initial: { datase
             <Field label="مجموعة البيانات">
               <Select value={dataset} onChange={changeDataset} options={datasets.map((d) => ({ value: d.key, label: `${d.group} — ${d.label}` }))} />
             </Field>
-            <section>
+            <section data-tour="report-fields">
               <h3 className="mb-1.5 text-[13px] font-medium text-fg-2">الحقول <span className="font-normal text-fg-3">— اسحبها إلى الأعمدة أو اضغط +</span></h3>
               <div className="relative mb-2">
                 <Search className="pointer-events-none absolute start-2 top-2 size-3.5 text-fg-3" />
@@ -276,7 +276,7 @@ function Builder({ datasets, initial }: { datasets: Dataset[]; initial: { datase
                 ))}
               </div>
             </section>
-            <section>
+            <section data-tour="report-filters">
               <h3 className="mb-1.5 text-[13px] font-medium text-fg-2">التصفية</h3>
               <FilterEditor fields={fields} filters={config.filters} onChange={(filters) => set({ filters })} />
             </section>
@@ -386,7 +386,7 @@ function FieldChip({ field, used, onAdd }: { field: FieldDef; used: boolean; onA
 function ColumnsZone({ columns, byKey, onRemove }: { columns: string[]; byKey: Map<string, FieldDef>; onRemove: (k: string) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: "columns-zone" });
   return (
-    <div ref={setNodeRef} className={cn("no-print flex min-h-[44px] flex-wrap items-center gap-1.5 rounded-lg border border-dashed border-line-strong p-2", isOver && "border-navy-600 bg-hover")} aria-label="أعمدة التقرير">
+    <div ref={setNodeRef} className={cn("no-print flex min-h-[44px] flex-wrap items-center gap-1.5 rounded-lg border border-dashed border-line-strong p-2", isOver && "border-navy-600 bg-hover")} aria-label="أعمدة التقرير" data-tour="report-columns">
       {columns.length ? (
         <SortableContext items={columns.map((c) => `col:${c}`)} strategy={horizontalListSortingStrategy}>
           {columns.map((c) => (

@@ -26,6 +26,8 @@ export interface UserPreferences {
   sidebarWidth?: number;
   sidebarCollapsed?: boolean;
   reducedMotion?: boolean;
+  /** الجولات الإرشادية التي أنهاها المستخدم أو تخطاها */
+  toursDone?: string[];
 }
 
 export interface SessionUser {

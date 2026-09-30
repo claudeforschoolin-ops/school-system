@@ -211,7 +211,7 @@ function IconRow() {
     );
   };
   return (
-    <div className="flex items-center gap-1 px-2 pb-1 pt-2">
+    <div className="flex items-center gap-1 px-2 pb-1 pt-2" data-tour="quick-icons">
       {item("/home", "الرئيسية", <House className="size-[18px]" strokeWidth={1.7} />)}
       {item("/chat", "المحادثات", <MessageCircle className="size-[18px]" strokeWidth={1.7} />, badges?.unreadChats)}
       {item("/calendar", "التقويم", <CalendarDays className="size-[18px]" strokeWidth={1.7} />)}
@@ -220,6 +220,7 @@ function IconRow() {
         <button
           onClick={() => openCommandPalette()}
           aria-label="بحث"
+          data-tour="search"
           className="grid size-8 place-items-center rounded-full text-fg-2 transition-colors duration-[120ms] hover:bg-hover hover:text-fg"
         >
           <Search className="size-[18px]" strokeWidth={1.7} />
@@ -253,7 +254,7 @@ function ModulesGroup() {
   const items = MODULE_NAV.filter((m) => can(m.module, m.action ?? "view") && (!m.scopes || m.scopes.includes(scopeOf(m.module, m.action ?? "view")!)));
   if (!items.length) return null;
   return (
-    <>
+    <div data-tour="modules">
       {(Object.keys(MODULE_GROUP_LABELS) as Array<keyof typeof MODULE_GROUP_LABELS>).map((group) => {
         const list = items.filter((m) => m.group === group);
         if (!list.length) return null;
@@ -275,7 +276,7 @@ function ModulesGroup() {
           </SidebarGroup>
         );
       })}
-    </>
+    </div>
   );
 }
 

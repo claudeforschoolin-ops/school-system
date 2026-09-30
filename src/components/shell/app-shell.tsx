@@ -9,6 +9,7 @@ import { CommandPalette, toggleCommandPalette } from "./command-palette";
 import { PolicyGate } from "@/components/governance/privacy";
 import { FloatingHelp, ShortcutsDialog } from "./floating-help";
 import { Sidebar } from "./sidebar/sidebar";
+import { TourHost } from "./tour";
 import { TabsBar } from "./tabs-bar";
 
 export function AppShell({ initial, children }: { initial: AppContextData; children: ReactNode }) {
@@ -62,6 +63,7 @@ function ShellLayout({ children }: { children: ReactNode }) {
       <FloatingHelp onShortcuts={() => setShortcutsOpen(true)} />
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <PolicyGate />
+      <TourHost />
     </div>
   );
 }

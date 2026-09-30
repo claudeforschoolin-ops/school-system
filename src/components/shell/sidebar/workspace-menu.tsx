@@ -19,7 +19,7 @@ export function WorkspaceMenu() {
   return (
     <Menu>
       <MenuTrigger asChild>
-        <button className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 text-start transition-colors duration-[120ms] hover:bg-hover">
+        <button data-tour="workspace" className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 text-start transition-colors duration-[120ms] hover:bg-hover">
           {tenant.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={tenant.logoUrl} alt="" className="size-6 rounded-md object-cover" />

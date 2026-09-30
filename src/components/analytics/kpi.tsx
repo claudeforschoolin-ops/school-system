@@ -98,7 +98,7 @@ export function KpiGrid({ kpis, loading }: { kpis: KpiData[] | undefined; loadin
     );
   }
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-tour="kpis">
       {kpis.map((k) => (
         <KpiTile key={k.key} k={k} />
       ))}

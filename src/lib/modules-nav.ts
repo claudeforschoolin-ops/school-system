@@ -72,8 +72,9 @@ export const MODULE_NAV: readonly ModuleNavItem[] = [
   { key: "analytics", label: "تحليل البيانات", href: "/analytics", icon: "lucide:chart-line", module: "analytics", description: "الاتجاهات والمقارنة بين الأعوام وتوقعات التحصيل والتسجيل", group: "analytics" },
   { key: "workflows", label: "سير العمل والموافقات", href: "/workflows", icon: "lucide:workflow", module: "workflows", description: "محرر مسارات الموافقة بالمهل والتصعيد، ومراقبة الطلبات المتأخرة، وقواعد الأتمتة على بيانات النظام", group: "governance" },
   { key: "documents", label: "المستندات والتوقيع", href: "/documents", icon: "lucide:signature", module: "e_documents", description: "عقود وإقرارات ونماذج تُرسل للتوقيع الإلكتروني بالرسم أو بالاسم، مع بصمة للمحتوى وأرشيف وبحث نصي ورابط تحقق عام", group: "governance" },
+  { key: "support", label: "الدعم الفني", href: "/support", icon: "lucide:life-buoy", module: "support", description: "تذاكر الدعم ومتابعتها حتى الحل، وقاعدة معرفة بمقالات إرشادية قابلة للبحث", group: "governance" },
   { key: "compliance", label: "الخصوصية والامتثال", href: "/compliance", icon: "lucide:shield-half", module: "compliance", scopes: ["ALL"], description: "سياسة الخصوصية وإصداراتها، وموافقات أولياء الأمور، وفترات الاحتفاظ بالبيانات، وطلبات أصحاب البيانات", group: "governance" },
 ];
 
-export const MODULE_GROUP_LABELS = { analytics: "التقارير والتحليلات", students: "شؤون الطلاب", academic: "الشؤون الأكاديمية", assessment: "التقييم والدرجات", hr: "الموارد البشرية", finance: "المالية والمحاسبة", operations: "العمليات والخدمات", governance: "الأتمتة والامتثال" } as const;
+export const MODULE_GROUP_LABELS = { analytics: "التقارير والتحليلات", students: "شؤون الطلاب", academic: "الشؤون الأكاديمية", assessment: "التقييم والدرجات", hr: "الموارد البشرية", finance: "المالية والمحاسبة", operations: "العمليات والخدمات", governance: "الإدارة والحوكمة" } as const;
 export const MODULE_GROUP_ICONS = { analytics: "lucide:chart-column", students: "lucide:users", academic: "lucide:graduation-cap", assessment: "lucide:award", hr: "lucide:id-card", finance: "lucide:wallet", operations: "lucide:building", governance: "lucide:shield-check" } as const;

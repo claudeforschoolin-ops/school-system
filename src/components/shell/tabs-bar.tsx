@@ -41,7 +41,7 @@ export function TabsBar({ onOpenMobileSidebar }: { onOpenMobileSidebar: () => vo
   };
 
   return (
-    <div className="no-print flex h-10 shrink-0 items-end gap-1 border-b border-line bg-sidebar pe-2 ps-1.5">
+    <div className="no-print flex h-10 shrink-0 items-end gap-1 border-b border-line bg-sidebar pe-2 ps-1.5" data-tour="tabs">
       <div className="flex h-10 items-center gap-0.5">
         <button onClick={onOpenMobileSidebar} className="grid size-7 place-items-center rounded-md text-fg-3 hover:bg-hover hover:text-fg md:hidden" aria-label="القائمة">
           <MenuIcon className="size-4" />

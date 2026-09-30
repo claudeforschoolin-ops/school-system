@@ -1,7 +1,8 @@
 "use client";
 /** زر المساعدة العائم (٤٨px) في الطرف المقابل للشريط الجانبي */
-import { BookOpen, CircleHelp, Keyboard, LifeBuoy, X } from "lucide-react";
+import { BookOpen, CircleHelp, Keyboard, Library, LifeBuoy, X } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Kbd, modKey } from "@/components/ui/kbd";
@@ -45,12 +46,14 @@ export function ShortcutsDialog({ open, onOpenChange }: { open: boolean; onOpenC
 
 export function FloatingHelp({ onShortcuts }: { onShortcuts: () => void }) {
   const [open, setOpen] = useState(false);
+  const path = usePathname();
   const item = "flex h-9 items-center gap-2.5 rounded-md px-2.5 text-[14px] text-fg hover:bg-hover";
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           aria-label="المساعدة"
+          data-tour="help"
           className="no-print fixed bottom-5 end-5 z-30 grid size-12 place-items-center rounded-full bg-card text-fg-2 shadow-[0_0_0_1px_var(--border),0_4px_14px_rgba(15,23,42,.10)] transition-[transform,box-shadow,color] duration-[140ms] hover:-translate-y-px hover:text-fg hover:shadow-[0_0_0_1px_var(--border-strong),0_6px_18px_rgba(15,23,42,.14)] max-md:hidden"
         >
           {open ? <X className="size-5" /> : <CircleHelp className="size-5" />}
@@ -71,9 +74,13 @@ export function FloatingHelp({ onShortcuts }: { onShortcuts: () => void }) {
           <Keyboard className="size-4 text-fg-3" />
           اختصارات لوحة المفاتيح
         </button>
-        <Link href="/help#support" className={item} onClick={() => setOpen(false)}>
+        <Link href="/help/kb" className={item} onClick={() => setOpen(false)}>
+          <Library className="size-4 text-fg-3" />
+          قاعدة المعرفة
+        </Link>
+        <Link href={`/support?new=1&from=${encodeURIComponent(path)}`} className={item} onClick={() => setOpen(false)}>
           <LifeBuoy className="size-4 text-fg-3" />
-          الدعم الفني
+          طلب دعم فني
         </Link>
       </PopoverContent>
     </Popover>
