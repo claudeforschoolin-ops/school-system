@@ -35,8 +35,8 @@ export function Lines({ labels, series, format, height = 220, yMin }: { labels: 
   const H = height;
   const padTop = 12;
   const padBottom = 26;
-  const padStart = 64; // مساحة تسميات المحور (يمين في العرض العربي)
-  const padEnd = 72; // مساحة التسمية المباشرة عند آخر نقطة (يسار)
+  const padStart = 100; // مساحة تسميات المحور (يمين في العرض العربي)
+  const padEnd = 100; // مساحة التسمية المباشرة عند آخر نقطة (يسار)
   const all = series.flatMap((s) => s.values).filter((v): v is number => v !== null);
   const lo = yMin ?? Math.min(0, ...all);
   const hi = niceMax(Math.max(lo + 1, ...all));
@@ -82,7 +82,8 @@ export function Lines({ labels, series, format, height = 220, yMin }: { labels: 
         {ticks.map((t, i) => (
           <g key={i}>
             <line x1={padEnd - 8} x2={W - padStart + 6} y1={y(t)} y2={y(t)} stroke="var(--chart-grid)" strokeWidth={1} />
-            <text x={W - padStart + 12} y={y(t) + 4} fontSize={11} textAnchor="start" fill="var(--text-muted)" style={{ direction: "rtl" }}>
+            {/* في السياق العربي: «end» = الحافة اليسرى، فيمتد النص يميناً خارج منطقة الرسم */}
+            <text x={W - padStart + 12} y={y(t) + 4} fontSize={11} textAnchor="end" fill="var(--text-muted)">
               {format(t)}
             </text>
           </g>
@@ -105,7 +106,7 @@ export function Lines({ labels, series, format, height = 220, yMin }: { labels: 
           return (
             <g key={s.key}>
               <circle cx={x(li)} cy={y(v)} r={4} fill={STROKE[s.color]} stroke="var(--bg-card)" strokeWidth={2} />
-              <text x={x(li) - 8} y={y(v) + 4} fontSize={11} textAnchor="end" fill="var(--text-secondary)">
+              <text x={x(li) - 8} y={y(v) + 4} fontSize={11} textAnchor="start" fill="var(--text-secondary)">
                 {format(v)}
               </text>
             </g>
@@ -156,7 +157,7 @@ export function LineLegend({ series }: { series: Array<Pick<LineSeries, "key" | 
 /** خط اتجاه صغير لبطاقة المؤشر: ١٢ نقطة بلون محايد والنقطة الأخيرة بلون التمييز */
 export function Sparkline({ values, className }: { values: Array<number | null>; className?: string }) {
   const known = values.map((v, i) => [i, v] as const).filter((p): p is readonly [number, number] => p[1] !== null);
-  if (known.length < 2) return null;
+  if (known.length < 3) return null;
   const W = 96;
   const H = 24;
   const lo = Math.min(...known.map((p) => p[1]));

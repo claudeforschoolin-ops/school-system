@@ -6,6 +6,7 @@
  * تظهر لكل مستخدم أقسام الوحدات التي يملك صلاحيتها فقط، ومحدّد الفرع يقيّد ما يقبل التقييد بالفرع.
  */
 import { addMonths } from "@/lib/analytics/metrics";
+import { formatNumber } from "@/lib/numbers";
 import { resolveScope } from "@/lib/rbac/access";
 import type { SessionData } from "@/server/auth/session";
 import type { TenantDb } from "@/server/db/tenant";
@@ -34,6 +35,8 @@ const DAY = 86_400_000;
 const d0 = (iso: string) => new Date(`${iso}T00:00:00Z`);
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const n = (v: bigint | number | null | undefined) => Number(v ?? 0);
+/** الأرقام داخل النصوص المولَّدة بتفضيل أرقام المستخدم */
+const nf = (session: SessionData, v: number) => formatNumber(v, session.user.preferences?.digits ?? "arab");
 
 function hasBroad(session: SessionData, module: string) {
   const s = resolveScope(session.access, module, "view");
@@ -147,7 +150,7 @@ export async function principalDashboard(db: TenantDb, session: SessionData, inp
     const todayRow = days.find((d) => d.date === today) ?? null;
     const before = days.filter((d) => d.date < today).slice(-7);
     const avg = before.length ? Math.round(before.reduce((s, d) => s + d.rateBp, 0) / before.length) : null;
-    kpis.push({ key: "attendance", label: "حضور اليوم", value: todayRow?.rateBp ?? null, previous: avg, compareLabel: "متوسط الأيام الدراسية السبعة السابقة", unit: "bp", higherIsBetter: true, href: "/attendance", hint: todayRow ? `${todayRow.absent} غائب · ${todayRow.late} متأخر` : "لم يُرصد حضور اليوم بعد" });
+    kpis.push({ key: "attendance", label: "حضور اليوم", value: todayRow?.rateBp ?? null, previous: avg, compareLabel: "متوسط الأيام الدراسية السبعة السابقة", unit: "bp", higherIsBetter: true, href: "/attendance", hint: todayRow ? `${nf(session, todayRow.absent)} غائب · ${nf(session, todayRow.late)} متأخر` : "لم يُرصد حضور اليوم بعد" });
     out.attendanceDays = days.slice(-14);
     out.repeatedAbsence = (await repeatedAbsence(db, branchIds, today)).slice(0, 8);
   }
@@ -164,7 +167,7 @@ export async function principalDashboard(db: TenantDb, session: SessionData, inp
   if (hasBroad(session, "gpa")) out.academic = await academicSummary(db, session, branchIds);
   if (out.academic) {
     const a = out.academic;
-    kpis.push({ key: "average", label: "متوسط التحصيل", value: a?.averageBp ?? null, previous: null, compareLabel: null, unit: "bp", higherIsBetter: true, href: "/assessment/stats", hint: a ? `${a.term} · ${a.atRisk} طالباً دون الحد` : "لا درجات معتمدة بعد" });
+    kpis.push({ key: "average", label: "متوسط التحصيل", value: a?.averageBp ?? null, previous: null, compareLabel: null, unit: "bp", higherIsBetter: true, href: "/assessment/stats", hint: a ? `${a.term} · ${nf(session, a.atRisk)} طالباً دون الحد` : "لا درجات معتمدة بعد" });
   }
   const myRoles = (await db.userRole.findMany({ where: { userId: session.user.id }, select: { roleId: true } })).map((r) => r.roleId);
   const pending = await db.approvalStep.count({ where: { status: "PENDING", request: { status: "PENDING" }, OR: [{ approverUserId: session.user.id }, { approverRoleId: { in: myRoles } }] } });
@@ -213,23 +216,23 @@ async function alerts(db: TenantDb, session: SessionData, branchIds: string[] | 
     const t = d0(today);
     const open = await db.invoice.findMany({ where: { deletedAt: null, status: { in: ["ISSUED", "PARTIAL"] }, ...inBranch(branchIds) }, select: { status: true, dueDate: true, totalMinor: true, paidMinor: true, creditedMinor: true, installments: { select: { dueDate: true, amountMinor: true, paidMinor: true } } } });
     const late30 = open.filter((i) => displayStatus(i, new Date(t.getTime() - 30 * DAY)) === "OVERDUE");
-    if (late30.length) out.push({ key: "overdue30", tone: "danger", title: `${late30.length} فاتورة متأخرة أكثر من ٣٠ يوماً`, detail: "راجع التذكيرات وخطط التقسيط مع الأسر", href: "/finance/invoices?status=OVERDUE" });
+    if (late30.length) out.push({ key: "overdue30", tone: "danger", title: `${nf(session, late30.length)} فاتورة متأخرة أكثر من ٣٠ يوماً`, detail: "راجع التذكيرات وخطط التقسيط مع الأسر", href: "/finance/invoices?status=OVERDUE" });
   }
   if (hasBroad(session, "employees")) {
     const soon = new Date(d0(today).getTime() + 30 * DAY);
     const docs = await db.employee.count({ where: { deletedAt: null, status: { not: "TERMINATED" }, OR: [{ idExpiry: { lte: soon } }, { passportExpiry: { lte: soon } }], ...inBranch(branchIds) } });
-    if (docs) out.push({ key: "docs", tone: "warning", title: `${docs} موظفاً تنتهي وثائقهم خلال ٣٠ يوماً`, detail: "الهوية/الإقامة أو الجواز", href: "/hr/employees/alerts" });
+    if (docs) out.push({ key: "docs", tone: "warning", title: `${nf(session, docs)} موظفاً تنتهي وثائقهم خلال ٣٠ يوماً`, detail: "الهوية/الإقامة أو الجواز", href: "/hr/employees/alerts" });
   }
   if (hasBroad(session, "inventory")) {
     const items = await db.inventoryItem.findMany({ where: { deletedAt: null, isActive: true, minQty: { gt: 0 } }, select: { onHandQty: true, minQty: true } });
     const low = items.filter((i) => i.onHandQty <= i.minQty).length;
-    if (low) out.push({ key: "stock", tone: "warning", title: `${low} صنفاً تحت الحد الأدنى`, detail: "أنشئ طلب شراء قبل النفاد", href: "/inventory" });
+    if (low) out.push({ key: "stock", tone: "warning", title: `${nf(session, low)} صنفاً تحت الحد الأدنى`, detail: "أنشئ طلب شراء قبل النفاد", href: "/inventory" });
   }
   const overdueSteps = await db.approvalStep.count({ where: { status: "PENDING", request: { status: "PENDING" }, dueHours: { not: null }, escalatedAt: { not: null } } });
-  if (overdueSteps && resolveScope(session.access, "workflows", "view")) out.push({ key: "sla", tone: "danger", title: `${overdueSteps} موافقة تجاوزت مهلتها وصُعّدت`, detail: "من مراقبة مسارات الموافقة", href: "/workflows/monitor" });
+  if (overdueSteps && resolveScope(session.access, "workflows", "view")) out.push({ key: "sla", tone: "danger", title: `${nf(session, overdueSteps)} موافقة تجاوزت مهلتها وصُعّدت`, detail: "من مراقبة مسارات الموافقة", href: "/workflows/monitor" });
   if (hasBroad(session, "maintenance")) {
     const urgent = await db.maintenanceRequest.count({ where: { deletedAt: null, priority: "URGENT", status: { in: ["NEW", "IN_PROGRESS", "WAITING_PARTS"] } } });
-    if (urgent) out.push({ key: "maint", tone: "danger", title: `${urgent} بلاغ صيانة عاجل مفتوح`, detail: "لوحة البلاغات", href: "/maintenance" });
+    if (urgent) out.push({ key: "maint", tone: "danger", title: `${nf(session, urgent)} بلاغ صيانة عاجل مفتوح`, detail: "لوحة البلاغات", href: "/maintenance" });
   }
   return out;
 }
@@ -274,8 +277,8 @@ export async function financeBoard(db: TenantDb, session: SessionData, input: { 
   const kpis: Kpi[] = [
     { key: "collected", label: "تحصيل الشهر", value: cur, previous: prev, compareLabel: p.label, unit: "money", higherIsBetter: true, href: "/finance/collect", spark: branchIds ? undefined : await sparkOf(db, session, "collected") },
     { key: "billed", label: "فوترة الشهر", value: billed ?? 0, previous: billedPrev ?? 0, compareLabel: p.label, unit: "money", higherIsBetter: true, href: "/finance/invoices" },
-    { key: "receivable", label: "الذمم المفتوحة", value: receivable, previous: null, compareLabel: null, unit: "money", higherIsBetter: false, href: "/finance/invoices", hint: `${open.length} فاتورة` },
-    { key: "overdue", label: "المتأخر سداده", value: overdue, previous: null, compareLabel: null, unit: "money", higherIsBetter: false, href: "/finance/invoices?status=OVERDUE", hint: receivable ? `${Math.round((overdue / receivable) * 100)}٪ من الذمم` : undefined },
+    { key: "receivable", label: "الذمم المفتوحة", value: receivable, previous: null, compareLabel: null, unit: "money", higherIsBetter: false, href: "/finance/invoices", hint: `${nf(session, open.length)} فاتورة` },
+    { key: "overdue", label: "المتأخر سداده", value: overdue, previous: null, compareLabel: null, unit: "money", higherIsBetter: false, href: "/finance/invoices?status=OVERDUE", hint: receivable ? `${nf(session, Math.round((overdue / receivable) * 100))}٪ من الذمم` : undefined },
     { key: "revenue", label: "إيرادات الشهر", value: gl.revenue, previous: glPrev.revenue, compareLabel: p.label, unit: "money", higherIsBetter: true, hint: "من دفتر اليومية", spark: await sparkOf(db, session, "revenue") },
     { key: "expenses", label: "مصروفات الشهر", value: gl.expenses, previous: glPrev.expenses, compareLabel: p.label, unit: "money", higherIsBetter: false, spark: await sparkOf(db, session, "expenses") },
   ];
@@ -305,9 +308,9 @@ export async function academicBoard(db: TenantDb, session: SessionData, input: {
   const kpis: Kpi[] = [];
   const summary = hasBroad(session, "gpa") ? await academicSummary(db, session, branchIds) : null;
   if (summary) {
-    kpis.push({ key: "average", label: "متوسط التحصيل", value: summary.averageBp, previous: null, compareLabel: null, unit: "bp", higherIsBetter: true, href: "/assessment/results", hint: `${summary.term} · ${summary.graded} طالباً برصد معتمد` });
+    kpis.push({ key: "average", label: "متوسط التحصيل", value: summary.averageBp, previous: null, compareLabel: null, unit: "bp", higherIsBetter: true, href: "/assessment/results", hint: `${summary.term} · ${nf(session, summary.graded)} طالباً برصد معتمد` });
     kpis.push({ key: "pass", label: "نسبة النجاح", value: summary.passRateBp, previous: null, compareLabel: null, unit: "bp", higherIsBetter: true, href: "/assessment/stats" });
-    kpis.push({ key: "atRisk", label: "طلاب دون الحد", value: summary.atRisk, previous: null, compareLabel: null, unit: "count", higherIsBetter: false, href: "/assessment/stats", hint: `المعدل أقل من ${Math.round(summary.atRiskBp / 100)}٪` });
+    kpis.push({ key: "atRisk", label: "طلاب دون الحد", value: summary.atRisk, previous: null, compareLabel: null, unit: "count", higherIsBetter: false, href: "/assessment/stats", hint: `المعدل أقل من ${nf(session, Math.round(summary.atRiskBp / 100))}٪` });
   }
   let attendanceByGrade: Array<{ key: string; label: string; value: number }> = [];
   if (hasBroad(session, "attendance")) {
@@ -333,7 +336,7 @@ export async function academicBoard(db: TenantDb, session: SessionData, input: {
     const where = (f: Date, to: Date, kind: "POSITIVE" | "NEGATIVE") => db.behaviorRecord.count({ where: { deletedAt: null, kind, occurredAt: { gte: f, lte: to }, ...inBranch(branchIds) } });
     const [pos, neg, prevNeg] = await Promise.all([where(p.from, p.to, "POSITIVE"), where(p.from, p.to, "NEGATIVE"), where(p.prevFrom, p.prevTo, "NEGATIVE")]);
     behavior = { positive: pos, negative: neg, prevNegative: prevNeg };
-    kpis.push({ key: "behavior", label: "ملاحظات سلوكية سلبية", value: neg, previous: prevNeg, compareLabel: p.label, unit: "count", higherIsBetter: false, href: "/behavior", hint: `${pos} ملاحظة إيجابية` });
+    kpis.push({ key: "behavior", label: "ملاحظات سلوكية سلبية", value: neg, previous: prevNeg, compareLabel: p.label, unit: "count", higherIsBetter: false, href: "/behavior", hint: `${nf(session, pos)} ملاحظة إيجابية` });
   }
   return { kpis, summary, attendanceByGrade, behavior, today };
 }
@@ -357,7 +360,7 @@ export async function hrBoard(db: TenantDb, session: SessionData, input: { branc
     db.employee.count({ where: { deletedAt: null, terminationDate: { gte: d0(`${today.slice(0, 4)}-01-01`), lte: t }, ...inBranch(branchIds) } }),
   ]);
   const deps = await db.department.findMany({ select: { id: true, name: true } });
-  const kpis: Kpi[] = [{ key: "headcount", label: "الموظفون على رأس العمل", value: headcount, previous: prevHead, compareLabel: "بداية الشهر", unit: "count", higherIsBetter: true, href: "/hr/employees", hint: `${terminatedYtd} انتهت خدمتهم هذه السنة` }];
+  const kpis: Kpi[] = [{ key: "headcount", label: "الموظفون على رأس العمل", value: headcount, previous: prevHead, compareLabel: "بداية الشهر", unit: "count", higherIsBetter: true, href: "/hr/employees", hint: `${nf(session, terminatedYtd)} انتهت خدمتهم هذه السنة` }];
   let attendance14: Array<{ date: string; rateBp: number }> = [];
   if (hasBroad(session, "hr_attendance")) {
     const agg = async (f: Date, to: Date) => db.employeeAttendance.groupBy({ by: ["status"], where: { date: { gte: f, lte: to }, employee: inBranch(branchIds) }, _count: true, _sum: { lateMinutes: true } });
@@ -390,7 +393,7 @@ export async function hrBoard(db: TenantDb, session: SessionData, input: { branc
   if (hasBroad(session, "payroll")) {
     const runs = await db.payrollRun.findMany({ where: { status: { in: ["APPROVED", "PAID"] } }, orderBy: { month: "desc" }, take: 2 });
     const [last, before] = runs;
-    kpis.push({ key: "payroll", label: "تكلفة آخر مسير", value: last?.grossMinor ?? null, previous: before?.grossMinor ?? null, compareLabel: "المسير السابق", unit: "money", higherIsBetter: false, href: "/hr/payroll", hint: last ? `مسير ${last.month} · ${last.employees} موظفاً` : "لا مسير معتمد", spark: await sparkOf(db, session, "payroll_cost") });
+    kpis.push({ key: "payroll", label: "تكلفة آخر مسير", value: last?.grossMinor ?? null, previous: before?.grossMinor ?? null, compareLabel: "المسير السابق", unit: "money", higherIsBetter: false, href: "/hr/payroll", hint: last ? `مسير ${last.month} · ${nf(session, last.employees)} موظفاً` : "لا مسير معتمد", spark: await sparkOf(db, session, "payroll_cost") });
     payroll = runs.map((r) => ({ month: r.month, grossMinor: r.grossMinor }));
   }
   return {
@@ -419,12 +422,12 @@ export async function operationsBoard(db: TenantDb, session: SessionData, input:
       db.maintenanceRequest.count({ where: { deletedAt: null, completedAt: { gte: p.from, lte: p.to } } }),
       db.maintenanceRequest.count({ where: { deletedAt: null, completedAt: { gte: p.prevFrom, lte: p.prevTo } } }),
     ]);
-    kpis.push({ key: "maintOpen", label: "بلاغات صيانة مفتوحة", value: open, previous: null, compareLabel: null, unit: "count", higherIsBetter: false, href: "/maintenance", hint: `${urgent} عاجل` });
+    kpis.push({ key: "maintOpen", label: "بلاغات صيانة مفتوحة", value: open, previous: null, compareLabel: null, unit: "count", higherIsBetter: false, href: "/maintenance", hint: `${nf(session, urgent)} عاجل` });
     kpis.push({ key: "maintDone", label: "بلاغات أُنجزت هذا الشهر", value: doneMonth, previous: donePrev, compareLabel: p.label, unit: "count", higherIsBetter: true, href: "/maintenance" });
   }
   if (hasBroad(session, "inventory")) {
     const items = await db.inventoryItem.findMany({ where: { deletedAt: null, isActive: true }, select: { onHandQty: true, minQty: true, stockValueMinor: true } });
-    kpis.push({ key: "stockValue", label: "قيمة المخزون", value: items.reduce((s, i) => s + i.stockValueMinor, 0), previous: null, compareLabel: null, unit: "money", higherIsBetter: true, href: "/inventory", hint: `${items.filter((i) => i.minQty > 0 && i.onHandQty <= i.minQty).length} صنف تحت الحد` });
+    kpis.push({ key: "stockValue", label: "قيمة المخزون", value: items.reduce((s, i) => s + i.stockValueMinor, 0), previous: null, compareLabel: null, unit: "money", higherIsBetter: true, href: "/inventory", hint: `${nf(session, items.filter((i) => i.minQty > 0 && i.onHandQty <= i.minQty).length)} صنف تحت الحد` });
   }
   if (hasBroad(session, "canteen")) {
     const sum = async (f: Date, to: Date) => (await db.sale.aggregate({ where: { status: "COMPLETED", date: { gte: f, lte: to } }, _sum: { totalMinor: true } }))._sum.totalMinor ?? 0;
@@ -435,7 +438,7 @@ export async function operationsBoard(db: TenantDb, session: SessionData, input:
     const overdue = await db.libraryLoan.count({ where: { returnedAt: null, dueDate: { lt: d0(today) } } });
     const loans = await db.libraryLoan.count({ where: { loanedAt: { gte: p.from, lte: p.to } } });
     const loansPrev = await db.libraryLoan.count({ where: { loanedAt: { gte: p.prevFrom, lte: p.prevTo } } });
-    kpis.push({ key: "loans", label: "إعارات هذا الشهر", value: loans, previous: loansPrev, compareLabel: p.label, unit: "count", higherIsBetter: true, href: "/library", hint: `${overdue} إعارة متأخرة` });
+    kpis.push({ key: "loans", label: "إعارات هذا الشهر", value: loans, previous: loansPrev, compareLabel: p.label, unit: "count", higherIsBetter: true, href: "/library", hint: `${nf(session, overdue)} إعارة متأخرة` });
   }
   if (hasBroad(session, "transport")) {
     const riders = await db.transportAssignment.count({ where: { status: "ACTIVE" } });

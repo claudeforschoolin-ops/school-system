@@ -47,7 +47,16 @@ export function KpiTile({ k }: { k: KpiData }) {
   const delta = k.value === null || k.previous === null ? null : k.unit === "bp" ? k.value - k.previous : changeBp(k.value, k.previous);
   const tone = deltaTone(k.unit === "bp" && delta !== null ? delta * 1 : delta, k.higherIsBetter);
   const Icon = delta === null || Math.abs(delta) < 50 ? Minus : delta > 0 ? ArrowUpLeft : ArrowDownLeft;
-  const deltaText = delta === null ? null : k.unit === "bp" ? `${delta > 0 ? "+" : delta < 0 ? "−" : ""}${formatNumber(Math.abs(Math.round(delta / 10) / 10), prefs.digits)} نقطة` : `${delta > 0 ? "+" : delta < 0 ? "−" : ""}${formatNumber(Math.abs(Math.round(delta / 10) / 10), prefs.digits)}٪`;
+  const sign = delta === null ? "" : delta > 0 ? "+" : delta < 0 ? "−" : "";
+  // التغير الهائل عن أساس صغير جداً لا يُقرأ كنسبة: يُعرض كمضاعف
+  const deltaText =
+    delta === null
+      ? null
+      : k.unit === "bp"
+        ? `${sign}${formatNumber(Math.abs(Math.round(delta / 10) / 10), prefs.digits)} نقطة`
+        : delta >= 20000
+          ? `${formatNumber(Math.round(delta / 10000 + 1), prefs.digits)} أضعاف`
+          : `${sign}${formatNumber(Math.abs(Math.round(delta / 10) / 10), prefs.digits)}٪`;
   const body: ReactNode = (
     <>
       <div className="flex items-start justify-between gap-2">

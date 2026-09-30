@@ -17,7 +17,7 @@ export function useCellFormat() {
   const prefs = usePrefs();
   const money = useMoney();
   const fmtDate = useFmtDate();
-  return (v: unknown, col: Pick<QueryColumn, "type" | "options">): ReactNode => {
+  return function formatCell(v: unknown, col: Pick<QueryColumn, "type" | "options">): ReactNode {
     if (v === null || v === undefined || v === "") return <span className="text-fg-4">—</span>;
     switch (col.type) {
       case "money":

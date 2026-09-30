@@ -59,7 +59,7 @@ export function DashboardsPage() {
         ) : null}
       </div>
       {meta.data && !tabs.length ? <EmptyState illustration="lock" title="لا لوحات متاحة" description="لوحات التحكم تتطلب صلاحية «لوحات التحكم» ووحدات بياناتها." /> : null}
-      {active === "principal" ? <PrincipalBoard branchId={branchId || null} /> : null}
+      {!tabs.length ? null : active === "principal" ? <PrincipalBoard branchId={branchId || null} /> : null}
       {active === "finance" ? <FinanceBoard branchId={branchId || null} /> : null}
       {active === "academic" ? <AcademicBoard branchId={branchId || null} /> : null}
       {active === "hr" ? <HrBoard branchId={branchId || null} /> : null}
