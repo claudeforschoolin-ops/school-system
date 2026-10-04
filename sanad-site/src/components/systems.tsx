@@ -1,72 +1,10 @@
 import { LineIcon, type IconName } from "@/components/line-icon";
+import { ModuleExplorer } from "@/components/module-explorer";
 import { SectionHead } from "@/components/section-head";
 import { WIREFRAMES } from "@/components/wireframes";
-import { systems, type ModuleSpec } from "@/content/site";
+import { systems } from "@/content/site";
 
-function Schema({ module }: { module: ModuleSpec }) {
-  const width = Math.max(...module.schema.map(([n]) => n.length));
-  return (
-    <figure className="m-0 min-w-0">
-      <figcaption className="text-caption mb-2 text-ink-3">Schema</figcaption>
-      <pre className="mono-block m-0 overflow-x-auto whitespace-pre-wrap break-words rounded-card border border-hairline bg-paper-deep p-4 text-ink">
-        <code>
-          <span className="text-sanad">type</span> {module.schemaTitle} {"{"}
-          {module.schema.map(([name, type, note]) => (
-            <span key={name} className="block pl-4">
-              {name.padEnd(width + 1)}
-              <span className="text-sanad">{type}</span>
-              {note ? <span className="text-ink-3">{"  // " + note}</span> : null}
-            </span>
-          ))}
-          {"}"}
-          {module.invariant ? (
-            <span className="mt-2 block text-ink-3">{"// invariant: " + module.invariant}</span>
-          ) : null}
-        </code>
-      </pre>
-    </figure>
-  );
-}
-
-function Params({ params }: { params: ModuleSpec["params"] }) {
-  return (
-    <dl className="m-0 border-t border-hairline">
-      {params.map(([k, v]) => (
-        <div key={k} className="grid grid-cols-[6.75rem_1fr] gap-x-4 border-b border-hairline py-2">
-          <dt className="text-caption text-ink-3">{k}</dt>
-          <dd className="mono-block m-0 text-ink">{v}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-function Module({ module, index }: { module: ModuleSpec; index: number }) {
-  const Wireframe = WIREFRAMES[module.id];
-  return (
-    <article className="border-t border-hairline p-6 first:border-t-0 sm:p-8">
-      <header className="flex items-baseline gap-4">
-        <span className="font-mono text-[0.78rem] text-ink-3">A.{index + 1}</span>
-        <div>
-          <h4 className="text-title text-ink">{module.name}</h4>
-          <p className="text-caption mt-1 text-ink-3">{module.summary}</p>
-        </div>
-      </header>
-      <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <figure className="m-0 min-w-0">
-          <figcaption className="text-caption mb-2 text-ink-3">Interface wireframe</figcaption>
-          <Wireframe />
-        </figure>
-        <div className="grid min-w-0 content-start gap-5">
-          <Schema module={module} />
-          <Params params={module.params} />
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function Panel({
+function Banner({
   tone,
   letter,
   title,
@@ -81,18 +19,24 @@ function Panel({
 }) {
   return (
     <div
-      className={`on-ink flex flex-col justify-between p-8 sm:p-10 lg:col-span-4 ${
-        tone === "blue" ? "bg-sanad text-paper" : "bg-ink text-paper"
-      }`}
+      className={`on-ink relative overflow-hidden px-6 pb-12 pt-8 sm:px-10 sm:pb-14 sm:pt-10 ${
+        tone === "blue" ? "bg-sanad" : "bg-ink"
+      } text-paper`}
     >
-      <div className="lg:sticky lg:top-28">
-        <p className="text-caption text-mist">Pillar {letter}</p>
-        <p aria-hidden="true" className="mt-4 font-serif text-[6.5rem] font-medium leading-none text-mist sm:text-[8rem]">
-          {letter}
-        </p>
-        <h3 className="text-heading mt-8 text-paper">{title}</h3>
-        <p className="text-caption mt-3 text-mist">{kind}</p>
-        <p className="text-body mt-6 max-w-[22rem] text-paper/85">{text}</p>
+      <span aria-hidden="true" className="loop-line loop-drift absolute inset-x-0 -bottom-1 text-mist/20" />
+      <div className="relative grid items-end gap-6 lg:grid-cols-12 lg:gap-10">
+        <div className="flex items-end gap-6 lg:col-span-7">
+          <span aria-hidden="true" className="font-serif text-[6rem] font-medium leading-[0.8] text-mist sm:text-[8rem]">
+            {letter}
+          </span>
+          <div className="pb-1">
+            <p className="text-caption text-mist">
+              {kind} · Pillar {letter}
+            </p>
+            <h3 className="text-heading mt-2 text-paper">{title}</h3>
+          </div>
+        </div>
+        <p className="text-body max-w-[28rem] text-paper/85 lg:col-span-5 lg:justify-self-end">{text}</p>
       </div>
     </div>
   );
@@ -107,27 +51,46 @@ export function Systems() {
 
         <div className="mt-14 space-y-8">
           {/* Pillar A */}
-          <div className="overflow-hidden rounded-card border border-hairline lg:grid lg:grid-cols-12">
-            <Panel tone="blue" letter={pillarA.letter} title={pillarA.title} kind={pillarA.kind} text={pillarA.text} />
-            <div className="bg-paper lg:col-span-8">
-              {pillarA.modules.map((m, i) => (
-                <Module key={m.id} module={m} index={i} />
-              ))}
+          <div className="reveal overflow-hidden rounded-card border border-hairline">
+            <Banner tone="blue" letter={pillarA.letter} title={pillarA.title} kind={pillarA.kind} text={pillarA.text} />
+            <div className="bg-paper p-6 sm:p-8 lg:p-10">
+              <ModuleExplorer />
+            </div>
+            <div className="grid border-t border-hairline bg-paper md:grid-cols-3">
+              {pillarA.modules.map((m, i) => {
+                const Wireframe = WIREFRAMES[m.id];
+                return (
+                  <article
+                    key={m.id}
+                    className={`reveal p-6 sm:p-8 ${i > 0 ? "border-t border-hairline md:border-l md:border-t-0" : ""}`}
+                    style={{ ["--d" as string]: i * 140 }}
+                  >
+                    <p className="font-mono text-[0.78rem] text-ink-3">A.{i + 1} · Interface wireframe</p>
+                    <h4 className="text-body mb-4 mt-1 font-medium text-ink">{m.name}</h4>
+                    <Wireframe />
+                  </article>
+                );
+              })}
             </div>
           </div>
 
           {/* Pillar B */}
-          <div className="overflow-hidden rounded-card border border-hairline lg:grid lg:grid-cols-12">
-            <Panel tone="ink" letter={pillarB.letter} title={pillarB.title} kind={pillarB.kind} text={pillarB.text} />
-            <div className="grid bg-paper md:grid-cols-3 lg:col-span-8">
+          <div className="reveal overflow-hidden rounded-card border border-hairline">
+            <Banner tone="ink" letter={pillarB.letter} title={pillarB.title} kind={pillarB.kind} text={pillarB.text} />
+            <div className="grid bg-paper md:grid-cols-3">
               {pillarB.items.map((item, i) => (
                 <article
                   key={item.title}
-                  className={`flex flex-col p-6 sm:p-8 ${i > 0 ? "border-t border-hairline md:border-l md:border-t-0" : ""}`}
+                  className={`reveal group flex flex-col p-6 transition-colors duration-500 hover:bg-mist-soft/40 sm:p-8 ${
+                    i > 0 ? "border-t border-hairline md:border-l md:border-t-0" : ""
+                  }`}
+                  style={{ ["--d" as string]: i * 140 }}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-[0.78rem] text-ink-3">B.{i + 1}</span>
-                    <LineIcon name={item.icon as IconName} size={44} />
+                    <span className="transition-transform duration-500 group-hover:-translate-y-1">
+                      <LineIcon name={item.icon as IconName} size={48} />
+                    </span>
                   </div>
                   <h4 className="text-title mt-6 text-ink">{item.title}</h4>
                   <p className="text-caption mt-1 text-sanad">{item.tagline}</p>

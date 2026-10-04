@@ -14,7 +14,7 @@ export function SiteHeader() {
           <ul className="text-caption flex items-center gap-9 text-ink-3">
             {nav.map((item) => (
               <li key={item.href}>
-                <a href={item.href} className="transition-colors hover:text-ink">
+                <a href={item.href} className="nav-link transition-colors hover:text-ink">
                   {item.label}
                 </a>
               </li>
@@ -25,7 +25,7 @@ export function SiteHeader() {
         <div className="flex items-center gap-3">
           <a
             href={dossierHref}
-            className="text-caption hidden rounded-control border border-ink px-4 py-2 font-medium text-ink transition-colors hover:bg-ink hover:text-paper md:inline-block"
+            className="btn btn-line hidden !py-2 md:inline-flex"
           >
             Request Technical Dossier
           </a>

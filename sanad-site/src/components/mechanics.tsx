@@ -10,8 +10,8 @@ export function Mechanics() {
 
         <div className="mt-14 grid gap-12 lg:grid-cols-12 lg:gap-10">
           <dl className="m-0 min-w-0 border-t border-ink lg:col-span-6">
-            {mechanics.specs.map((s) => (
-              <div key={s.label} className="border-b border-hairline py-7">
+            {mechanics.specs.map((s, i) => (
+              <div key={s.label} className="reveal border-b border-hairline py-7" style={{ ["--d" as string]: i * 110 }}>
                 <dt className="text-caption text-ink-3">{s.label}</dt>
                 <dd className="m-0 mt-1">
                   <span className="text-heading block text-ink">{s.value}</span>
@@ -21,7 +21,7 @@ export function Mechanics() {
             ))}
           </dl>
 
-          <figure className="m-0 min-w-0 lg:sticky lg:top-28 lg:col-span-6 lg:self-start">
+          <figure className="reveal m-0 min-w-0 lg:sticky lg:top-28 lg:col-span-6 lg:self-start">
             <div className="on-ink overflow-hidden rounded-card bg-ink text-paper">
               <div className="flex items-baseline justify-between gap-4 border-b border-paper/15 px-5 py-3 sm:px-6">
                 <figcaption className="text-caption font-medium text-paper">{trace.title}</figcaption>

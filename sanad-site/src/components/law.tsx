@@ -8,7 +8,7 @@ export function Law() {
       <div className="wrap">
         <SectionHead index={law.index} label={law.label} heading={law.heading} lead={law.lead} id="law-title" />
 
-        <table className="mt-14 block w-full border-t border-ink text-left md:table">
+        <table className="reveal mt-14 block w-full border-t border-ink text-left md:table">
           <caption className="sr-only">
             Operational load before and after Sanad, by workstream
           </caption>
@@ -27,7 +27,7 @@ export function Law() {
           </thead>
           <tbody className="block md:table-row-group">
             {law.rows.map((row, i) => (
-              <tr key={row.workstream} className="block border-b border-hairline py-6 md:table-row md:py-0">
+              <tr key={row.workstream} className="group block border-b border-hairline py-6 transition-colors duration-500 hover:bg-mist-soft/50 md:table-row md:py-0">
                 <th scope="row" className="block pb-3 text-left font-normal md:table-cell md:py-9 md:pb-9 md:pr-8 md:align-top">
                   <span className="flex items-baseline gap-3">
                     <span className="font-mono text-[0.78rem] text-ink-3">{String(i + 1).padStart(2, "0")}</span>
@@ -50,7 +50,7 @@ export function Law() {
         </table>
 
         <div className="mt-14 grid gap-12 lg:grid-cols-12 lg:gap-10">
-          <div className="min-w-0 lg:col-span-5">
+          <div className="reveal min-w-0 lg:col-span-5">
             <p className="text-caption text-ink-3">{law.definition.caption}</p>
             <div className="mt-3 overflow-x-auto rounded-card border border-hairline bg-mist-soft p-5">
               <div className="mono-block min-w-max text-ink">
@@ -64,22 +64,22 @@ export function Law() {
             </div>
           </div>
 
-          <figure className="m-0 min-w-0 lg:col-span-7" aria-label={`${bars.caption}: baseline 100, with Sanad at most 70`}>
+          <figure className="reveal m-0 min-w-0 lg:col-span-7" style={{ ["--d" as string]: 150 }} aria-label={`${bars.caption}: baseline 100, with Sanad at most 70`}>
             <figcaption className="text-caption flex items-baseline justify-between text-ink-3">
               <span>{bars.caption}</span>
               <span className="font-mono text-[0.72rem]">baseline = 100</span>
             </figcaption>
             <div className="mt-4 grid grid-cols-[6.5rem_1fr] items-center gap-x-4 gap-y-4">
               <span className="text-caption text-ink-3">{bars.baseline.label}</span>
-              <div className="flex h-11 items-center justify-end rounded-control border border-ink bg-mist-soft px-3">
+              <div className="bar-grow flex h-11 items-center justify-end rounded-control border border-ink bg-mist-soft px-3">
                 <span className="font-mono text-[0.8rem] text-ink">{bars.baseline.value}</span>
               </div>
 
               <span className="text-caption font-medium text-sanad">{bars.sanad.label}</span>
               <div className="flex h-11">
                 <div
-                  className="flex items-center justify-end rounded-l-control bg-sanad px-3"
-                  style={{ width: `${bars.sanad.value}%` }}
+                  className="bar-grow flex items-center justify-end rounded-l-control bg-sanad px-3"
+                  style={{ width: `${bars.sanad.value}%`, ["--d" as string]: 500 }}
                 >
                   <span className="font-mono text-[0.8rem] text-paper">{bars.sanad.note}</span>
                 </div>

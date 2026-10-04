@@ -84,10 +84,16 @@ export const law = {
   },
 } as const;
 
+export type ModuleId = "inventory" | "units" | "ledger";
+
 export type ModuleSpec = {
-  id: "inventory" | "units" | "ledger";
+  id: ModuleId;
   name: string;
   summary: string;
+  /** What the module is the system of record for. */
+  owns: string;
+  /** The two data streams that feed it. */
+  sources: readonly [string, string];
   schemaTitle: string;
   schema: ReadonlyArray<readonly [name: string, type: string, note?: string]>;
   invariant?: string;
@@ -109,6 +115,8 @@ export const systems = {
         id: "inventory",
         name: "Inventory & Distributed Warehousing Logic",
         summary: "One stock position across every warehouse, store and channel.",
+        owns: "Stock position per node, reservations and transfers.",
+        sources: ["Warehouse scanners", "3PL & logistics"],
         schemaTitle: "StockLevel",
         schema: [
           ["sku", "string"],
@@ -129,6 +137,8 @@ export const systems = {
         id: "units",
         name: "Hospitality & Unit Management Engines",
         summary: "Units, stays and turnover, held to a single source of availability.",
+        owns: "Units, stays, availability and turnover tasks.",
+        sources: ["Booking channels", "Property systems"],
         schemaTitle: "Stay",
         schema: [
           ["unit", "UnitId"],
@@ -150,6 +160,8 @@ export const systems = {
         id: "ledger",
         name: "Unified Commerce & POS Ledger Sync",
         summary: "Every sale, online or in store, posts once to one ledger.",
+        owns: "The transaction ledger: every entry, posted once.",
+        sources: ["Point of sale", "Payment gateways"],
         schemaTitle: "LedgerEntry",
         schema: [
           ["tx", "TxId", "idempotency key"],
@@ -260,8 +272,100 @@ export const mechanics = {
   },
 } as const;
 
-export const manifesto = {
+export const heroStats = [
+  { kind: "count", to: 30, prefix: "≥ ", suffix: "%", label: "Structural reduction in daily operational load" },
+  { kind: "text", display: "18 h → < 1 s", label: "Inventory and supply synchronization" },
+  { kind: "count", to: 100, prefix: "< ", suffix: " ms", label: "Internal state change across terminals" },
+  { kind: "text", display: "Zero", label: "Black-box dependencies" },
+] as const;
+
+export const security = {
   index: "04",
+  label: "Security & compliance",
+  heading: "Stated plainly, so it can be checked.",
+  lead: "Properties of the systems we build, written as specifications rather than assurances.",
+  rows: [
+    ["Data location", "Client-controlled infrastructure."],
+    ["Access", "Role-based. Permissions are explicit and reviewable."],
+    ["History", "An append-only record of changes and actions."],
+    ["Agents", "Bounded permissions, approval gates, a full action log, and every action reversible."],
+    ["Network", "Outbound access denied by default."],
+    ["Failure", "Offline-capable nodes and deterministic recovery."],
+  ],
+  note: "We do not claim certifications on this page. If you must meet a specific regulation, we design to it and show you how.",
+} as const;
+
+export const how = {
+  index: "05",
+  label: "How we work",
+  heading: "Four stages. One owner at each.",
+  lead: "Every engagement follows the same order, so you always know what is being decided and what comes next.",
+  stages: [
+    {
+      n: "01",
+      name: "Understand",
+      text: "We map how work actually moves through your business: systems, hand-offs, waiting and re-entry.",
+      receive: "A written map of current operations, and the baseline for the 30% target.",
+    },
+    {
+      n: "02",
+      name: "Design",
+      text: "We specify the system: data model, integrations, failure behavior, and what must run offline.",
+      receive: "An architecture document you can hand to your own engineers.",
+    },
+    {
+      n: "03",
+      name: "Build",
+      text: "We build and test in your environment, in stages, each one usable on its own.",
+      receive: "Working software, tested against the baseline.",
+    },
+    {
+      n: "04",
+      name: "Operate",
+      text: "We run it with you, monitor it, and hand over ownership when you are ready.",
+      receive: "Runbooks, access, and the option to run it yourselves.",
+    },
+  ],
+} as const;
+
+export const models = {
+  index: "06",
+  label: "Engagement models",
+  heading: "Two ways to start.",
+  columns: [
+    { key: "A", title: "Turnkey modules", kind: "Pillar A" },
+    { key: "B", title: "Bespoke systems", kind: "Pillar B" },
+  ],
+  rows: [
+    ["Best when", "Your process matches a standard shape: stock, units, a sales ledger.", "Your operations are particular to you and no product fits."],
+    ["What we do", "Configure, connect and deploy a tested module.", "Specify and engineer from scratch."],
+    ["From you", "Access to current systems, a named process owner, and your configuration decisions.", "Time with the people who run the work, access to systems and data, and a named decision-maker."],
+    ["You get", "A running system, and training.", "A system built to your flow, with full documentation."],
+    ["Start with", "The technical dossier.", "An architectural walkthrough."],
+  ],
+} as const;
+
+export const faq = {
+  index: "07",
+  label: "Questions from engineers",
+  heading: "Plain answers to the usual questions.",
+  note: "Longer answers, with diagrams, are in the technical dossier.",
+  items: [
+    ["Who owns the data?", "You do. Databases synchronize with infrastructure you control, and we keep no copy that we depend on."],
+    ["What happens without internet?", "Each node keeps working from its local ledger. Changes queue, then replicate in order when the connection returns."],
+    ["How do we migrate from our current system?", "In stages. Data is imported and reconciled against the old system before anything is switched over, and the old system stays readable until you decide otherwise."],
+    ["Can it connect to our ERP and payment gateway?", "Yes, through deterministic APIs: the same input always produces the same result, and every call is logged."],
+    ["Do agents send our data to outside services?", "Not by default. Private agentic workflows run on your infrastructure, and outbound access is denied unless you allow it explicitly."],
+    ["What if we outgrow a turnkey module?", "Modules share one data model, so a bespoke component can replace or extend one without a rebuild."],
+  ],
+} as const;
+
+export const cta = {
+  line: "If the work is heavier than it should be, we should talk.",
+} as const;
+
+export const manifesto = {
+  index: "08",
   label: "The Sanad manifesto",
   heading: "Software should clarify the mind, not demand it.",
   body: "Most enterprise software creates its own bureaucracy. Teams spend hours managing the tool that was supposed to save them time. Sanad is built on the inverse thesis: intelligent software works silently in the background so leaders and builders can dedicate their focus to what actually matters.",
