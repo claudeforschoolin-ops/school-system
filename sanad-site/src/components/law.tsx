@@ -66,7 +66,8 @@ export function Law() {
       </div>
 
       {/* the full comparison, for screen readers and search */}
-      <table className="sr-only">
+      <div className="sr-only">
+      <table>
         <caption>Operational load before and after Sanad, by workstream</caption>
         <thead>
           <tr>
@@ -85,6 +86,7 @@ export function Law() {
           ))}
         </tbody>
       </table>
+      </div>
     </section>
   );
 }
