@@ -159,6 +159,15 @@
   width: 0.9em;
   height: 0.9em;
 }
+.wordmark {
+  display: inline-block;
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  font-optical-sizing: auto;
+  white-space: nowrap;
+}
 .lockup-word {
   display: block;
   /* nudges the capital S optically onto the symbol's centre line */
@@ -538,5 +547,33 @@
 @media (prefers-reduced-motion: no-preference) {
   .panel-in {
     animation: panel-in 0.55s var(--ease-out) both;
+  }
+}
+
+/* The large head in the hero: the wash settles, then the line is drawn down the page */
+@keyframes head-wash {
+  from {
+    opacity: 0;
+    transform: translate(-1.2px, -1.2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes head-line {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .head-wash {
+    animation: head-wash 1.8s var(--ease-out) 0.2s both;
+  }
+  .head-line {
+    animation: head-line 2.4s cubic-bezier(0.55, 0, 0.2, 1) 0.45s both;
   }
 }

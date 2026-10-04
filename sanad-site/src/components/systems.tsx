@@ -45,7 +45,7 @@ function Banner({
 export function Systems() {
   const { pillarA, pillarB } = systems;
   return (
-    <section id="systems" data-section data-n="02" data-label="Systems" aria-labelledby="systems-title" className="border-b border-hairline py-20 lg:py-28">
+    <section id="systems" data-section data-n="02" data-label="Systems" aria-labelledby="systems-title" className="py-20 lg:py-28">
       <div className="wrap">
         <SectionHead index={systems.index} label={systems.label} heading={systems.heading} lead={systems.lead} id="systems-title" />
 
@@ -94,8 +94,8 @@ export function Systems() {
                   </div>
                   <h4 className="text-title mt-6 text-ink">{item.title}</h4>
                   <p className="text-caption mt-1 text-sanad">{item.tagline}</p>
-                  <p className="text-body mt-5 text-[1rem] leading-[1.6]">{item.text}</p>
-                  <dl className="mt-auto border-t border-hairline pt-5 [&:not(:first-child)]:mt-8">
+                  <p className="text-body mb-8 mt-5 text-[1rem] leading-[1.6]">{item.text}</p>
+                  <dl className="mt-auto border-t border-hairline pt-5">
                     {item.spec.map(([k, v]) => (
                       <div key={k} className="grid gap-x-3 border-b border-hairline py-2 last:border-b-0">
                         <dt className="text-caption text-ink-3">{k}</dt>

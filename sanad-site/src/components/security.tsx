@@ -10,7 +10,7 @@ export function Security() {
 
         <div className="mt-14 grid gap-10 lg:grid-cols-12 lg:gap-10">
           <div className="reveal lg:col-span-4">
-            <LineIcon name="security" size={104} />
+            <LineIcon name="security" size={128} />
             <p className="text-caption mt-8 max-w-[22rem] italic text-ink-3">{security.note}</p>
           </div>
           <dl className="m-0 border-t border-ink lg:col-span-8">

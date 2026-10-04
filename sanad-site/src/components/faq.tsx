@@ -9,7 +9,7 @@ export function Faq() {
   const [open, setOpen] = useState<number | null>(0);
   const base = useId();
   return (
-    <section id="faq" data-section data-n="07" data-label="Questions" aria-labelledby="faq-title" className="border-b border-hairline py-20 lg:py-28">
+    <section id="faq" data-section data-n="07" data-label="Questions" aria-labelledby="faq-title" className="py-24 lg:py-32">
       <div className="wrap">
         <SectionHead index={faq.index} label={faq.label} heading={faq.heading} id="faq-title" />
 

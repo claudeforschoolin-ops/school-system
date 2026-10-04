@@ -76,3 +76,12 @@ export function Lockup({ size = 32, tone = "paper", boost = 1.0, className = "" 
     </span>
   );
 }
+
+/** The wordmark on its own: Newsreader Semibold, +0.01em. Used where the symbol would be redundant. */
+export function Wordmark({ size = 30, className = "" }: { size?: number; className?: string }) {
+  return (
+    <span className={`wordmark ${className}`} style={{ fontSize: size }}>
+      Sanad
+    </span>
+  );
+}

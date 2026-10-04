@@ -2,39 +2,48 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Arrow } from "@/components/arrow";
-import { Lockup } from "@/components/brand/mark";
+import { Wordmark } from "@/components/brand/mark";
 import { dossierHref, sections, site } from "@/content/site";
 
-type Here = { n: string; label: string };
-const TOP: Here = { n: "", label: "Enterprise engineering studio" };
+/** The four primary links, set as italic type. Everything else is reachable from the index. */
+const LINKS = [
+  { label: "Architecture", href: "#architecture" },
+  { label: "Systems", href: "#systems" },
+  { label: "The 30% Law", href: "#thirty-percent-law" },
+  { label: "Company", href: "#company" },
+] as const;
 
 /**
- * A running head, like a book's. The bar names the section you are reading and
- * its lower edge fills as you go. Navigation lives in an index that opens over
- * the whole page, set in the display face.
+ * Type only: a wordmark, four links in italic, one underlined request. It shares the
+ * hero's blue while the hero is behind it, then turns to paper. Below the large breakpoint
+ * the links fold into an index that opens over the page.
  */
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
-  const [here, setHere] = useState<Here>(TOP);
+  const [dark, setDark] = useState(true);
   const trigger = useRef<HTMLButtonElement>(null);
   const closeBtn = useRef<HTMLButtonElement>(null);
   const overlay = useRef<HTMLDivElement>(null);
 
-  // which section is crossing the middle of the screen
   useEffect(() => {
-    const els = document.querySelectorAll<HTMLElement>("[data-section]");
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (!e.isIntersecting) continue;
-          const t = e.target as HTMLElement;
-          setHere({ n: t.dataset.n ?? "", label: t.dataset.label ?? "" });
-        }
-      },
-      { rootMargin: "-45% 0px -50% 0px" },
-    );
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
+    const hero = document.getElementById("top");
+    if (!hero) return;
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      setDark(window.scrollY < hero.offsetHeight - 72);
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      cancelAnimationFrame(raf);
+    };
   }, []);
 
   const close = useCallback(() => {
@@ -42,7 +51,6 @@ export function SiteHeader() {
     trigger.current?.focus({ preventScroll: true });
   }, []);
 
-  // scroll lock, Escape, and a simple focus loop while the index is open
   useEffect(() => {
     if (!open) return;
     const prev = document.documentElement.style.overflow;
@@ -68,23 +76,30 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-paper">
-        <div className="wrap relative grid h-[4.25rem] grid-cols-[1fr_auto] items-center gap-6 md:grid-cols-[1fr_auto_1fr]">
-          <a href="#top" aria-label="Sanad, back to top" className="justify-self-start text-ink">
-            <Lockup size={30} className="max-sm:text-[1.65rem]" />
+      <header
+        className={`sticky top-0 z-40 border-b transition-colors duration-500 ${
+          dark ? "border-paper/15 bg-sanad text-paper" : "border-ink/10 bg-paper text-ink"
+        }`}
+      >
+        <div className="wrap relative grid h-[4.5rem] grid-cols-[1fr_auto] items-center gap-6 lg:grid-cols-[1fr_auto_1fr]">
+          <a href="#top" aria-label="Sanad, back to top" className="justify-self-start">
+            <Wordmark size={30} />
           </a>
 
-          {/* running head */}
-          <p aria-hidden="true" className="text-caption hidden min-w-[16rem] justify-center md:flex">
-            <span key={`${here.n}-${here.label}`} className="rh inline-flex items-baseline gap-3">
-              {here.n ? <span className="font-serif text-[1.1875rem] font-medium text-sanad">{here.n}</span> : null}
-              <span className="text-ink-3">{here.label}</span>
-            </span>
-          </p>
+          <nav aria-label="Primary" className="hidden items-center gap-11 lg:flex">
+            {LINKS.map((l) => (
+              <a key={l.href} href={l.href} className="nav-link font-serif text-[1.3125rem] italic opacity-90 transition-opacity hover:opacity-100">
+                {l.label}
+              </a>
+            ))}
+          </nav>
 
-          <div className="flex items-center gap-3 justify-self-end">
-            <a href={dossierHref} className="btn btn-line hidden !py-2 lg:inline-flex">
-              Request Technical Dossier
+          <div className="flex items-center gap-7 justify-self-end">
+            <a
+              href={dossierHref}
+              className="text-caption hidden border-b border-current/50 pb-0.5 font-medium transition-[border-color] hover:border-current md:inline-block"
+            >
+              Request Technical Dossier <span aria-hidden="true">→</span>
             </a>
             <button
               ref={trigger}
@@ -92,21 +107,17 @@ export function SiteHeader() {
               aria-haspopup="dialog"
               aria-expanded={open}
               onClick={() => setOpen(true)}
-              className="btn btn-solid group !gap-3 !py-2"
+              className="font-serif text-[1.375rem] italic lg:hidden"
             >
               Index
-              <svg width="16" height="8" viewBox="0 0 16 8" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" className="transition-transform duration-500 group-hover:scale-x-75">
-                <path d="M1 1h14M1 7h14" />
-              </svg>
             </button>
           </div>
-        </div>
-        <div className="relative h-px bg-hairline">
-          <span aria-hidden="true" className="header-progress" />
+
+          <span aria-hidden="true" className={`header-progress ${dark ? "bg-paper" : "bg-sanad"}`} />
         </div>
       </header>
 
-      {/* the index */}
+      {/* the index, for small screens */}
       <div
         ref={overlay}
         role="dialog"
@@ -118,34 +129,15 @@ export function SiteHeader() {
         }`}
       >
         <div className="wrap flex min-h-full flex-col">
-          <div className="flex h-[4.25rem] flex-none items-center justify-between">
-            <Lockup size={30} className="max-sm:text-[1.65rem]" />
-            <button ref={closeBtn} type="button" onClick={close} className="btn btn-line !gap-3 !py-2">
+          <div className="flex h-[4.5rem] flex-none items-center justify-between">
+            <Wordmark size={30} />
+            <button ref={closeBtn} type="button" onClick={close} className="font-serif text-[1.375rem] italic">
               Close
-              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
-                <path d="M1 1l10 10M11 1L1 11" />
-              </svg>
             </button>
           </div>
 
-          <div className="grid flex-1 gap-10 pb-12 pt-8 lg:grid-cols-12 lg:gap-14 lg:pt-14">
-            <div className="flex flex-col justify-between lg:col-span-4">
-              <p className="text-caption text-ink/70">Index</p>
-              <div className="mt-10 lg:mt-0">
-                <p className="font-serif text-[1.375rem] italic">{site.tagline}</p>
-                <a href={dossierHref} onClick={() => setOpen(false)} className="btn btn-solid mt-8">
-                  Request Technical Dossier
-                  <Arrow />
-                </a>
-                <p className="text-caption mt-6 text-ink/70">
-                  <a href={`mailto:${site.email}`} className="underline decoration-ink/30 underline-offset-4 hover:decoration-ink">
-                    {site.email}
-                  </a>
-                </p>
-              </div>
-            </div>
-
-            <ol className="m-0 list-none border-t border-ink/25 p-0 lg:col-span-8">
+          <div className="grid flex-1 gap-10 pb-12 pt-6">
+            <ol className="m-0 list-none border-t border-ink/25 p-0">
               {sections.map((s, i) => (
                 <li
                   key={s.n}
@@ -156,14 +148,26 @@ export function SiteHeader() {
                     transitionDelay: open ? `${380 + i * 55}ms` : "0ms",
                   }}
                 >
-                  <a href={s.href} onClick={() => setOpen(false)} className="group grid grid-cols-[2.75rem_1fr] items-baseline gap-x-4 py-4 sm:grid-cols-[3.5rem_1fr_auto] sm:py-5">
+                  <a href={s.href} onClick={() => setOpen(false)} className="group grid grid-cols-[2.75rem_1fr] items-baseline gap-x-4 py-4">
                     <span className="font-serif text-[1.375rem] font-medium text-sanad">{s.n}</span>
-                    <span className="text-heading transition-transform duration-500 ease-[cubic-bezier(0.2,0.7,0.1,1)] group-hover:translate-x-3">{s.label}</span>
-                    <span className="text-caption col-start-2 text-ink/65 sm:col-start-auto sm:text-right">{s.note}</span>
+                    <span className="text-heading">{s.label}</span>
+                    <span className="text-caption col-start-2 text-ink/65">{s.note}</span>
                   </a>
                 </li>
               ))}
             </ol>
+            <div>
+              <p className="font-serif text-[1.375rem] italic">{site.tagline}</p>
+              <a href={dossierHref} onClick={() => setOpen(false)} className="btn btn-solid mt-6">
+                Request Technical Dossier
+                <Arrow />
+              </a>
+              <p className="text-caption mt-5 text-ink/70">
+                <a href={`mailto:${site.email}`} className="underline decoration-ink/30 underline-offset-4">
+                  {site.email}
+                </a>
+              </p>
+            </div>
           </div>
         </div>
       </div>

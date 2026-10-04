@@ -1,78 +1,81 @@
 import { Arrow } from "@/components/arrow";
-import { FLOW_COMPACT, FLOW_WIDE, Flow } from "@/components/flow";
-import { dossierHref, hero, systems } from "@/content/site";
+import { MARK_LINE, MARK_WASH } from "@/components/brand/mark-paths";
+import { dossierHref, hero } from "@/content/site";
 
 const delay = (n: number) => ({ ["--d" as string]: n });
-const sources = systems.pillarA.modules.flatMap((m) => m.sources);
+
+/**
+ * The head from the symbol, drawn large and cropped by the page: the wash settles,
+ * then the single ink line is drawn down it. On wide screens it sits behind the right
+ * side of the hero; on narrow screens it follows the text and is cropped from below.
+ */
+function HeadArt() {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none relative mt-14 h-[25rem] overflow-hidden sm:h-[30rem] lg:absolute lg:inset-0 lg:mt-0 lg:h-auto"
+    >
+      <svg
+        viewBox="0 0 64 64"
+        className="absolute -right-24 top-0 w-[34rem] max-w-none sm:-right-16 sm:w-[40rem] lg:-top-[30px] lg:-right-[11.8vw] lg:w-[clamp(34rem,69vw,80rem)]"
+      >
+        <path className="head-wash" d={MARK_WASH} fill="var(--color-mist)" />
+        <path className="head-line" d={MARK_LINE} fill="var(--color-ink)" fillRule="evenodd" />
+      </svg>
+    </div>
+  );
+}
 
 export function Hero() {
   const words = hero.headline.split(" ");
   return (
-    <section
-      id="top"
-      data-section
-      data-n=""
-      data-label="Enterprise engineering studio"
-      aria-labelledby="hero-title"
-      className="relative overflow-hidden border-b border-hairline"
-    >
-      <div className="wrap pb-16 pt-14 sm:pt-20 lg:pb-24 lg:pt-24">
-        <p className="text-caption hero-in text-ink-3" style={delay(0)}>
-          Enterprise engineering studio · Intelligent software for modern commerce
-        </p>
-
-        <div className="grid items-start gap-8 lg:grid-cols-12">
-          <h1 id="hero-title" className="text-display mt-6 max-w-[17ch] text-ink sm:max-w-[22ch] lg:col-span-12 lg:max-w-none">
-            {words.map((w, i) => (
-              <span key={i}>
-                <span className="word-mask">
-                  <span className="word" style={{ ["--i" as string]: i }}>
-                    {w}
+    <>
+      <section id="top" aria-labelledby="hero-title" className="relative overflow-hidden bg-sanad text-paper">
+        <div className="wrap relative z-10 pb-4 pt-14 sm:pt-20 lg:flex lg:min-h-[48rem] lg:items-center lg:py-20">
+          <div className="lg:max-w-[38rem]">
+            <p className="text-caption hero-in text-paper/65" style={delay(0)}>
+              Enterprise engineering studio · Intelligent software for modern commerce
+            </p>
+            <h1 id="hero-title" className="text-display mt-6 max-w-[15ch] text-paper">
+              {words.map((w, i) => (
+                <span key={i}>
+                  <span className="word-mask">
+                    <span className="word" style={{ ["--i" as string]: i }}>
+                      {w}
+                    </span>
                   </span>
+                  {i < words.length - 1 ? " " : ""}
                 </span>
-                {i < words.length - 1 ? " " : ""}
-              </span>
-            ))}
-          </h1>
-        </div>
-
-        <div className="mt-10 grid gap-8 lg:mt-12 lg:grid-cols-12 lg:items-end lg:gap-10">
-          <p className="text-body hero-in max-w-[38rem] lg:col-span-6" style={delay(900)}>
-            {hero.sub}
-          </p>
-          <div className="hero-in flex flex-wrap items-center gap-x-8 gap-y-4 lg:col-span-5 lg:col-start-8 lg:justify-end" style={delay(1050)}>
-            <a href={dossierHref} className="btn btn-solid">
-              Request Technical Dossier
-              <Arrow />
-            </a>
-            <a
-              href="#thirty-percent-law"
-              className="text-caption font-medium text-sanad underline decoration-sanad/30 underline-offset-4 transition-colors hover:decoration-sanad"
-            >
-              Read the 30% baseline
-            </a>
+              ))}
+            </h1>
+            <p className="text-body hero-in mt-8 max-w-[32rem] text-paper/85" style={delay(900)}>
+              {hero.sub}
+            </p>
+            <div className="hero-in mt-10 flex flex-wrap items-center gap-x-8 gap-y-4" style={delay(1050)}>
+              <a href={dossierHref} className="btn btn-paper">
+                Request Technical Dossier
+                <Arrow />
+              </a>
+              <a
+                href="#thirty-percent-law"
+                className="text-caption font-medium text-paper underline decoration-paper/45 underline-offset-4 transition-colors hover:decoration-paper"
+              >
+                Read the 30% baseline
+              </a>
+            </div>
           </div>
         </div>
 
-        <figure className="intro m-0 mt-20 lg:mt-24">
-          <div className="hidden md:block">
-            <Flow g={FLOW_WIDE} id="flow-wide" sources={sources} intro />
-          </div>
-          <div className="mx-auto max-w-[24rem] md:hidden">
-            <Flow g={FLOW_COMPACT} id="flow-compact" sources={sources} intro />
-          </div>
-          <figcaption className="text-caption mt-6 max-w-[34rem] text-ink-3">
-            Enterprise data streams gather in the Sanad Core, then synchronize out to infrastructure the client controls.
-          </figcaption>
-        </figure>
-      </div>
+        <HeadArt />
+        <span aria-hidden="true" className="loop-line loop-drift absolute bottom-9 left-0 hidden w-[51vw] text-mist/30 lg:block" />
+      </section>
 
-      <div className="border-t border-hairline">
+      <div className="border-b border-hairline">
         <dl className="wrap grid sm:grid-cols-2">
           {hero.perspectives.map((p, i) => (
             <div
               key={p.label}
-              className={`reveal py-8 sm:py-10 ${i === 0 ? "sm:pr-10" : "border-t border-hairline sm:border-l sm:border-t-0 sm:pl-10"}`}
+              className={`reveal py-9 sm:py-12 ${i === 0 ? "sm:pr-10" : "border-t border-hairline sm:border-l sm:border-t-0 sm:pl-10"}`}
               style={delay(i * 140)}
             >
               <dt className="text-caption font-medium text-sanad">{p.label}</dt>
@@ -81,6 +84,6 @@ export function Hero() {
           ))}
         </dl>
       </div>
-    </section>
+    </>
   );
 }

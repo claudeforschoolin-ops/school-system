@@ -3,7 +3,7 @@ import { how } from "@/content/site";
 
 export function HowWeWork() {
   return (
-    <section id="process" data-section data-n="05" data-label="Process" aria-labelledby="how-title" className="border-b border-hairline py-20 lg:py-28">
+    <section id="process" data-section data-n="05" data-label="Process" aria-labelledby="how-title" className="py-20 lg:py-28">
       <div className="wrap">
         <SectionHead index={how.index} label={how.label} heading={how.heading} lead={how.lead} id="how-title" />
 
@@ -25,7 +25,7 @@ export function HowWeWork() {
                   <span className="text-title text-ink">{st.name}</span>
                 </p>
                 <p className="text-body mb-6 mt-3">{st.text}</p>
-                <div className="mt-auto border-t border-hairline pt-4 [&:not(:first-child)]:mt-8">
+                <div className="mt-auto border-t border-hairline pt-4">
                   <p className="text-caption text-ink-3">You receive</p>
                   <p className="text-body mt-1 text-[1rem] leading-[1.55] text-ink">{st.receive}</p>
                 </div>
