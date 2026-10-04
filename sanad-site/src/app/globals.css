@@ -127,6 +127,12 @@
   flex: none;
   aspect-ratio: 1;
 }
+.mark-vars {
+  --mark-tile: var(--color-ink);
+  --mark-wash: var(--color-signal);
+  --mark-line: var(--color-paper);
+  --mark-boost: 0;
+}
 .mark--ink {
   /* On ink: pale tile, Mist head, ink line */
   --mark-tile: #f0f0f0;
@@ -223,8 +229,8 @@
 /* Monospace blocks */
 .mono-block {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
-  line-height: 1.7;
+  font-size: 0.875rem;
+  line-height: 1.75;
   font-feature-settings: "calt" 0;
   tab-size: 2;
 }
@@ -390,15 +396,27 @@
   opacity: 0;
 }
 
-.scroll-progress {
-  position: fixed;
-  inset: 0 0 auto 0;
-  z-index: 60;
+.header-progress {
+  position: absolute;
+  inset: -1px 0 auto 0;
   height: 2px;
   background: var(--color-sanad);
   transform: scaleX(0);
   transform-origin: left;
   pointer-events: none;
+}
+@keyframes rh-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rh {
+  animation: rh-in 0.6s var(--ease-out) both;
 }
 
 @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
@@ -493,7 +511,7 @@
   }
 
   @supports (animation-timeline: scroll()) {
-    .scroll-progress {
+    .header-progress {
       animation: progress linear both;
       animation-timeline: scroll(root block);
     }

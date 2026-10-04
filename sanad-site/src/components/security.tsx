@@ -4,7 +4,7 @@ import { security } from "@/content/site";
 
 export function Security() {
   return (
-    <section id="security" aria-labelledby="security-title" className="border-b border-hairline py-20 lg:py-28">
+    <section id="security" data-section data-n="04" data-label="Security" aria-labelledby="security-title" className="border-b border-hairline py-20 lg:py-28">
       <div className="wrap">
         <SectionHead index={security.index} label={security.label} heading={security.heading} lead={security.lead} id="security-title" />
 

@@ -5,7 +5,7 @@ import { manifesto, site } from "@/content/site";
 /** A page from an architectural monograph: a numeral in the margin, one ruled column of text, set on Mist. */
 export function Manifesto() {
   return (
-    <section id="company" aria-labelledby="manifesto-title" className="relative overflow-hidden bg-mist py-20 text-ink sm:py-28">
+    <section id="company" data-section data-n="08" data-label="Company" aria-labelledby="manifesto-title" className="relative overflow-hidden bg-mist py-20 text-ink sm:py-28">
       <span aria-hidden="true" className="loop-line loop-drift absolute inset-x-0 top-5 text-ink/25" />
       <span aria-hidden="true" className="loop-line loop-drift absolute inset-x-0 bottom-5 text-ink/25" />
 

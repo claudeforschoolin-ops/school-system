@@ -25,11 +25,18 @@ export const dossierHref = mailto(
   "Hello Sanad,\n\nPlease send the technical dossier.\n\nCompany:\nRole:\nSystems in scope:\n",
 );
 
-export const nav = [
-  { label: "Architecture", href: "#architecture" },
-  { label: "Systems", href: "#systems" },
-  { label: "The 30% Law", href: "#thirty-percent-law" },
-  { label: "Company", href: "#company" },
+
+
+/** The index shown in the header overlay. Labels follow the primary navigation. */
+export const sections = [
+  { n: "01", label: "The 30% Law", href: "#thirty-percent-law", note: "The baseline every system is specified against." },
+  { n: "02", label: "Systems", href: "#systems", note: "Turnkey modules and bespoke engineering." },
+  { n: "03", label: "Architecture", href: "#architecture", note: "Ownership, reliability, latency, integrations." },
+  { n: "04", label: "Security", href: "#security", note: "Properties, stated plainly." },
+  { n: "05", label: "Process", href: "#process", note: "Four stages, one owner at each." },
+  { n: "06", label: "Engagement", href: "#models", note: "Two ways to start." },
+  { n: "07", label: "Questions", href: "#faq", note: "Plain answers for engineers." },
+  { n: "08", label: "Company", href: "#company", note: "The Sanad manifesto." },
 ] as const;
 
 export const hero = {
@@ -69,17 +76,11 @@ export const law = {
       after: { value: "Eliminated", note: "structurally: one entry, one record of truth" },
     },
   ],
-  definition: {
-    caption: "Definition",
-    lines: [
-      { code: "L  = t_wait + t_rekey + t_reconcile", note: "daily operational load, in hours" },
-      { code: "L′ ≤ 0.70 × L", note: "the 30% Law" },
-    ],
-  },
-  bars: {
-    caption: "Daily operational load, indexed",
-    baseline: { label: "Baseline", value: 100 },
-    sanad: { label: "With Sanad", value: 70, note: "≤ 70" },
+  proof: {
+    figure: 30,
+    text: "of daily operational load, structurally removed.",
+    caption: "Daily operational load, indexed to a baseline of 100",
+    kept: "With Sanad: at most 70",
     reclaimed: "At least 30% reclaimed",
   },
 } as const;
@@ -88,6 +89,7 @@ export type ModuleId = "inventory" | "units" | "ledger";
 
 export type ModuleSpec = {
   id: ModuleId;
+  short: string;
   name: string;
   summary: string;
   /** What the module is the system of record for. */
@@ -113,6 +115,7 @@ export const systems = {
     modules: [
       {
         id: "inventory",
+        short: "Inventory",
         name: "Inventory & Distributed Warehousing Logic",
         summary: "One stock position across every warehouse, store and channel.",
         owns: "Stock position per node, reservations and transfers.",
@@ -135,6 +138,7 @@ export const systems = {
       },
       {
         id: "units",
+        short: "Units",
         name: "Hospitality & Unit Management Engines",
         summary: "Units, stays and turnover, held to a single source of availability.",
         owns: "Units, stays, availability and turnover tasks.",
@@ -158,6 +162,7 @@ export const systems = {
       },
       {
         id: "ledger",
+        short: "Ledger",
         name: "Unified Commerce & POS Ledger Sync",
         summary: "Every sale, online or in store, posts once to one ledger.",
         owns: "The transaction ledger: every entry, posted once.",
@@ -251,33 +256,7 @@ export const mechanics = {
       text: "Clean, deterministic APIs connecting legacy ERPs, payment gateways, and third-party logistics.",
     },
   ],
-  trace: {
-    title: "Representative event trace",
-    note: "Illustrative sequence, not a benchmark.",
-    lines: [
-      ["comment", "# multi-terminal sale on the shop floor"],
-      ["row", "t+000 ms", "term-02", "sale.created", "tx=A-10441"],
-      ["row", "t+008 ms", "node-01", "ledger.posted", "Σdr = Σcr  ok"],
-      ["row", "t+019 ms", "node-01", "stock.reserved", "sku=1042  -1"],
-      ["row", "t+037 ms", "term-01", "state.applied", "v=2291"],
-      ["row", "t+041 ms", "term-03", "state.applied", "v=2291"],
-      ["gap"],
-      ["comment", "# network lost: the node keeps working locally"],
-      ["row", "t+912 ms", "term-02", "sale.created", "tx=A-10442"],
-      ["row", "t+921 ms", "node-01", "ledger.posted", "queued=1"],
-      ["gap"],
-      ["comment", "# network restored: replicate to client-db"],
-      ["row", "t+4.2 s", "node-01", "replicate", "converged  v=2292"],
-    ],
-  },
 } as const;
-
-export const heroStats = [
-  { kind: "count", to: 30, prefix: "≥ ", suffix: "%", label: "Structural reduction in daily operational load" },
-  { kind: "text", display: "18 h → < 1 s", label: "Inventory and supply synchronization" },
-  { kind: "count", to: 100, prefix: "< ", suffix: " ms", label: "Internal state change across terminals" },
-  { kind: "text", display: "Zero", label: "Black-box dependencies" },
-] as const;
 
 export const security = {
   index: "04",

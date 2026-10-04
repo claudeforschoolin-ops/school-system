@@ -45,7 +45,7 @@ function Banner({
 export function Systems() {
   const { pillarA, pillarB } = systems;
   return (
-    <section id="systems" aria-labelledby="systems-title" className="border-b border-hairline py-20 lg:py-28">
+    <section id="systems" data-section data-n="02" data-label="Systems" aria-labelledby="systems-title" className="border-b border-hairline py-20 lg:py-28">
       <div className="wrap">
         <SectionHead index={systems.index} label={systems.label} heading={systems.heading} lead={systems.lead} id="systems-title" />
 
@@ -53,16 +53,16 @@ export function Systems() {
           {/* Pillar A */}
           <div className="reveal overflow-hidden rounded-card border border-hairline">
             <Banner tone="blue" letter={pillarA.letter} title={pillarA.title} kind={pillarA.kind} text={pillarA.text} />
-            <div className="bg-paper p-6 sm:p-8 lg:p-10">
+            <div className="bg-paper px-6 py-10 sm:px-10 sm:py-14 lg:px-14">
               <ModuleExplorer />
             </div>
-            <div className="grid border-t border-hairline bg-paper md:grid-cols-3">
+            <div className="grid gap-12 bg-paper px-6 pb-12 sm:px-10 sm:pb-14 md:grid-cols-3 md:gap-8 lg:px-14">
               {pillarA.modules.map((m, i) => {
                 const Wireframe = WIREFRAMES[m.id];
                 return (
                   <article
                     key={m.id}
-                    className={`reveal p-6 sm:p-8 ${i > 0 ? "border-t border-hairline md:border-l md:border-t-0" : ""}`}
+                    className="reveal"
                     style={{ ["--d" as string]: i * 140 }}
                   >
                     <p className="font-mono text-[0.78rem] text-ink-3">A.{i + 1} · Interface wireframe</p>

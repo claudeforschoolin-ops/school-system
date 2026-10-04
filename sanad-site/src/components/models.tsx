@@ -4,7 +4,7 @@ import { models } from "@/content/site";
 export function Models() {
   const [a, b] = models.columns;
   return (
-    <section id="models" aria-labelledby="models-title" className="border-b border-hairline py-20 lg:py-28">
+    <section id="models" data-section data-n="06" data-label="Engagement" aria-labelledby="models-title" className="border-b border-hairline py-20 lg:py-28">
       <div className="wrap">
         <SectionHead index={models.index} label={models.label} heading={models.heading} id="models-title" />
 

@@ -35,7 +35,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <MarkSprite />
-        <div aria-hidden="true" className="scroll-progress" />
         <RevealObserver />
         <a
           href="#main"

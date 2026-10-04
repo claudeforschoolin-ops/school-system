@@ -3,7 +3,7 @@ import { how } from "@/content/site";
 
 export function HowWeWork() {
   return (
-    <section id="process" aria-labelledby="how-title" className="border-b border-hairline py-20 lg:py-28">
+    <section id="process" data-section data-n="05" data-label="Process" aria-labelledby="how-title" className="border-b border-hairline py-20 lg:py-28">
       <div className="wrap">
         <SectionHead index={how.index} label={how.label} heading={how.heading} lead={how.lead} id="how-title" />
 
