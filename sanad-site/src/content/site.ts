@@ -58,31 +58,24 @@ export const law = {
   index: "01",
   label: "Proof by metric",
   heading: "The 30% efficiency baseline",
-  lead: "Operational load is not a feeling. It is waiting, re-keying and reconciling — three things that can be measured, and removed. Every system we build is specified against one baseline: a structural reduction of at least 30% in daily operational load.",
-  rows: [
-    {
-      workstream: "Inventory & Supply Sync",
-      before: { value: "18 hours", note: "of multi-channel lag between stock and sales" },
-      after: { value: "Sub-second", note: "synchronization across every channel" },
-    },
-    {
-      workstream: "Financial & Reconciled Auditing",
-      before: { value: "Repeated", note: "reconciliations, performed by staff each cycle" },
-      after: { value: "Zero-loss", note: "balancing routines, automated end to end" },
-    },
-    {
-      workstream: "Human Error Overhead",
-      before: { value: "Re-keyed", note: "data entered again in each system it touches" },
-      after: { value: "Eliminated", note: "structurally: one entry, one record of truth" },
-    },
+  /** The section is one sentence per workstream; the highlighted word is the outcome. */
+  narrative: [
+    { lead: "Eighteen hours of lag becomes ", outcome: "sub-second", end: "." },
+    { lead: "Repeated reconciliations become ", outcome: "zero-loss", end: "." },
+    { lead: "Data re-keyed in every system is ", outcome: "eliminated", end: "." },
   ],
   proof: {
     figure: 30,
     text: "of daily operational load, structurally removed.",
-    caption: "Daily operational load, indexed to a baseline of 100",
-    kept: "With Sanad: at most 70",
-    reclaimed: "At least 30% reclaimed",
+    caption:
+      "Every system we build is specified against one baseline: a structural reduction of at least 30% in daily operational load.",
   },
+  /** The full comparison, kept for screen readers and search. */
+  rows: [
+    { workstream: "Inventory & Supply Sync", before: "18 hours of multi-channel lag between stock and sales", after: "Sub-second synchronization across every channel" },
+    { workstream: "Financial & Reconciled Auditing", before: "Repeated reconciliations, performed by staff each cycle", after: "Zero-loss balancing routines, automated end to end" },
+    { workstream: "Human Error Overhead", before: "Data entered again in each system it touches", after: "Eliminated structurally: one entry, one record of truth" },
+  ],
 } as const;
 
 export type ModuleId = "inventory" | "units" | "ledger";

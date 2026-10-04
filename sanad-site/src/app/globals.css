@@ -577,3 +577,31 @@
     animation: head-line 2.4s cubic-bezier(0.55, 0, 0.2, 1) 0.45s both;
   }
 }
+
+/* Outcome words: Mist wash beneath, shifted down and right (line and wash) */
+.hl {
+  position: relative;
+  display: inline-block;
+  color: var(--color-sanad);
+}
+.hl::before {
+  content: "";
+  position: absolute;
+  inset: 0.22em -0.08em -0.14em 0.14em;
+  background: var(--color-mist);
+  border-radius: 6px;
+}
+.hl-text {
+  position: relative;
+  padding: 0 0.06em 0 0.04em;
+}
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .hl::before {
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 1.1s var(--ease-out) calc(var(--d, 0) * 1ms);
+  }
+  [data-in] .hl::before {
+    transform: none;
+  }
+}
