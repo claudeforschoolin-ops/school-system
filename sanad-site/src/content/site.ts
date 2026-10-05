@@ -163,6 +163,15 @@ export const mechanics = {
   label: "System mechanics & technical rigor",
   audience: "For CTOs and technical evaluators",
   heading: "Specified like infrastructure, stated so it can be tested.",
+  /** The one number that can be measured, so it leads. */
+  hero: {
+    label: "Latency",
+    prefix: "< ",
+    value: 100,
+    suffix: " ms",
+    caption: "under 100 ms",
+    text: "Sub-100ms internal state changes across multi-terminal setups.",
+  },
   specs: [
     {
       label: "Data ownership",
@@ -173,11 +182,6 @@ export const mechanics = {
       label: "Reliability",
       value: "Offline-capable",
       text: "Operational nodes designed to function without internet disruption.",
-    },
-    {
-      label: "Latency",
-      value: "< 100 ms",
-      text: "Sub-100ms internal state changes across multi-terminal setups.",
     },
     {
       label: "Integrations",

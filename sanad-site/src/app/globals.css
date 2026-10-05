@@ -390,6 +390,19 @@
     transform: none;
   }
 
+  /* The dot lands where the line ends */
+  .tl-dot {
+    opacity: 0;
+    scale: 0.4;
+    transition:
+      opacity 0.5s var(--ease-out) 1.6s,
+      scale 0.7s var(--ease-out) 1.6s;
+  }
+  [data-in] .tl-dot {
+    opacity: 1;
+    scale: 1;
+  }
+
   /* Timeline: the line draws, then each stage lights up */
   .tl-line {
     transform: scaleX(0);
@@ -473,6 +486,9 @@
   inset: 0.22em -0.08em -0.14em 0.14em;
   background: var(--color-mist);
   border-radius: 6px;
+}
+.hl--ink {
+  color: var(--color-ink);
 }
 .hl-text {
   position: relative;
