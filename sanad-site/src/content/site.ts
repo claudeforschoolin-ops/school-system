@@ -127,41 +127,32 @@ export const systems = {
   pillarB: {
     letter: "B",
     title: "Tailored Commercial Architecture",
-    kind: "Bespoke systems",
-    text: "From-scratch systems, engineered for unique, proprietary operational flows.",
+    heading: "Describe the flow. We build the system.",
+    cta: {
+      label: "Discuss your system",
+      href: mailto(
+        "Bespoke system: discussion",
+        "Hello Sanad,\n\nI would like to discuss a bespoke system.\n\nThe flow in question:\nCompany:\n",
+      ),
+    },
     items: [
       {
         icon: "document",
         title: "Custom internal operating systems",
         tagline: "Replacing patchwork spreadsheets",
-        text: "One system of record in place of a folder of spreadsheets: role-based views, enforced workflows, and a history of every change.",
-        spec: [
-          ["record", "single source of truth"],
-          ["access", "role-based"],
-          ["history", "append-only"],
-        ],
+        guarantee: "One system of record.",
       },
       {
         icon: "security",
         title: "Private agentic workflows",
         tagline: "Operating securely on client infrastructure",
-        text: "Autonomous logic that runs inside your perimeter, on your hardware or your cloud account. Every action is logged, bounded by explicit permissions, and reversible.",
-        spec: [
-          ["runtime", "client infrastructure"],
-          ["egress", "denied by default"],
-          ["oversight", "approval gates, full action log"],
-        ],
+        guarantee: "Nothing leaves your perimeter.",
       },
       {
         icon: "data",
         title: "High-availability distributed databases",
         tagline: "With offline-first synchronization",
-        text: "Replicated stores that keep accepting writes when the network does not, then converge deterministically when it returns.",
-        spec: [
-          ["writes", "local-first"],
-          ["merge", "deterministic"],
-          ["single point of failure", "none, by design"],
-        ],
+        guarantee: "Writes never stop.",
       },
     ],
   },

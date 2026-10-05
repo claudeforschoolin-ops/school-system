@@ -54,9 +54,9 @@ const ICONS = {
 
 export type IconName = keyof typeof ICONS;
 
-export function LineIcon({ name, size = 44, washClass }: { name: IconName; size?: number; washClass?: string }) {
+export function LineIcon({ name, size = 44, washClass, className }: { name: IconName; size?: number; washClass?: string; className?: string }) {
   return (
-    <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true" focusable="false">
+    <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true" focusable="false" className={className}>
       {ICONS[name](washClass)}
     </svg>
   );
