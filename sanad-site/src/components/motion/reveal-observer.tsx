@@ -3,12 +3,12 @@
 import { useEffect } from "react";
 
 /**
- * Marks `.reveal` and `.intro` elements with `data-in` as they scroll into view.
+ * Marks `.reveal` elements with `data-in` as they scroll into view.
  * The CSS decides what that means; this only reports visibility, once per element.
  */
 export function RevealObserver() {
   useEffect(() => {
-    const els = document.querySelectorAll<HTMLElement>(".reveal, .intro");
+    const els = document.querySelectorAll<HTMLElement>(".reveal");
     if (!("IntersectionObserver" in window)) {
       els.forEach((el) => el.setAttribute("data-in", ""));
       return;

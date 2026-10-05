@@ -84,15 +84,10 @@ export type ModuleSpec = {
   id: ModuleId;
   short: string;
   name: string;
-  summary: string;
   /** What the module is the system of record for. */
   owns: string;
-  /** The two data streams that feed it. */
-  sources: readonly [string, string];
-  schemaTitle: string;
-  schema: ReadonlyArray<readonly [name: string, type: string, note?: string]>;
-  invariant?: string;
-  params: ReadonlyArray<readonly [key: string, value: string]>;
+  /** The one thing it will not let go wrong. */
+  guarantee: string;
 };
 
 export const systems = {
@@ -110,72 +105,22 @@ export const systems = {
         id: "inventory",
         short: "Inventory",
         name: "Inventory & Distributed Warehousing Logic",
-        summary: "One stock position across every warehouse, store and channel.",
         owns: "Stock position per node, reservations and transfers.",
-        sources: ["Warehouse scanners", "3PL & logistics"],
-        schemaTitle: "StockLevel",
-        schema: [
-          ["sku", "string"],
-          ["node", "NodeId", "warehouse or store"],
-          ["on_hand", "int"],
-          ["reserved", "int", "held for open orders"],
-          ["version", "lamport", "deterministic ordering"],
-        ],
-        params: [
-          ["Topology", "n-node, multi-warehouse"],
-          ["Sync", "event-sourced, deterministic merge"],
-          ["Reservations", "per-channel holds, auto-expiry"],
-          ["Offline", "node-local ledger, reconcile on reconnect"],
-          ["Latency", "< 100 ms in-site, sub-second across channels"],
-        ],
+        guarantee: "One stock position.",
       },
       {
         id: "units",
         short: "Units",
         name: "Hospitality & Unit Management Engines",
-        summary: "Units, stays and turnover, held to a single source of availability.",
         owns: "Units, stays, availability and turnover tasks.",
-        sources: ["Booking channels", "Property systems"],
-        schemaTitle: "Stay",
-        schema: [
-          ["unit", "UnitId"],
-          ["from", "date"],
-          ["to", "date"],
-          ["status", "vacant | occupied | turnover | blocked"],
-          ["rate_plan", "RatePlanId"],
-        ],
-        invariant: "no two stays overlap on one unit",
-        params: [
-          ["Allocation", "overlap-free by construction"],
-          ["Housekeeping", "status transitions create tasks"],
-          ["Channels", "booking channels kept in step"],
-          ["Rates", "plans, seasons and restrictions"],
-          ["Handover", "turnover opens at check-out"],
-        ],
+        guarantee: "No two stays overlap.",
       },
       {
         id: "ledger",
         short: "Ledger",
         name: "Unified Commerce & POS Ledger Sync",
-        summary: "Every sale, online or in store, posts once to one ledger.",
         owns: "The transaction ledger: every entry, posted once.",
-        sources: ["Point of sale", "Payment gateways"],
-        schemaTitle: "LedgerEntry",
-        schema: [
-          ["tx", "TxId", "idempotency key"],
-          ["account", "AccountCode"],
-          ["debit", "decimal"],
-          ["credit", "decimal"],
-          ["source", "pos | web | erp | gateway"],
-        ],
-        invariant: "Σ debit = Σ credit, per transaction",
-        params: [
-          ["Model", "double-entry, append-only"],
-          ["Idempotency", "one key per transaction"],
-          ["Gateways", "settlement matched automatically"],
-          ["Close", "daily close with variance report"],
-          ["Audit", "immutable history, exportable"],
-        ],
+        guarantee: "Debit equals credit.",
       },
     ] satisfies ModuleSpec[],
   },

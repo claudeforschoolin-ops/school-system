@@ -202,38 +202,6 @@
 .dg-line {
   fill: none;
 }
-.dg-fine {
-  fill: none;
-  stroke: var(--color-ink);
-  stroke-opacity: 0.35;
-  stroke-width: 1;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.dg-text {
-  font-family: var(--font-sans);
-  fill: var(--color-ink);
-}
-.dg-mono {
-  font-family: var(--font-mono);
-  fill: var(--color-ink-3);
-}
-
-@keyframes dg-flow {
-  to {
-    stroke-dashoffset: -12;
-  }
-}
-.dg-flow {
-  stroke-dasharray: 2 10;
-  animation: dg-flow 2.4s linear infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .dg-flow {
-    animation: none;
-    stroke-dasharray: none;
-  }
-}
 
 /* Monospace blocks */
 .mono-block {
@@ -334,45 +302,6 @@
     transform: none;
   }
 }
-@keyframes dg-draw {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-@keyframes dg-pop {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-@keyframes dg-wash {
-  from {
-    transform: translate(-9px, -9px);
-  }
-  to {
-    transform: none;
-  }
-}
-@keyframes dg-packet {
-  0% {
-    offset-distance: 0%;
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  88% {
-    opacity: 1;
-  }
-  100% {
-    offset-distance: 100%;
-    opacity: 0;
-  }
-}
 @keyframes loop-drift {
   to {
     -webkit-mask-position: 96px center;
@@ -397,12 +326,6 @@
 }
 .word {
   display: inline-block;
-}
-
-.dg-packet {
-  offset-rotate: 0deg;
-  offset-distance: 0%;
-  opacity: 0;
 }
 
 .header-progress {
@@ -450,31 +373,6 @@
   .reveal[data-in] {
     opacity: 1;
     transform: none;
-  }
-
-  /* Diagrams draw themselves once, when they scroll into view */
-  .intro .dg-draw {
-    stroke-dasharray: 1;
-    stroke-dashoffset: 1;
-  }
-  .intro[data-in] .dg-draw {
-    animation: dg-draw 1.1s var(--ease-out) forwards;
-    animation-delay: calc(var(--d, 0) * 1ms);
-  }
-  .intro .dg-pop {
-    opacity: 0;
-  }
-  .intro[data-in] .dg-pop {
-    animation: dg-pop 0.8s var(--ease-out) forwards;
-    animation-delay: calc(var(--d, 0) * 1ms);
-  }
-  .intro[data-in] .dg-wash {
-    animation: dg-wash 1.2s var(--ease-out) both;
-    animation-delay: 150ms;
-  }
-  .dg-packet {
-    animation: dg-packet 3.6s linear infinite;
-    animation-delay: calc(var(--d, 0) * 1ms);
   }
 
   .loop-drift {
@@ -534,21 +432,6 @@
 }
 
 /* Panel swap inside the module explorer */
-@keyframes panel-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .panel-in {
-    animation: panel-in 0.55s var(--ease-out) both;
-  }
-}
 
 /* The large head in the hero: the wash settles, then the line is drawn down the page */
 @keyframes head-wash {

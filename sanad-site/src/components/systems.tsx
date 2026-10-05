@@ -1,7 +1,6 @@
 import { LineIcon, type IconName } from "@/components/line-icon";
-import { ModuleExplorer } from "@/components/module-explorer";
+import { ModuleConfigurator } from "@/components/module-configurator";
 import { SectionHead } from "@/components/section-head";
-import { WIREFRAMES } from "@/components/wireframes";
 import { systems } from "@/content/site";
 
 function Banner({
@@ -43,36 +42,15 @@ function Banner({
 }
 
 export function Systems() {
-  const { pillarA, pillarB } = systems;
+  const { pillarB } = systems;
   return (
     <section id="systems" data-section data-n="02" data-label="Systems" aria-labelledby="systems-title" className="py-20 lg:py-28">
       <div className="wrap">
         <SectionHead index={systems.index} label={systems.label} heading={systems.heading} lead={systems.lead} id="systems-title" />
 
-        <div className="mt-14 space-y-8">
+        <div className="mt-14 space-y-20 lg:mt-16 lg:space-y-28">
           {/* Pillar A */}
-          <div className="reveal overflow-hidden rounded-card border border-hairline">
-            <Banner tone="blue" letter={pillarA.letter} title={pillarA.title} kind={pillarA.kind} text={pillarA.text} />
-            <div className="bg-paper px-6 py-10 sm:px-10 sm:py-14 lg:px-14">
-              <ModuleExplorer />
-            </div>
-            <div className="grid gap-12 bg-paper px-6 pb-12 sm:px-10 sm:pb-14 md:grid-cols-3 md:gap-8 lg:px-14">
-              {pillarA.modules.map((m, i) => {
-                const Wireframe = WIREFRAMES[m.id];
-                return (
-                  <article
-                    key={m.id}
-                    className="reveal"
-                    style={{ ["--d" as string]: i * 140 }}
-                  >
-                    <p className="font-mono text-[0.78rem] text-ink-3">A.{i + 1} · Interface wireframe</p>
-                    <h4 className="text-body mb-4 mt-1 font-medium text-ink">{m.name}</h4>
-                    <Wireframe />
-                  </article>
-                );
-              })}
-            </div>
-          </div>
+          <ModuleConfigurator />
 
           {/* Pillar B */}
           <div className="reveal overflow-hidden rounded-card border border-hairline">
